@@ -52,6 +52,12 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
   expect dentro de `#[test]` e `#[cfg(test)]`; os testes de integração (`tests/*.rs`), os exemplos e o
   `estado::apoio_testes` liberam com `#![allow(...)]` no topo. Fora disso, um `#[allow]` local precisa de
   comentário dizendo por quê (o `build.rs` do editor, o alocador de `exportar/tests/memoria.rs`, a FFI do `banco`).
+- Nos crates que leem arquivo (`comum`, `ddl`, `planilha`, `tabular`, `texto`), também `clippy::indexing_slicing`
+  em deny, pelo `#![cfg_attr(not(test), deny(clippy::indexing_slicing))]` do `lib.rs` (o `Cargo.toml` não deixa
+  somar lint próprio ao `[lints] workspace = true`; e o `cfg_attr` deixa os testes de fora). Índice e fatia viram
+  `.get()`, `split_first`, `split_at_checked` ou iterador; onde o índice é seguro por construção e a troca piora
+  a leitura, `#[allow(clippy::indexing_slicing)]` local com o porquê (`texto::json::Arvore::no`,
+  `planilha::Planilha::folha`).
 
 ---
 
@@ -131,7 +137,9 @@ seção "Tabela" das Propriedades, o "Abrir na Consulta SQL", a busca da barra e
    manda gravar é `Entrada` (a coerção pela afinidade da coluna é `banco::coagir`). Inteiros são `i64`, texto
    inválido é `Valor::TextoBruto`.
 5. **Nada de pânico com dado da pessoa ou do arquivo**: sem `unwrap`/`expect`/índice que possa estourar fora
-   de testes; erro vira `ErroBanco`. `unwrap`/`expect` são barrados pelo clippy (§1); o índice, ainda só na revisão. `Mutex` envenenado não derruba o app (recupere o conteúdo).
+   de testes; erro vira `ErroBanco`. `unwrap`/`expect` são barrados pelo clippy em todo o workspace (§1); o
+   índice e a fatia (`clippy::indexing_slicing`), nos crates que leem arquivo (`comum`, `ddl`, `planilha`,
+   `tabular`, `texto`); nos demais, ainda só na revisão. `Mutex` envenenado não derruba o app (recupere o conteúdo).
 6. **Concorrência.** `Banco`, `Preferencias` e `Servico` são `Send + Sync` e usados por `Arc` de várias threads.
    A thread da interface **nunca** toca no SQLite nem no disco: tudo vai por `estado::Promessa` (thread de
    fundo que acorda a interface ao terminar).
