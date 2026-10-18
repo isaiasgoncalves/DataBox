@@ -69,7 +69,7 @@
 //!
 //! O XML nunca é carregado inteiro: uma linha de execução descomprime em blocos de 256 KB (canal de 1 MB) e
 //! o leitor XML consome em blocos de 64 KB, sem alocar por evento. As frases compartilhadas ficam num bloco
-//! só de memória. A indexação de uma aba grande é uma passada sem copiar texto; cada página lê só ~128
+//! só de memória, com teto de 512 MB (frases e fins; passou, a abertura para e dá erro em português). A indexação de uma aba grande é uma passada sem copiar texto; cada página lê só ~128
 //! linhas ao redor do ponto. Veja `Planilha` para o modelo de índice e cache.
 //!
 //! # Erros

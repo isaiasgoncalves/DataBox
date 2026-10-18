@@ -48,6 +48,10 @@ pub(crate) enum ErroXml {
         posicao: u64,
         motivo: &'static str,
     },
+    /// O que a parte guardaria na memória passa do limite, em bytes (um zip bomb, por exemplo).
+    Grande {
+        limite: usize,
+    },
 }
 
 impl fmt::Display for ErroXml {
@@ -55,6 +59,7 @@ impl fmt::Display for ErroXml {
         match self {
             ErroXml::Io(e) => write!(f, "{e}"),
             ErroXml::Malformado { posicao, motivo } => write!(f, "{motivo} (byte {posicao})"),
+            ErroXml::Grande { limite } => write!(f, "passa do limite de {limite} bytes na memória"),
         }
     }
 }

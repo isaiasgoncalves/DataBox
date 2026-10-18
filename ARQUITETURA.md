@@ -297,7 +297,8 @@ células mescladas), `tamanho()`, `meta()` e `pagina(primeira_linha, quantidade)
 buracos, com cache de blocos e cursor que continua de onde parou); `pasta.linhas(i)` é o iterador em fluxo. As
 células saem tipadas (`Valor::{Vazio, Texto, Numero, Booleano, Erro, Data, Hora, DataHora}`; data/hora pelo formato
 do estilo, sistemas 1900 e 1904) e `pasta.exibir(&celula)` escreve como o Excel (pt-BR). `.xls`, `.xlsb` e arquivo com
-senha dão erro em português (`ErroBanco`). O XML é lido por um leitor "pull" próprio, em fluxo (`xml.rs`), e o zip é
+senha dão erro em português (`ErroBanco`), e também textos compartilhados que ocupariam mais de 512 MB na memória
+(`LIMITE_TEXTOS`, contra zip bomb no `sharedStrings.xml`: a leitura para assim que passa). O XML é lido por um leitor "pull" próprio, em fluxo (`xml.rs`), e o zip é
 descomprimido numa linha de execução à parte (`fluxo.rs`).
 
 ### 4.4c `tabular` (o CSV e o Trazer colunas)

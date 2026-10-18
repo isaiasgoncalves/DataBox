@@ -13,6 +13,8 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ### Segurança
 
+- Planilhas do Excel com textos compartilhados acima de 512 MB na memória (como um zip bomb no `sharedStrings.xml`)
+  dão erro em português em vez de esgotar a memória.
 - Bancos abertos com `trusted_schema` desligado: visões, gatilhos e padrões gravados no arquivo só usam funções
   inofensivas do SQLite.
 

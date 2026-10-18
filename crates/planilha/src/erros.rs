@@ -91,7 +91,17 @@ pub(crate) fn da_leitura(e: ErroXml, parte: &str) -> ErroBanco {
                 .detalhe(format!("{motivo} (byte {posicao})"))
         }
         ErroXml::Io(e) => da_io(&e, parte),
+        ErroXml::Grande { limite } => textos_grandes(limite).detalhe(format!("«{parte}» passa de {limite} bytes")),
     }
+}
+
+/// Os textos compartilhados passam do que o DataBox guarda na memória ([`crate::pasta::LIMITE_TEXTOS`]).
+pub(crate) fn textos_grandes(limite: usize) -> ErroBanco {
+    let tamanho =
+        if limite >= 1024 * 1024 { format!("{} MB", limite / (1024 * 1024)) } else { format!("{limite} bytes") };
+    ErroBanco::novo(format!(
+        "A planilha não pôde ser aberta: os textos dela ocupariam mais de {tamanho} na memória, o limite do DataBox.          Se o arquivo for de confiança, divida-o no Excel em pastas de trabalho menores."
+    ))
 }
 
 pub(crate) fn da_io(e: &std::io::Error, parte: &str) -> ErroBanco {

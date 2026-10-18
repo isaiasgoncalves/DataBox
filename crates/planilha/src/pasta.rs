@@ -72,6 +72,11 @@ impl Textos {
         self.fins.push(self.dados.len());
     }
 
+    /// Bytes na memória (sem contar a folga de capacidade): as frases e o fim de cada uma.
+    fn ocupado(&self) -> usize {
+        self.dados.len().saturating_add(self.fins.len().saturating_mul(size_of::<usize>()))
+    }
+
     pub fn len(&self) -> usize {
         self.fins.len()
     }
@@ -113,11 +118,21 @@ pub struct Pasta {
 
 const ASSINATURA_OLE: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
+/// Quanto os textos compartilhados podem ocupar na memória, em bytes (as frases e o fim de cada uma). O
+/// `sharedStrings.xml` é lido inteiro na abertura: sem teto, um zip pequeno que descomprime em gigabytes de texto
+/// esgotaria a memória. 512 MB cabem com folga milhões de frases de verdade.
+pub(crate) const LIMITE_TEXTOS: usize = 512 * 1024 * 1024;
+
 impl Pasta {
     /// Abre e confere o arquivo. Erros em português: arquivo vazio, protegido por senha, `.xls` antigo,
-    /// `.xlsb`, outro tipo de documento, zip corrompido, parte essencial faltando.
+    /// `.xlsb`, outro tipo de documento, zip corrompido, parte essencial faltando, textos compartilhados acima de
+    /// [`LIMITE_TEXTOS`].
     pub fn abrir(caminho: impl AsRef<Path>) -> Resultado<Pasta> {
-        let caminho = caminho.as_ref();
+        Self::abrir_com_limite(caminho.as_ref(), LIMITE_TEXTOS)
+    }
+
+    /// O [`Pasta::abrir`] com outro teto para os textos compartilhados (os testes usam um pequeno).
+    pub(crate) fn abrir_com_limite(caminho: &Path, limite_textos: usize) -> Resultado<Pasta> {
         let mut arquivo = File::open(caminho)
             .map_err(|e| traduzir_io(&e, Some(caminho), Some("Não foi possível abrir a planilha.")))?;
         let tamanho = arquivo.metadata().map_err(|e| traduzir_io(&e, Some(caminho), None))?.len();
@@ -182,7 +197,7 @@ impl Pasta {
         }
 
         let alvo_textos = alvo_de("/sharedStrings").unwrap_or_else(|| format!("{diretorio}sharedStrings.xml"));
-        let textos = ler_parte(&mut zip, &nomes, &alvo_textos, ler_textos)?.unwrap_or_default();
+        let textos = ler_parte(&mut zip, &nomes, &alvo_textos, |l| ler_textos(l, limite_textos))?.unwrap_or_default();
         let alvo_estilos = alvo_de("/styles").unwrap_or_else(|| format!("{diretorio}styles.xml"));
         let (formatos, estilos) = ler_parte(&mut zip, &nomes, &alvo_estilos, ler_estilos)?.unwrap_or_default();
 
@@ -700,8 +715,9 @@ pub(crate) fn desescapar_x(texto: &str) -> Cow<'_, str> {
 }
 
 /// `xl/sharedStrings.xml`: o texto de cada `<si>` (as partes `<t>` dos trechos formatados emendadas; o
-/// fonético `<rPh>` fica de fora).
-fn ler_textos(l: &mut Leitor<Fonte<'_>>) -> Result<Textos, ErroXml> {
+/// fonético `<rPh>` fica de fora). Passar de `limite` bytes na memória (o que já foi guardado mais a frase em
+/// curso) é [`ErroXml::Grande`].
+fn ler_textos(l: &mut Leitor<Fonte<'_>>, limite: usize) -> Result<Textos, ErroXml> {
     let mut textos = Textos::default();
     let mut item = String::new();
     let mut em_item = false;
@@ -722,6 +738,9 @@ fn ler_textos(l: &mut Leitor<Fonte<'_>>) -> Result<Textos, ErroXml> {
             Evento::Texto => {
                 if em_t {
                     item.push_str(l.texto());
+                    if textos.ocupado().saturating_add(item.len()) > limite {
+                        return Err(ErroXml::Grande { limite });
+                    }
                 }
             }
             Evento::Fecha => match l.nome() {
@@ -730,6 +749,10 @@ fn ler_textos(l: &mut Leitor<Fonte<'_>>) -> Result<Textos, ErroXml> {
                 "si" => {
                     em_item = false;
                     textos.empurrar(&desescapar_x(&item));
+                    // o fim de cada frase também conta: milhões de `<si/>` vazios não passam
+                    if textos.ocupado() > limite {
+                        return Err(ErroXml::Grande { limite });
+                    }
                 }
                 _ => {}
             },

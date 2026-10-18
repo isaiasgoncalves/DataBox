@@ -500,6 +500,35 @@ fn textos_compartilhados_com_trechos_formatados() {
 }
 
 #[test]
+fn textos_compartilhados_acima_do_limite_viram_erro() {
+    let tmp = Tmp::nova("sst-limite");
+    // 40 frases de 10 bytes: 400 bytes de texto mais 40 fins de frase
+    let itens = "<si><t>0123456789</t></si>".repeat(40);
+    let arquivo = Montador::novo().aba("P", "").textos(&itens).salvar(&tmp);
+    let e = erro_de(Pasta::abrir_com_limite(&arquivo, 300));
+    assert_eq!(
+        e.mensagem,
+        "A planilha não pôde ser aberta: os textos dela ocupariam mais de 300 bytes na memória, o limite do DataBox.          Se o arquivo for de confiança, divida-o no Excel em pastas de trabalho menores."
+    );
+    assert_eq!(e.status, 400);
+    assert!(e.detalhe.as_deref().is_some_and(|d| d.contains("sharedStrings.xml")), "{:?}", e.detalhe);
+    // uma frase só, maior que o limite, para no meio dela
+    let longa = format!("<si><t>{}</t></si>", "x".repeat(1000));
+    let tmp_longa = Tmp::nova("sst-limite-longa");
+    let arquivo = Montador::novo().aba("P", "").textos(&longa).salvar(&tmp_longa);
+    assert!(erro_de(Pasta::abrir_com_limite(&arquivo, 300)).mensagem.contains("300 bytes"));
+    // frases vazias também contam (o fim de cada uma)
+    let vazias = "<si/>".repeat(100);
+    let tmp_vazias = Tmp::nova("sst-limite-vazias");
+    let arquivo = Montador::novo().aba("P", "").textos(&vazias).salvar(&tmp_vazias);
+    assert!(erro_de(Pasta::abrir_com_limite(&arquivo, 300)).mensagem.contains("300 bytes"));
+    // abaixo do limite abre, e o limite de verdade é em MB
+    let pasta = Pasta::abrir_com_limite(&Montador::novo().aba("P", "").textos(&itens).salvar(&tmp), 1000).unwrap();
+    assert_eq!(pasta.textos_compartilhados(), 40);
+    assert!(erros::textos_grandes(pasta::LIMITE_TEXTOS).mensagem.contains("mais de 512 MB"));
+}
+
+#[test]
 fn indice_de_texto_invalido_vira_celula_vazia() {
     let tmp = Tmp::nova("sst-ruim");
     let linha =
