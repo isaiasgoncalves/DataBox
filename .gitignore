@@ -1,0 +1,23 @@
+# compilação
+/target/
+/dist/
+# cópias do intermediário de link, refeitas pelo cargo.ps1
+/ferramentas/bin/
+# capturas dos testes de tela (capturas/rust) e as de referência copiadas da versão web
+/capturas/
+# bancos e exportações de teste feitos à mão na raiz
+/*.db
+/*.sqlite
+/*.xlsx
+/*.csv
+/*.json
+# geradores em Python do design (e a página de conferência do cadeado.py --previa)
+__pycache__/
+*.pyc
+/design/ferramentas/previa_*.html
+.idea/
+.vscode/
+
+# ferramentas locais do Claude Code (fora do repositório público)
+/CLAUDE.md
+/.claude/

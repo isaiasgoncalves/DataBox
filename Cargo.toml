@@ -1,0 +1,63 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+# crates do próprio projeto
+comum = { path = "crates/comum" }
+amostras = { path = "crates/amostras" }
+ddl = { path = "crates/ddl" }
+banco = { path = "crates/banco" }
+esquema = { path = "crates/esquema" }
+exportar = { path = "crates/exportar" }
+planilha = { path = "crates/planilha" }
+prefs = { path = "crates/prefs" }
+servico = { path = "crates/servico" }
+interface = { path = "crates/interface" }
+estado = { path = "crates/estado" }
+tela_dados = { path = "crates/tela_dados" }
+tela_esquema = { path = "crates/tela_esquema" }
+tela_consulta = { path = "crates/tela_consulta" }
+tela_exportar = { path = "crates/tela_exportar" }
+tela_csv = { path = "crates/tela_csv" }
+tela_texto = { path = "crates/tela_texto" }
+tela_planilha = { path = "crates/tela_planilha" }
+tabular = { path = "crates/tabular" }
+texto = { path = "crates/texto" }
+
+# de fora (versões fixas; todas MIT e/ou Apache-2.0)
+eframe = { version = "=0.36.2", features = ["glow", "wgpu"] }
+egui = "=0.36.2"
+egui_extras = { version = "=0.36.2", features = ["image"] }
+egui_kittest = { version = "=0.36.2", features = ["wgpu", "snapshot"] }
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
+rusqlite = { version = "=0.40.2", features = ["bundled", "backup", "hooks", "limits"] }
+rfd = "=0.17.2"
+zip = { version = "=8.6.0", default-features = false, features = ["deflate"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "=1.0.151"
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+base64 = "=0.23.1"
+regex = "=1.13.1"
+log = "=0.4.34"
+parking_lot = "=0.12.5"
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+# Dependências otimizadas e sem depuração mesmo no build de desenvolvimento: o SQLite e o egui ficam
+# rápidos nos testes, e os binários e o link, bem menores.
+opt-level = 2
+debug = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
