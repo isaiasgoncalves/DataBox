@@ -59,7 +59,7 @@ pub(crate) fn proximo_registro(
             citado = true;
             pos += 1;
             loop {
-                let Some(k) = buf[pos..].iter().position(|&b| b == b'"') else {
+                let Some(k) = buf.get(pos..).unwrap_or_default().iter().position(|&b| b == b'"') else {
                     if !eof {
                         return None;
                     }
@@ -80,7 +80,8 @@ pub(crate) fn proximo_registro(
             }
         }
         // o resto do campo, até o separador ou o fim do registro
-        let Some(k) = buf[pos..].iter().position(|&b| b == sep || b == b'\n' || b == b'\r') else {
+        let resto = buf.get(pos..).unwrap_or_default();
+        let Some((k, &b)) = resto.iter().enumerate().find(|&(_, &b)| b == sep || b == b'\n' || b == b'\r') else {
             if !eof {
                 return None;
             }
@@ -94,7 +95,6 @@ pub(crate) fn proximo_registro(
             c.push(Campo { ini: campo_ini, fim: p, citado });
         }
         n_campos += 1;
-        let b = buf[p];
         if b == sep {
             pos = p + 1;
             continue;
@@ -136,7 +136,7 @@ fn desfazer_aspas(bytes: &[u8]) -> Cow<'_, [u8]> {
             saida.extend_from_slice(bytes.get(i..).unwrap_or_default());
             break;
         };
-        saida.extend_from_slice(&bytes[i..i + k]);
+        saida.extend_from_slice(bytes.get(i..i + k).unwrap_or_default());
         i += k + 1;
         if bytes.get(i) == Some(&b'"') {
             saida.push(b'"');
@@ -211,14 +211,15 @@ impl<R: Read> Varredura<R> {
             self.buf.resize(novo, 0);
         }
         loop {
-            match self.fonte.read(&mut self.buf[self.cheio..]) {
+            let livre = self.buf.get_mut(self.cheio..).unwrap_or_default();
+            match self.fonte.read(livre) {
                 Ok(0) => {
                     self.eof = true;
                     return Ok(());
                 }
                 Ok(k) => {
                     if let Some(v) = self.validador.as_mut() {
-                        v.alimentar(&self.buf[self.cheio..self.cheio + k]);
+                        v.alimentar(self.buf.get(self.cheio..self.cheio + k).unwrap_or_default());
                     }
                     self.cheio += k;
                     return Ok(());
@@ -238,7 +239,13 @@ impl<R: Read> Varredura<R> {
             }
             if self.pos < self.cheio {
                 let campos = if self.coletar { Some(&mut self.campos) } else { None };
-                if let Some(r) = proximo_registro(&self.buf[..self.cheio], self.pos, self.sep, self.eof, campos) {
+                if let Some(r) = proximo_registro(
+                    self.buf.get(..self.cheio).unwrap_or_default(),
+                    self.pos,
+                    self.sep,
+                    self.eof,
+                    campos,
+                ) {
                     self.ini_atual = self.pos;
                     self.atual = r;
                     return Ok(true);
@@ -289,12 +296,12 @@ impl<R: Read> Varredura<R> {
     }
 
     pub fn buffer(&self) -> &[u8] {
-        &self.buf[..self.cheio]
+        self.buf.get(..self.cheio).unwrap_or_default()
     }
 
     /// Todos os campos do registro atual, decodificados. Exige `coletar`.
     pub fn todos_os_campos(&self, cod: Codificacao) -> Vec<String> {
-        let buf = &self.buf[..self.cheio];
+        let buf = self.buffer();
         self.campos.iter().map(|c| decodificar_campo(buf, *c, cod)).collect()
     }
 

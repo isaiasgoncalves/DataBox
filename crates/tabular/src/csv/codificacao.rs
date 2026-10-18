@@ -151,23 +151,20 @@ impl ValidadorUtf8 {
             return;
         }
         let mut resto = bloco;
-        if self.n > 0 {
+        let cauda = self.cauda.get(..self.n).unwrap_or_default();
+        if let Some(&primeiro) = cauda.first() {
             // completa o caractere que ficou partido no bloco anterior
-            let falta = tamanho_esperado(self.cauda[0]).saturating_sub(self.n);
-            let usa = falta.min(bloco.len());
-            let mut junto = [0u8; 4];
-            junto[..self.n].copy_from_slice(&self.cauda[..self.n]);
-            junto[self.n..self.n + usa].copy_from_slice(&bloco[..usa]);
-            let total = self.n + usa;
-            match std::str::from_utf8(&junto[..total]) {
+            let falta = tamanho_esperado(primeiro).saturating_sub(self.n);
+            let (usa, depois) = bloco.split_at_checked(falta).unwrap_or((bloco, &[]));
+            let junto: Vec<u8> = cauda.iter().chain(usa).copied().collect();
+            match std::str::from_utf8(&junto) {
                 Ok(_) => {
                     self.n = 0;
-                    resto = &bloco[usa..];
+                    resto = depois;
                 }
                 Err(e) if e.error_len().is_none() => {
                     // ainda incompleto (bloco minúsculo): guarda o que já se tem
-                    self.cauda[..total].copy_from_slice(&junto[..total]);
-                    self.n = total;
+                    self.guardar_cauda(&junto);
                     return;
                 }
                 Err(_) => {
@@ -178,13 +175,19 @@ impl ValidadorUtf8 {
         }
         match std::str::from_utf8(resto) {
             Ok(_) => {}
-            Err(e) if e.error_len().is_none() => {
-                let cauda = &resto[e.valid_up_to()..];
-                self.cauda[..cauda.len()].copy_from_slice(cauda);
-                self.n = cauda.len();
-            }
+            Err(e) if e.error_len().is_none() => self.guardar_cauda(resto.get(e.valid_up_to()..).unwrap_or_default()),
             Err(_) => self.invalido = true,
         }
+    }
+
+    /// Guarda o caractere partido no fim do bloco (até 3 bytes: o que é incompleto nunca passa disso).
+    fn guardar_cauda(&mut self, bytes: &[u8]) {
+        if bytes.len() > self.cauda.len() {
+            self.invalido = true;
+            return;
+        }
+        self.cauda.iter_mut().zip(bytes).for_each(|(c, &b)| *c = b);
+        self.n = bytes.len();
     }
 
     /// O arquivo inteiro é UTF-8 válido (sem caractere cortado no fim).

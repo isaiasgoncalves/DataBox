@@ -97,8 +97,8 @@ impl Tabela {
             .collect();
         if self.edicoes.tem_celulas_alteradas() {
             for (id, valor) in self.edicoes.celulas_da_linha(chave) {
-                if let Some(p) = colunas.iter().position(|c| c.id == id) {
-                    linha[p] = valor.to_string();
+                if let Some(c) = colunas.iter().position(|c| c.id == id).and_then(|p| linha.get_mut(p)) {
+                    *c = valor.to_string();
                 }
             }
         }
@@ -110,24 +110,22 @@ impl Tabela {
     pub fn pagina(&mut self, inicio: u64, quantidade: usize) -> Resultado<Vec<Vec<String>>> {
         let chaves = self.edicoes.chaves(inicio, quantidade);
         let mut saida = Vec::with_capacity(chaves.len());
-        let mut i = 0;
-        while i < chaves.len() {
-            match chaves[i] {
+        let mut resto = chaves.as_slice();
+        while let Some((&chave, depois)) = resto.split_first() {
+            match chave {
                 ChaveLinha::Nova(_) => {
-                    saida.push(self.montar(chaves[i], None));
-                    i += 1;
+                    saida.push(self.montar(chave, None));
+                    resto = depois;
                 }
                 ChaveLinha::Base(r) => {
                     // as linhas do arquivo em sequência saem de uma leitura só
-                    let mut j = i + 1;
-                    while j < chaves.len() && chaves[j] == ChaveLinha::Base(r + (j - i) as u64) {
-                        j += 1;
-                    }
-                    let lidas = self.leitor.linhas_de(r, j - i)?;
-                    for (k, chave) in chaves[i..j].iter().enumerate() {
+                    let seguidas = depois.iter().zip(r + 1..).take_while(|&(c, s)| *c == ChaveLinha::Base(s)).count();
+                    let (bloco, depois) = resto.split_at_checked(1 + seguidas).unwrap_or((resto, &[]));
+                    let lidas = self.leitor.linhas_de(r, bloco.len())?;
+                    for (k, chave) in bloco.iter().enumerate() {
                         saida.push(self.montar(*chave, lidas.get(k).map(Vec::as_slice)));
                     }
-                    i = j;
+                    resto = depois;
                 }
             }
         }
@@ -153,27 +151,30 @@ impl Tabela {
         let colunas = self.edicoes.colunas();
         let mut origens = Vec::new();
         let mut posicao_na_origem = Vec::with_capacity(indices.len());
+        let mut ids = Vec::with_capacity(indices.len());
         for &c in indices {
             let coluna = colunas.get(c).ok_or_else(|| ErroBanco::novo(format!("A coluna {} não existe.", c + 1)))?;
+            ids.push(coluna.id);
             posicao_na_origem.push(coluna.origem.map(|o| {
                 origens.push(o);
                 origens.len() - 1
             }));
         }
-        let ids: Vec<_> = indices.iter().map(|&c| colunas[c].id).collect();
         let mut base = if origens.is_empty() { Vec::new() } else { self.leitor.colunas_de(&origens, ao_progresso)? };
         let total = usize::try_from(self.edicoes.total_linhas()).unwrap_or(0);
         let mut saida: Vec<Vec<String>> = indices.iter().map(|_| Vec::with_capacity(total)).collect();
         let tem_alteracoes = self.edicoes.tem_celulas_alteradas();
         for chave in self.edicoes.percorrer_chaves() {
-            for (k, coluna) in saida.iter_mut().enumerate() {
-                let mut valor = match (chave, posicao_na_origem[k]) {
-                    (ChaveLinha::Base(r), Some(p)) => {
-                        usize::try_from(r).ok().and_then(|r| base[p].get_mut(r)).map(std::mem::take).unwrap_or_default()
-                    }
+            for ((coluna, &posicao), &id) in saida.iter_mut().zip(&posicao_na_origem).zip(&ids) {
+                let mut valor = match (chave, posicao) {
+                    (ChaveLinha::Base(r), Some(p)) => usize::try_from(r)
+                        .ok()
+                        .and_then(|r| base.get_mut(p)?.get_mut(r))
+                        .map(std::mem::take)
+                        .unwrap_or_default(),
                     _ => String::new(),
                 };
-                if tem_alteracoes && let Some(v) = self.edicoes.celula_editada(chave, ids[k]) {
+                if tem_alteracoes && let Some(v) = self.edicoes.celula_editada(chave, id) {
                     valor = v.to_string();
                 }
                 coluna.push(valor);
@@ -340,8 +341,8 @@ impl Tabela {
         for (linha, chave) in marcas.iter_mut().zip(chaves) {
             for (id, _) in self.edicoes.celulas_da_linha(chave) {
                 // a célula de uma coluna que foi excluída continua guardada, mas não aparece
-                if let Some(&p) = posicoes.get(&id) {
-                    linha[p] = true;
+                if let Some(marca) = posicoes.get(&id).and_then(|&p| linha.get_mut(p)) {
+                    *marca = true;
                 }
             }
         }

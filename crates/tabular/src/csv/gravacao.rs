@@ -254,8 +254,8 @@ fn escrever(
                             };
                         }
                         for (id, valor) in edicoes.celulas_da_linha(ChaveLinha::Base(r)) {
-                            if let Some(&p) = posicao_da_coluna.get(&id) {
-                                linha_de_saida[p] = valor.to_string();
+                            if let Some(c) = posicao_da_coluna.get(&id).and_then(|&p| linha_de_saida.get_mut(p)) {
+                                *c = valor.to_string();
                             }
                         }
                         buffer.clear();
@@ -276,8 +276,8 @@ fn escrever(
                     c.clear();
                 }
                 for (idc, valor) in edicoes.celulas_da_linha(ChaveLinha::Nova(*id)) {
-                    if let Some(&p) = posicao_da_coluna.get(&idc) {
-                        linha_de_saida[p] = valor.to_string();
+                    if let Some(c) = posicao_da_coluna.get(&idc).and_then(|&p| linha_de_saida.get_mut(p)) {
+                        *c = valor.to_string();
                     }
                 }
                 buffer.clear();

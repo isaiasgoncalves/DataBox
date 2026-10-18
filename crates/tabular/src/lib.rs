@@ -121,6 +121,9 @@
 //! ponta. Os benchmarks estão marcados `#[ignore]`: `cargo test --release -p tabular -- --ignored --nocapture`.
 
 #![forbid(unsafe_code)]
+// Índice e fatia que estouram viram pânico; aqui eles passam por .get() ou iterador (ARQUITETURA.md §3).
+// Os testes ficam de fora: neles, o pânico é a falha que se quer ver.
+#![cfg_attr(not(test), deny(clippy::indexing_slicing))]
 
 pub mod colunas;
 pub mod csv;

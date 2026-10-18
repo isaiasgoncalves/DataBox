@@ -192,14 +192,13 @@ impl Edicoes {
     /// em vez de uma [`Edicoes::chave_da_linha`] por linha (que percorre os trechos a cada vez; depois de muitas
     /// exclusões salteadas, são muitos).
     fn chaves_das_linhas(&self, linhas: &[u64]) -> Vec<Option<ChaveLinha>> {
-        let mut ordem: Vec<usize> = (0..linhas.len()).collect();
-        ordem.sort_unstable_by_key(|&i| linhas[i]);
+        let mut ordem: Vec<(usize, u64)> = linhas.iter().copied().enumerate().collect();
+        ordem.sort_unstable_by_key(|&(_, linha)| linha);
         let mut saida = vec![None; linhas.len()];
         let mut trechos = self.trechos.iter();
         let mut atual = trechos.next();
         let mut acumulado = 0u64;
-        for i in ordem {
-            let linha = linhas[i];
+        for (i, linha) in ordem {
             while let Some(t) = atual {
                 if linha < acumulado + t.tamanho() {
                     break;
@@ -207,8 +206,8 @@ impl Edicoes {
                 acumulado += t.tamanho();
                 atual = trechos.next();
             }
-            let Some(t) = atual else { break };
-            saida[i] = Some(match t {
+            let (Some(t), Some(chave)) = (atual, saida.get_mut(i)) else { break };
+            *chave = Some(match t {
                 Trecho::Base { de, .. } => ChaveLinha::Base(de + (linha - acumulado)),
                 Trecho::Nova(id) => ChaveLinha::Nova(*id),
             });
@@ -447,13 +446,14 @@ impl Edicoes {
     fn inserir_trecho(trechos: &mut Vec<Trecho>, posicao: u64, id: u64) {
         let mut acumulado = 0;
         for i in 0..trechos.len() {
-            let tamanho = trechos[i].tamanho();
+            let Some(trecho) = trechos.get(i).cloned() else { break };
+            let tamanho = trecho.tamanho();
             if posicao == acumulado {
                 trechos.insert(i, Trecho::Nova(id));
                 return;
             }
             if posicao < acumulado + tamanho
-                && let Trecho::Base { de, ate } = trechos[i].clone()
+                && let Trecho::Base { de, ate } = trecho
             {
                 let corte = de + (posicao - acumulado);
                 trechos.splice(
@@ -560,7 +560,9 @@ impl Edicoes {
             return Ok(());
         }
         let antes = self.colunas.clone();
-        self.colunas[coluna].nome = nome;
+        if let Some(atual) = self.colunas.get_mut(coluna) {
+            atual.nome = nome;
+        }
         self.registrar(Passo { colunas: Some(antes), ..Passo::default() });
         Ok(())
     }

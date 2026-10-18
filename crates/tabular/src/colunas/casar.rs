@@ -106,8 +106,8 @@ fn montar_indice<'a>(normalizadas: &'a [Cow<'_, str>]) -> IndiceDaOrigem<'a> {
                     grupo.extend([atual, i]);
                     grupos.push(grupo);
                     o.insert(BIT_DE_GRUPO | (grupos.len() - 1));
-                } else {
-                    grupos[atual & !BIT_DE_GRUPO].push(i);
+                } else if let Some(grupo) = grupos.get_mut(atual & !BIT_DE_GRUPO) {
+                    grupo.push(i);
                 }
             }
         }
@@ -123,7 +123,11 @@ pub fn indice_da_origem<S: AsRef<str>>(chaves: &[S], opcoes: &OpcoesCasamento) -
         .mapa
         .iter()
         .map(|(k, &v)| {
-            let linhas = if v & BIT_DE_GRUPO == 0 { vec![v] } else { indice.grupos[v & !BIT_DE_GRUPO].clone() };
+            let linhas = if v & BIT_DE_GRUPO == 0 {
+                vec![v]
+            } else {
+                indice.grupos.get(v & !BIT_DE_GRUPO).cloned().unwrap_or_default()
+            };
             ((*k).to_string(), linhas)
         })
         .collect()
@@ -230,8 +234,8 @@ impl Casamento {
             Linhas::Nenhuma => None,
             Linhas::Uma(o) => Some(valor(o).to_string()),
             Linhas::Varias(v) => Some(match modo {
-                ChavesRepetidas::Primeira => valor(v[0]).to_string(),
-                ChavesRepetidas::Ultima => valor(v[v.len() - 1]).to_string(),
+                ChavesRepetidas::Primeira => v.first().map_or("", |&o| valor(o)).to_string(),
+                ChavesRepetidas::Ultima => v.last().map_or("", |&o| valor(o)).to_string(),
                 ChavesRepetidas::TodasJuntas => v
                     .iter()
                     .map(|&o| valor(o))
@@ -292,9 +296,14 @@ pub fn casar<D: AsRef<str> + Sync, O: AsRef<str>>(destino: &[D], origem: &[O], o
         })
     };
     let sem_par: Vec<usize> = pares.iter().enumerate().filter(|(_, p)| **p == Par::Nenhum).map(|(i, _)| i).collect();
-    let mut repetidas: Vec<Repetida> =
-        grupos.iter().map(|g| Repetida { chave: origem[g[0]].as_ref().to_string(), linhas: g.clone() }).collect();
-    repetidas.sort_by_key(|r| r.linhas[0]);
+    let mut repetidas: Vec<Repetida> = grupos
+        .iter()
+        .map(|g| {
+            let chave = g.first().and_then(|&o| origem.get(o)).map_or("", AsRef::as_ref);
+            Repetida { chave: chave.to_string(), linhas: g.clone() }
+        })
+        .collect();
+    repetidas.sort_by_key(|r| r.linhas.first().copied());
     Casamento { pares, sem_par, repetidas, grupos }
 }
 /// A sugestão automática das colunas-chave: a coluna de mesmo nome (sem diferenciar maiúsculas nem espaços

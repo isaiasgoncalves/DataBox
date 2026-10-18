@@ -25,17 +25,16 @@ pub fn texto_tem_cabecalho(linhas: &[Vec<String>], origem: OrigemDoTexto, decima
     if origem == OrigemDoTexto::Databox {
         return !linhas.is_empty();
     }
-    if linhas.len() < 2 {
+    let Some((primeira, embaixo)) = linhas.split_first().filter(|(_, embaixo)| !embaixo.is_empty()) else {
         return false;
-    }
-    let primeira = &linhas[0];
+    };
     if primeira.iter().any(|c| !matches!(classificar(c, decimal), TipoDetectado::Texto | TipoDetectado::Vazio)) {
         return false;
     }
     (0..largura(linhas)).any(|j| {
         let nome = primeira.get(j).map_or("", String::as_str);
         classificar(nome, decimal) == TipoDetectado::Texto
-            && tipo_da_coluna(linhas[1..].iter().map(|l| l.get(j).map_or("", String::as_str)), decimal).e_tipado()
+            && tipo_da_coluna(embaixo.iter().map(|l| l.get(j).map_or("", String::as_str)), decimal).e_tipado()
     })
 }
 
@@ -124,7 +123,7 @@ pub fn posicionar(valores: &[String], linhas_do_arquivo: usize, sobram: QuandoSo
         }
         Quantidades::SobramValores { extras } => match sobram {
             QuandoSobram::Cortar => Posicionamento {
-                valores: valores[..linhas_do_arquivo].to_vec(),
+                valores: valores.iter().take(linhas_do_arquivo).cloned().collect(),
                 linhas_a_acrescentar: 0,
                 linhas_vazias: 0,
                 descartados: extras,
@@ -161,16 +160,16 @@ pub struct Atualizacao {
 pub fn atualizar_coluna(atual: &[String], trazidos: &[Option<String>], modo: ModoAtualizacao) -> Atualizacao {
     let mut valores = atual.to_vec();
     let mut alteradas = Vec::new();
-    for (i, (velho, novo)) in atual.iter().zip(trazidos).enumerate() {
+    for (i, (celula, novo)) in valores.iter_mut().zip(trazidos).enumerate() {
         let Some(novo) = novo else {
             continue;
         };
         let vale = match modo {
             ModoAtualizacao::Substituir => true,
-            ModoAtualizacao::SoCelulasVazias => velho.trim().is_empty(),
+            ModoAtualizacao::SoCelulasVazias => celula.trim().is_empty(),
         };
-        if vale && novo != velho {
-            valores[i] = novo.clone();
+        if vale && novo != celula {
+            celula.clone_from(novo);
             alteradas.push(i);
         }
     }

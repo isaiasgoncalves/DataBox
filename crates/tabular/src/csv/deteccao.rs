@@ -168,7 +168,7 @@ pub fn detectar_cabecalho(registros: &[Vec<String>], decimal: char) -> bool {
     if primeira.is_empty() {
         return false;
     }
-    let resto = &registros[1..];
+    let resto = registros.get(1..).unwrap_or_default();
     let tipos: Vec<TipoDetectado> = primeira.iter().map(|c| classificar(c, decimal)).collect();
     let tudo_texto = tipos.iter().all(|t| *t == TipoDetectado::Texto);
     if resto.is_empty() {
