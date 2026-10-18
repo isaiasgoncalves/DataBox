@@ -46,6 +46,9 @@ GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um
 5. Acompanhe em **Actions › Release** (uns 15 minutos). No fim, a versão aparece em **Releases**, e o link
    `../../releases/latest` do README passa a baixar ela.
 
+Antes da tag, dá para testar o AppImage do Linux: **Actions › CI › Run workflow** gera o artefato `appimage` com o
+`DataBox-dev-<commit>-x86_64.AppImage` (ou, numa máquina Linux, `ferramentas/appimage.sh`).
+
 A tag precisa bater com a versão do `Cargo.toml` (`v0.1.0` ↔ `0.1.0`); se não bater, o workflow para antes de
 publicar. Se algo der errado depois de criada, apague a versão na página de Releases e a tag
 (`git push --delete origin v0.1.0` e `git tag -d v0.1.0`), corrija e repita.

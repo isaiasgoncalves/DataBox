@@ -84,7 +84,7 @@ fn main() -> ExitCode {
 /// `--criar-atalho`: os atalhos na Área de Trabalho e no Menu Iniciar, para o próprio executável.
 fn criar_atalho() -> ExitCode {
     let exe = match std::env::current_exe() {
-        Ok(exe) => exe,
+        Ok(exe) => atalho::executavel_do_pacote(std::env::var_os("APPIMAGE"), exe),
         Err(e) => {
             log::error!("Não foi possível saber onde está o executável: {e}");
             caixa(&falha_fatal(&format!("Não foi possível saber onde está o executável: {e}")), true);
@@ -199,7 +199,9 @@ fn executar(args: &Argumentos) -> ExitCode {
 /// Abre o próprio executável de novo com `--renderizador wgpu` (os mesmos argumentos) e sai.
 fn relancar(args: &Argumentos) -> ExitCode {
     let novos = linha_comando::argumentos_para_relancar(args, Renderizador::Wgpu);
-    let lancado = std::env::current_exe().and_then(|exe| std::process::Command::new(exe).args(&novos).spawn());
+    let lancado = std::env::current_exe()
+        .map(|exe| atalho::executavel_do_pacote(std::env::var_os("APPIMAGE"), exe))
+        .and_then(|exe| std::process::Command::new(exe).args(&novos).spawn());
     match lancado {
         Ok(_) => ExitCode::SUCCESS,
         Err(e) => {

@@ -32,6 +32,10 @@ Windows 10 or 11, 64-bit.
 > The executable is not code-signed, so Windows SmartScreen may warn you the first time ("Windows protected your
 > PC"). Click **More info › Run anyway**, or build it yourself (below).
 
+**Linux (experimental):** grab `DataBox-…-x86_64.AppImage`, make it executable and run it (double-click, or
+`chmod +x DataBox-*.AppImage && ./DataBox-*.AppImage`). Nothing to install; `--criar-atalho` adds it to the
+applications menu, pointing at the AppImage. Without FUSE, run it with `--appimage-extract-and-run`.
+
 ---
 
 ## Features
@@ -130,6 +134,7 @@ Keep the project in a shallow folder: paths over 260 characters break the Window
 sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
 cargo build --release -p editor        # target/release/DataBox
 ./target/release/DataBox --criar-atalho  # adds DataBox to the applications menu (~/.local/share/applications)
+ferramentas/appimage.sh                  # builds dist/DataBox-<version>-x86_64.AppImage (needs curl)
 ```
 
 At run time it uses the desktop's file dialogs (`xdg-desktop-portal`), `xdg-open` (package `xdg-utils`) and the Noto

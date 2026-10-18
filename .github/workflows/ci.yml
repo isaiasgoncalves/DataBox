@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Rodar à mão (Actions › CI › Run workflow) também monta o AppImage, para testar antes de publicar uma versão.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -115,3 +117,30 @@ jobs:
 
       - name: Testes do editor sem as telas
         run: cargo test -p editor --no-default-features
+
+  appimage:
+    # Só quando rodado à mão: o AppImage do commit escolhido, como artefato (Actions › a execução › Artifacts).
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pacotes do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: AppImage
+        run: bash ferramentas/appimage.sh "dev-${GITHUB_SHA::7}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage

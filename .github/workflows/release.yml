@@ -2,7 +2,9 @@ name: Release
 
 # Publica uma versão quando uma tag vX.Y.Z é enviada (git tag v0.1.0 && git push origin v0.1.0).
 # Compila o DataBox otimizado para Windows e para Linux e cria a página da versão com o DataBox.exe, um .zip para
-# Windows (exe, licença e avisos de terceiros), um .tar.gz para Linux (o binário, a licença e os avisos) e o SHA-256.
+# Windows (exe, licença e avisos de terceiros), para Linux o AppImage (ferramentas/appimage.sh) e um .tar.gz (o
+# binário, a licença e os avisos), e o SHA-256. O Linux compila no Ubuntu 22.04: a glibc mínima do binário é a da
+# máquina que compila, e a mais antiga dá o AppImage que roda em mais distribuições.
 
 on:
   push:
@@ -65,7 +67,7 @@ jobs:
           path: saida/*
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -96,6 +98,12 @@ jobs:
           cp "$avisos" "$nome/THIRD-PARTY-NOTICES.txt"
           tar -czf "saida/$nome.tar.gz" "$nome"
 
+      - name: AppImage
+        run: |
+          tag="${{ github.ref_name }}"
+          bash ferramentas/appimage.sh "$tag"
+          cp "dist/DataBox-$tag-x86_64.AppImage" saida/
+
       - uses: actions/upload-artifact@v4
         with:
           name: linux
@@ -118,7 +126,9 @@ jobs:
         run: |
           tag="${{ github.ref_name }}"
           cd arquivos
-          sha256sum DataBox.exe "DataBox-$tag-windows-x64.zip" "DataBox-$tag-linux-x64.tar.gz" > SHA256SUMS.txt
+          sha256sum DataBox.exe "DataBox-$tag-windows-x64.zip" "DataBox-$tag-x86_64.AppImage" \
+            "DataBox-$tag-linux-x64.tar.gz" > SHA256SUMS.txt
           notas="Veja o [CHANGELOG](https://github.com/${{ github.repository }}/blob/$tag/CHANGELOG.md)."
-          gh release create "$tag" DataBox.exe "DataBox-$tag-windows-x64.zip" "DataBox-$tag-linux-x64.tar.gz" \
+          gh release create "$tag" DataBox.exe "DataBox-$tag-windows-x64.zip" "DataBox-$tag-x86_64.AppImage" \
+            "DataBox-$tag-linux-x64.tar.gz" \
             SHA256SUMS.txt --title "DataBox $tag" --notes "$notas" --verify-tag --repo "${{ github.repository }}"

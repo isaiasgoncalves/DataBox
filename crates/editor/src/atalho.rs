@@ -7,7 +7,8 @@
 //!
 //! Fora do Windows (Linux e outros desktops freedesktop), o atalho é o `databox.desktop` em
 //! `$XDG_DATA_HOME/applications` (sem a variável, `~/.local/share/applications`), que o menu de aplicativos lê, com o
-//! logo de 256 px gravado em `$XDG_DATA_HOME/icons/hicolor/256x256/apps/databox.png` ([`gravar_desktop`]).
+//! logo de 256 px gravado em `$XDG_DATA_HOME/icons/hicolor/256x256/apps/databox.png` ([`gravar_desktop`]). Rodando
+//! de um AppImage, o atalho aponta para o `.AppImage` ([`executavel_do_pacote`]).
 
 use std::path::{Path, PathBuf};
 #[cfg(windows)]
@@ -22,6 +23,16 @@ pub const NOME_ICONE: &str = "databox.png";
 /// A descrição do atalho (a dica do Explorer), a mesma do Sobre.
 pub const DESCRICAO: &str =
     "Toolkit de dados gratuito e aberto para desenvolvedores, cientistas e engenheiros de dados.";
+
+/// O executável que o atalho e o "abrir de novo" usam. Dentro de um AppImage é o próprio `.AppImage` (a variável
+/// `APPIMAGE`, caminho absoluto de um arquivo que existe): o executável de dentro fica numa montagem temporária
+/// (`/tmp/.mount_…`) que some quando o programa fecha. Fora dele, `atual` (o `current_exe`).
+pub fn executavel_do_pacote(appimage: Option<std::ffi::OsString>, atual: PathBuf) -> PathBuf {
+    match appimage.map(PathBuf::from) {
+        Some(pacote) if pacote.is_absolute() && pacote.is_file() => pacote,
+        _ => atual,
+    }
+}
 
 /// Texto entre aspas simples do PowerShell (a aspa simples dobra).
 fn aspas(texto: &str) -> String {
@@ -189,6 +200,21 @@ pub fn gravar_desktop(exe: &Path, pasta: &Path, pasta_icone: &Path) -> Result<Pa
 #[cfg(test)]
 mod testes {
     use super::*;
+
+    #[test]
+    fn executavel_do_pacote_so_com_appimage_que_existe() {
+        let atual = PathBuf::from("atual");
+        assert_eq!(executavel_do_pacote(None, atual.clone()), atual);
+        // relativo ou inexistente: fica o executável de agora
+        assert_eq!(executavel_do_pacote(Some("DataBox.AppImage".into()), atual.clone()), atual);
+        let pasta = std::env::temp_dir().join(format!("databox-appimage-{}", std::process::id()));
+        std::fs::create_dir_all(&pasta).expect("pasta");
+        let pacote = pasta.join("DataBox-x86_64.AppImage");
+        assert_eq!(executavel_do_pacote(Some(pacote.clone().into()), atual.clone()), atual);
+        std::fs::write(&pacote, b"").expect("pacote");
+        assert_eq!(executavel_do_pacote(Some(pacote.clone().into()), atual), pacote);
+        std::fs::remove_dir_all(&pasta).ok();
+    }
 
     #[test]
     fn base64_como_o_padrao() {

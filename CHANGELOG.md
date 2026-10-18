@@ -10,6 +10,10 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 - Versão para Linux (experimental): o `.tar.gz` de cada versão traz o binário `DataBox`. "Abrir no programa padrão"
   e "Mostrar na pasta" usam o `xdg-open`, e `DataBox --criar-atalho` põe o DataBox no menu de aplicativos (um
   `databox.desktop` com o logo). O CI roda fmt, clippy e os testes também no Ubuntu.
+- **AppImage** para Linux em cada versão (`DataBox-vX.Y.Z-x86_64.AppImage`): um arquivo só, sem instalar, compilado
+  no Ubuntu 22.04 para rodar em mais distribuições. Aberto de um AppImage, o `--criar-atalho` aponta para o próprio
+  `.AppImage`. O `ferramentas/appimage.sh` monta o pacote na máquina de quem compila, e rodar o CI à mão (Run
+  workflow) também gera um, para testar antes de publicar.
 
 ### Alterado
 

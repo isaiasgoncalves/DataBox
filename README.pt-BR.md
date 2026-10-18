@@ -34,6 +34,10 @@ instalar nada. Windows 10 ou 11, 64 bits.
 > O executável não é assinado digitalmente; na primeira vez, o Windows SmartScreen pode avisar ("O Windows protegeu o
 > computador"). Clique em **Mais informações › Executar assim mesmo**. Se preferir, compile você mesmo (abaixo).
 
+**Linux (experimental):** baixe o `DataBox-…-x86_64.AppImage`, dê permissão de execução e abra (duplo clique, ou
+`chmod +x DataBox-*.AppImage && ./DataBox-*.AppImage`). Não precisa instalar nada; `--criar-atalho` põe o DataBox no
+menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FUSE, rode com `--appimage-extract-and-run`.
+
 ---
 
 ## Recursos
@@ -206,6 +210,7 @@ No Linux é o `cargo` direto, sem o `cargo.ps1`. No Debian/Ubuntu, instale uma v
 sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
 cargo build --release -p editor          # target/release/DataBox
 ./target/release/DataBox --criar-atalho  # põe o DataBox no menu de aplicativos (~/.local/share/applications)
+ferramentas/appimage.sh                  # monta dist/DataBox-<versão>-x86_64.AppImage (precisa do curl)
 ```
 
 Para rodar, ele usa os diálogos de arquivo da área de trabalho (`xdg-desktop-portal`), o `xdg-open` (pacote

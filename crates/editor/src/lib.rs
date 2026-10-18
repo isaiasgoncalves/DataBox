@@ -84,7 +84,8 @@
 //!     max_bytes, copias) · escrever(linha) · com_adiamento, Registro (log::Log), formatar_linha, nivel_do_alvo,
 //!     MAX_BYTES (1.000.000), COPIAS (2), ADIAR_ROTACAO (60 s)}
 //! atalho::{criar_atalhos(exe, Option<&[PathBuf]>) -> Result<Vec<PathBuf>, String> (fora do Windows, Err),
-//!     script, base64_utf16, NOME_ATALHO ("DataBox.lnk"), DESCRICAO}
+//!     script, base64_utf16, NOME_ATALHO ("DataBox.lnk"), DESCRICAO,
+//!     executavel_do_pacote(APPIMAGE, current_exe) -> PathBuf (o `.AppImage`, se rodando de um)}
 //! ```
 //!
 //! # O que a casca faz a cada quadro ([`Editor::desenhar`])
