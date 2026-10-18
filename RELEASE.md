@@ -31,7 +31,7 @@ GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um
 ### Passo a passo
 
 1. **Atualize a versão** em `Cargo.toml` (`[workspace.package] version`) e em `crates/editor/recursos/databox.rc`
-   (`FILEVERSION`, `PRODUCTVERSION` e os textos `FileVersion`/`ProductVersion`). Para a 0.1.0, já está feito.
+   (`FILEVERSION`, `PRODUCTVERSION` e os textos `FileVersion`/`ProductVersion`). (Na 0.1.1, já está feito.)
 2. **Atualize o [`CHANGELOG.md`](CHANGELOG.md):** mova o que está em "Não lançado" para uma seção nova com a versão e
    a data.
 3. Rode os testes (`.\cargo.ps1 test --workspace`) e faça o commit (`git commit -am "chore: versão 0.2.0"`).

@@ -5,6 +5,8 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+## [0.1.1] - 2026-10-18
+
 ### Adicionado
 
 - `THIRD-PARTY-NOTICES.txt` no `.zip` de cada versão: as bibliotecas de terceiros com a licença de cada uma, os
@@ -17,6 +19,11 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   dão erro em português em vez de esgotar a memória.
 - Bancos abertos com `trusted_schema` desligado: visões, gatilhos e padrões gravados no arquivo só usam funções
   inofensivas do SQLite.
+
+### Alterado
+
+- Os leitores de arquivo (CSV, texto/JSON, `CREATE TABLE` e Excel) não indexam mais sem conferir o tamanho: um arquivo
+  malformado dá erro em vez de derrubar o programa (travado pelo clippy, `indexing_slicing`).
 
 ## [0.1.0] - 2026-10-18
 
@@ -40,5 +47,6 @@ Primeira versão pública.
   painéis redimensionáveis, Preferências, atalhos do teclado e acessibilidade (AccessKit).
 - Executável único, `DataBox.exe`, sem instalação; `--criar-atalho` para os atalhos do Windows.
 
-[Não lançado]: ../../compare/v0.1.0...HEAD
+[Não lançado]: ../../compare/v0.1.1...HEAD
+[0.1.1]: ../../compare/v0.1.0...v0.1.1
 [0.1.0]: ../../releases/tag/v0.1.0

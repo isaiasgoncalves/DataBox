@@ -846,7 +846,7 @@ fn ajuda_sobre_o_databox() {
     // o logo e o nome, a versão, a descrição e a ficha, sem Consolas
     let app = h.state().estado().app;
     let versao = format!("Versão {}", app.versao);
-    assert_eq!(versao, "Versão 0.1.0", "a versão do aplicativo");
+    assert_eq!(versao, "Versão 0.1.1", "a versão do aplicativo");
     let sqlite = format!("{}, embutido", app.sqlite_versao);
     for texto in [
         "DataBox",

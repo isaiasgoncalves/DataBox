@@ -9,7 +9,7 @@ leitura). É um executável só, `DataBox.exe`, sem instalação, sem runtime, s
 desenhada direto na placa de vídeo com [egui](https://github.com/emilk/egui), em Rust.
 
 Começou como um leitor e editor de SQLite e está crescendo para virar uma caixa de ferramentas com várias funções
-para quem trabalha com dados. Versão atual: **0.1.0**.
+para quem trabalha com dados. Versão atual: **0.1.1**.
 
 | Tipo | Extensões | Como abre |
 |---|---|---|

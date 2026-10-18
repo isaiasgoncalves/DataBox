@@ -61,7 +61,7 @@ Pedidos de 15/10/2026 que valem para a implementação, além das pranchetas 12 
   - os **painéis laterais redimensionáveis** (ver "Anatomia da janela");
   - a janela abre com **1280 × 800** (mínimo 960 × 600), largo o
     bastante para as Propriedades ficarem à vista;
-  - a versão do aplicativo é **0.1.0**: no Sobre, no recurso de versão do `DataBox.exe` e no workspace.
+  - a versão do aplicativo é **0.1.1**: no Sobre, no recurso de versão do `DataBox.exe` e no workspace.
 - **CSV:** botão Nova coluna logo depois de Nova linha (coluna com as divisas e um + à direita), que insere depois da
   coluna selecionada; um + no fim do cabeçalho da grade insere no fim. A coluna # tem 48 px e alarga com os algarismos.
 - **JSON:** o estado do documento é só o ícone (concluído ou erro), com a dica ao passar o mouse ou com o foco.

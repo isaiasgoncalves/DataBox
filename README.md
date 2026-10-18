@@ -9,7 +9,7 @@ files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). It
 [egui](https://github.com/emilk/egui), in Rust.
 
 It started as a SQLite viewer and editor and is growing into a toolbox with many tools for people who work with
-data. Current version: **0.1.0**.
+data. Current version: **0.1.1**.
 
 > The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now. English UI and docs are on
 > the roadmap; contributions are welcome.
