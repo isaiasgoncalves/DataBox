@@ -1,0 +1,17 @@
+[package]
+name = "tela_csv"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+egui = { workspace = true }
+comum = { workspace = true }
+tabular = { workspace = true }
+interface = { workspace = true }
+estado = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+estado = { workspace = true, features = ["apoio-testes"] }
+egui_kittest = { workspace = true }

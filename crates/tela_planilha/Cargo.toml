@@ -1,0 +1,18 @@
+[package]
+name = "tela_planilha"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+egui = { workspace = true }
+comum = { workspace = true }
+planilha = { workspace = true }
+tabular = { workspace = true }
+interface = { workspace = true }
+estado = { workspace = true }
+
+[dev-dependencies]
+estado = { workspace = true, features = ["apoio-testes"] }
+egui_kittest = { workspace = true }
+zip = { workspace = true }
