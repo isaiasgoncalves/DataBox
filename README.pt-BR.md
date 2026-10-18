@@ -1,15 +1,94 @@
-# DataBox
+<p align="center">
+  <img src="docs/imagens/logo.png" alt="Logo do DataBox: uma caixa de papelão aberta com um banco de dados, uma lupa e um gráfico" width="160">
+</p>
 
-[English](README.md) · **Português**
+<h1 align="center">DataBox</h1>
 
-O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto, para desenvolvedores, cientistas e
-engenheiros de dados. É um programa de mesa para Windows que abre, mostra e edita os arquivos do dia a dia: bancos
-**SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e **planilhas do Excel** (só
-leitura). É um executável só, `DataBox.exe`, sem instalação, sem runtime, sem navegador e sem servidor: a interface é
-desenhada direto na placa de vídeo com [egui](https://github.com/emilk/egui), em Rust.
+<p align="center">
+  <strong>Abra, explore, limpe e exporte seus dados num único <code>.exe</code>.</strong><br>
+  SQLite, CSV, JSON, Excel e pastas inteiras, sem instalar nada, sem servidor e sem mandar nada para a nuvem.
+</p>
 
-Começou como um leitor e editor de SQLite e está crescendo para virar uma caixa de ferramentas com várias funções
-para quem trabalha com dados. Versão atual: **0.1.1**.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-MIT-blue" alt="Licença MIT"></a>
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/isaiasgoncalves/DataBox?label=vers%C3%A3o" alt="Última versão"></a>
+  <a href="../../actions/workflows/ci.yml"><img src="https://github.com/isaiasgoncalves/DataBox/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/plataforma-Windows%2010%20%7C%2011-0078D6" alt="Plataforma: Windows 10 e 11">
+  <img src="https://img.shields.io/badge/Linux-em%20breve-lightgrey" alt="Linux em breve">
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <strong>Português</strong>
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><strong>⬇ Baixar o DataBox.exe</strong></a> ·
+  <a href="#guias-rápidos">Guias rápidos</a> ·
+  <a href="#recursos">Recursos</a> ·
+  <a href="#roadmap">Roadmap</a>
+</p>
+
+<p align="center">
+  <img src="docs/imagens/dados-sqlite-escuro.png" alt="A aba Dados de uma tabela SQLite no DataBox, tema escuro: filtro, grade, Explorador e Propriedades" width="900">
+</p>
+
+O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto, para cientistas de dados, engenheiros
+de dados e desenvolvedores. É um programa de mesa para Windows que abre, mostra e edita os arquivos do dia a dia:
+bancos **SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e **planilhas do
+Excel** (só leitura). A interface é desenhada direto na placa de vídeo com [egui](https://github.com/emilk/egui), em
+Rust. Versão atual: **0.1.1**.
+
+**Sumário:** [Por que o DataBox](#por-que-o-databox) · [Galeria](#galeria) · [Baixar](#baixar) ·
+[Guias rápidos](#guias-rápidos) · [Recursos](#recursos) · [Primeiro uso](#primeiro-uso) ·
+[Preferências e log](#onde-ficam-as-preferências-e-o-log) · [Roadmap](#roadmap) ·
+[Compilar](#compilar-a-partir-do-código) · [Mapa do código](#mapa-do-código) · [Contribuir](#contribuir) ·
+[Licença](#licença)
+
+---
+
+## Por que o DataBox
+
+- 📦 **Um `.exe` só, sem instalação.** Sem runtime, sem navegador, sem servidor, sem Java nem Python. Baixe, dê um
+  duplo clique e pronto; dá até para levar num pen drive.
+- 🔒 **Local e privado.** Seus dados não saem da máquina: nada de conta, nuvem ou telemetria.
+- ⚡ **Rápido com arquivo grande.** Um CSV de um milhão de linhas abre sem esperar (a grade lê por páginas, sem
+  carregar tudo na memória); uma planilha grande mostra a primeira página na hora; um milhão de linhas vira Excel em
+  cerca de 7 s.
+- 🛡️ **Seguro com o seu dado.** Toda mudança de estrutura mostra antes o SQL que vai rodar; bancos podem abrir só
+  para leitura; o CSV salva no mesmo formato sem tocar no que não mudou, e não sobrescreve um arquivo que outro
+  programa alterou.
+- 🧰 **Uma caixa de ferramentas, não só um editor.** Abra uma pasta e trabalhe com os bancos, CSV, planilhas e JSON
+  dela lado a lado, em abas, e cruze um arquivo com outro.
+- 🎨 **Bonito e confortável.** Tema claro e escuro, vidro fosco, ícones próprios, atalhos de teclado para tudo.
+
+---
+
+## Galeria
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/inicio-pasta-claro.png"><img src="docs/imagens/inicio-pasta-claro.png" alt="Início com uma pasta aberta: bancos, CSV, JSON, textos e planilhas no Explorador"></a><br><sub><b>Início</b> com uma pasta aberta: bancos, CSV, JSON, textos e planilhas no Explorador</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/consulta-sql-escuro.png"><img src="docs/imagens/consulta-sql-escuro.png" alt="Consulta SQL com vários comandos: resultado de cada um, e o erro aponta onde parou"></a><br><sub><b>Consulta SQL</b> com vários comandos: resultado de cada um, e o erro aponta onde parou</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/csv-filtro-escuro.png"><img src="docs/imagens/csv-filtro-escuro.png" alt="CSV de 1.180 linhas filtrado por região e ordenado por quantidade"></a><br><sub><b>CSV</b> de 1.180 linhas filtrado por região e ordenado por quantidade</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/csv-trazer-colunas-escuro.png"><img src="docs/imagens/csv-trazer-colunas-escuro.png" alt="Trazer colunas: casa dois arquivos por uma coluna em comum, com prévia"></a><br><sub><b>Trazer colunas</b>: casa dois arquivos por uma coluna em comum, com prévia</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/json-estrutura-claro.png"><img src="docs/imagens/json-estrutura-claro.png" alt="JSON validado, com cores, botão Formatar e a estrutura do documento"></a><br><sub><b>JSON</b> validado, com cores, botão Formatar e a estrutura do documento</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/excel-planilha-claro.png"><img src="docs/imagens/excel-planilha-claro.png" alt="Excel (só leitura): abas de planilha, congelados, filtro e detalhes da célula"></a><br><sub><b>Excel</b> (só leitura): abas de planilha, congelados, filtro e detalhes da célula</sub></td>
+  </tr>
+</table>
+
+---
+
+## Baixar
+
+Baixe o `DataBox.exe` da última versão na página [Releases](../../releases/latest) e dê um duplo clique. Não precisa
+instalar nada. Windows 10 ou 11, 64 bits. (Linux está a caminho; veja o [Roadmap](#roadmap).)
+
+> O executável não é assinado digitalmente; na primeira vez, o Windows SmartScreen pode avisar ("O Windows protegeu o
+> computador"). Clique em **Mais informações › Executar assim mesmo**. Se preferir, compile você mesmo (abaixo).
 
 | Tipo | Extensões | Como abre |
 |---|---|---|
@@ -19,20 +98,49 @@ para quem trabalha com dados. Versão atual: **0.1.1**.
 | JSON e texto | `.json`, `.txt`, `.md`, `.log` | editor de texto (só leitura acima de 0,5 MiB) |
 | Planilha do Excel | `.xlsx`, `.xlsm` | só leitura |
 
-**Sumário:** [Baixar](#baixar) · [Recursos](#recursos) · [Primeiro uso](#primeiro-uso) ·
-[Preferências e log](#onde-ficam-as-preferências-e-o-log) · [Compilar](#compilar-a-partir-do-código) ·
-[Mapa do código](#mapa-do-código) · [Próximos passos](#próximos-passos) · [Contribuir](#contribuir) ·
-[Licença](#licença)
-
 ---
 
-## Baixar
+## Guias rápidos
 
-Baixe o `DataBox.exe` da última versão na página [Releases](../../releases/latest) e dê um duplo clique. Não precisa
-instalar nada. Windows 10 ou 11, 64 bits.
+### Explorar um banco SQLite
 
-> O executável não é assinado digitalmente; na primeira vez, o Windows SmartScreen pode avisar ("O Windows protegeu o
-> computador"). Clique em **Mais informações › Executar assim mesmo**. Se preferir, compile você mesmo (abaixo).
+1. **Arquivo › Abrir pasta** (Ctrl+Shift+O) e escolha a pasta do banco, ou arraste o `.db` para a janela. Para olhar
+   sem risco, marque **Abrir bancos só para leitura** no Início.
+2. A **Visão geral** mostra quantas tabelas, visões, índices e gatilhos o banco tem. Clique numa tabela no Explorador.
+3. Na aba **Dados**, use a busca, os **filtros** e a seta do cabeçalho para ordenar. Duplo clique numa célula edita;
+   a ficha da linha mostra BLOB, NULL e colunas geradas.
+4. As abas **Estrutura**, **Índices e gatilhos** e **Definição SQL** mostram como a tabela é feita. Alterar uma
+   coluna ou criar um índice sempre mostra antes o SQL que vai rodar.
+
+### Limpar e cruzar um CSV com uma planilha
+
+1. Abra o CSV (Ctrl+O). O arquivo inteiro aparece na hora, com o tipo detectado de cada coluna no cabeçalho.
+2. **Filtre** as linhas com condições e **ordene** pela seta do cabeçalho. Corrija células com duplo clique, F2 ou
+   Enter; exclua linhas e colunas; Ctrl+Z desfaz.
+3. Abra também a planilha do Excel. Clique direito no cabeçalho da coluna dela e escolha **Trazer colunas desta
+   planilha** (ou use **Trazer colunas** no CSV, que também aceita outro CSV, a área de transferência ou um arquivo
+   do disco).
+4. Escolha a coluna em comum e as colunas a trazer, confira a **prévia** e confirme. É uma alteração só: um Ctrl+Z
+   desfaz tudo.
+5. **Salvar** (Ctrl+S) grava no mesmo formato do arquivo (codificação, separador, fim de linha).
+
+### Exportar uma consulta para Excel
+
+1. Com o banco aberto, abra uma **Consulta SQL** e escreva o `SELECT`. O código ganha cores e a consulta vai para o
+   **Histórico**.
+2. Rode a consulta; se demorar demais, **Interromper** (Esc) para no meio.
+3. Clique em **Exportar** e escolha **Excel** (ou CSV, ou JSON). A barra de progresso acompanha; um milhão de linhas
+   leva cerca de 7 s.
+4. Também dá para exportar uma tabela inteira, só o que a busca e os filtros mostram, as linhas marcadas ou o banco
+   inteiro.
+
+### Validar e formatar um JSON
+
+1. Abra o `.json` (Ctrl+O, ou um clique no Explorador da pasta).
+2. O sinal de **válido** ou de **erro** aparece na hora; no erro, ele diz a linha, a coluna e o motivo, e um clique
+   leva até lá.
+3. **Formatar** arruma a indentação sem mudar a ordem das chaves nem os números.
+4. A **estrutura** do documento aparece nas Propriedades (Ctrl+Alt+B mostra ou esconde o painel).
 
 ---
 
@@ -163,6 +271,27 @@ Em Ajuda › Sobre o DataBox, os links abrem essas duas pastas. Apagar o `prefer
 
 ---
 
+## Roadmap
+
+O DataBox quer ser uma caixa de ferramentas de dados, não só um editor de SQLite. O que vem por aí, mais ou menos
+nesta ordem (sugestões são bem-vindas nas [issues](../../issues)):
+
+| | Melhoria | O que muda para você |
+|---|---|---|
+| 🐧 | **Linux** (em andamento) | O mesmo DataBox no Linux, com binário pronto em cada versão. |
+| 📊 | **Perfil de colunas** | Nulos, distintos, mínimo, máximo e histograma de cada coluna, para saber "o que tem aqui" num olhar. |
+| 🔁 | **Conversão entre formatos** (Salvar como) | CSV para Excel ou SQLite, e de volta, com os tipos certos; e **Salvar tudo**. |
+| 🔎 | **Busca no CSV e no texto** | Achar um valor em qualquer lugar do arquivo; editar texto acima de 0,5 MiB. |
+| 🧮 | **SQL sobre CSV** | Rodar `SELECT … GROUP BY` direto num CSV ou numa planilha. |
+| 📈 | **Gráficos** | Barras, linhas, histograma e dispersão desenhados no próprio DataBox, a partir de uma tabela, consulta ou CSV; e **Abrir no Python**, que gera o script Seaborn/Matplotlib e roda com o Python que você já tem. |
+| 📓 | **Leitor de notebooks `.ipynb`** | Ver células, Markdown e saídas (texto, tabela, imagem) de um notebook sem subir o Jupyter. Só leitura, por enquanto. |
+| 🗄️ | **Outros bancos** | Um contrato único de fonte de dados, começando pelo **PostgreSQL** (só leitura por padrão); depois **MySQL/MariaDB**, **DuckDB e Parquet**, **SQL Server** e **MongoDB**. |
+
+Na fila, também: uma tabela do banco como destino do Trazer colunas; os formatos `.xls` e `.xlsb` do Excel;
+interface em inglês; macOS.
+
+---
+
 ## Compilar a partir do código
 
 ### Ferramentas (uma vez, sem administrador)
@@ -209,7 +338,8 @@ Caminhos com mais de 260 caracteres quebram a compilação no Windows: deixe o p
 ```
 
 - Os testes de tela renderizam cada tela sem abrir janela, com o `egui_kittest`, e gravam capturas PNG em
-  `capturas\rust\` (fora do git) para comparar com as pranchetas de `design/canvas`.
+  `capturas\rust\` (fora do git) para comparar com as pranchetas de `design/canvas`. As imagens deste README, em
+  [`docs/imagens/`](docs/imagens), saíram dessas capturas.
 - Se um teste de tela cair com `STATUS_ACCESS_VIOLATION` (0xC0000005), é o renderizador de software do Windows
   (WARP) sob carga, não defeito do código: rode o mesmo alvo de novo com `'--' --test-threads=1`.
 - Os testes nunca usam o `%APPDATA%` real. Para testar o executável à mão sem sujar os seus recentes, aponte
@@ -249,26 +379,11 @@ Os detalhes estão no [`ARQUITETURA.md`](ARQUITETURA.md) (o contrato técnico) e
 
 ---
 
-## Próximos passos
-
-O DataBox quer ser uma caixa de ferramentas de dados, não só um editor de SQLite. Ideias na fila (sugestões são bem
-vindas nas [issues](../../issues)):
-
-- outros bancos: DuckDB, PostgreSQL, MySQL/MariaDB e MongoDB (os ícones já existem no canvas);
-- gráficos a partir de uma tabela, de uma consulta ou de um CSV;
-- Parquet e outros formatos colunares;
-- busca dentro do CSV e do texto; editar texto acima de 0,5 MiB;
-- **Salvar como** com conversão de formato (por exemplo, CSV para Excel) e **Salvar tudo**;
-- uma tabela do banco como destino do Trazer colunas;
-- os formatos `.xls` e `.xlsb` do Excel;
-- versões para Linux e macOS (o código já separa o que é do Windows).
-
----
-
 ## Contribuir
 
 Contribuições são bem-vindas. Leia o [`CONTRIBUTING.md`](CONTRIBUTING.md): ele explica as convenções (o código, os
-comentários e as mensagens são em português), como rodar os testes e como abrir um pull request.
+comentários e as mensagens são em português), como rodar os testes e como abrir um pull request. Ideias e defeitos vão
+nas [issues](../../issues); se o DataBox te ajudou, uma ⭐ no repositório ajuda outras pessoas a acharem o projeto.
 
 ---
 
