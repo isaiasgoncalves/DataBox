@@ -1,0 +1,44 @@
+[package]
+name = "editor"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "DataBox"
+path = "src/main.rs"
+
+[dependencies]
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+image = { workspace = true }
+comum = { workspace = true }
+servico = { workspace = true }
+banco = { workspace = true }
+ddl = { workspace = true }
+exportar = { workspace = true }
+prefs = { workspace = true }
+interface = { workspace = true }
+estado = { workspace = true }
+tela_dados = { workspace = true, optional = true }
+tela_esquema = { workspace = true, optional = true }
+tela_consulta = { workspace = true, optional = true }
+tela_exportar = { workspace = true, optional = true }
+tela_csv = { workspace = true, optional = true }
+tela_texto = { workspace = true, optional = true }
+tela_planilha = { workspace = true, optional = true }
+rfd = { workspace = true }
+log = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+estado = { workspace = true, features = ["apoio-testes"] }
+egui_kittest = { workspace = true }
+amostras = { workspace = true }
+
+[features]
+# As telas de verdade. Sem este recurso a casca compila com substitutos (crate editor, módulo substitutos),
+# para ser desenvolvida sem depender do estado dos crates de tela.
+default = ["telas"]
+telas = ["dep:tela_dados", "dep:tela_esquema", "dep:tela_consulta", "dep:tela_exportar", "dep:tela_texto", "dep:tela_csv", "dep:tela_planilha"]
