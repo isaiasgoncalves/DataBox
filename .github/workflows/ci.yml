@@ -72,3 +72,46 @@ jobs:
 
       - name: Testes do editor sem as telas
         run: ./cargo.ps1 test -p editor --no-default-features
+
+  linux:
+    # O porte para Linux: o mesmo fmt, clippy e testes, com o cargo direto (o cargo.ps1 e o intermediário de link
+    # são só do Windows). Os testes de tela renderizam com o lavapipe (Vulkan por software do Mesa).
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pacotes do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
+            mesa-vulkan-drivers fonts-noto-core fonts-dejavu-core xdg-utils
+
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal -c clippy -c rustfmt
+          rustup default stable
+          rustc -vV
+
+      - name: Cache do cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-linux-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-linux-
+
+      - name: Formatação
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Testes
+        run: cargo test --workspace --no-fail-fast
+
+      - name: Testes do editor sem as telas
+        run: cargo test -p editor --no-default-features
