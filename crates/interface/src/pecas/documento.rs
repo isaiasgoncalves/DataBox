@@ -129,12 +129,11 @@ impl Documento {
                 .layout(Layout::top_down(Align::Min)),
         );
         filho.set_clip_rect(r.intersect(ui.clip_rect()));
-        let mut saida = None;
-        let resp = Aviso::com_tom(tom)
+        let (resp, saida) = Aviso::com_tom(tom)
             .faixa_do_documento(cantos_de_cima(self.encosta_no_alto()))
-            .mostrar(&mut filho, |ui, cores| saida = Some(conteudo(ui, cores)));
+            .mostrar_com(&mut filho, conteudo);
         self.topo = resp.rect.bottom().min(self.base);
-        saida.expect("o conteúdo do aviso é desenhado")
+        saida
     }
 
     /// Um aviso de ponta a ponta no alto com a frase em trechos (o `strong`, os links): o [`aviso_do_documento`].

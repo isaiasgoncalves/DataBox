@@ -3,6 +3,8 @@
 //! em…?". As do CSV filtrado e das planilhas do Excel saem dos palcos dos crates das telas (`tela_csv`,
 //! `tela_planilha`), que têm os montadores de arquivo. Tudo em `capturas/rust/etapa56-*.png`.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #![cfg(feature = "telas")]
 
 mod apoio;

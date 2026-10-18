@@ -1,6 +1,9 @@
 //! A tela da planilha abrindo e lendo (etapa 6, passo 5): a primeira página na hora, o índice em segundo plano, as duas
 //! `Planilha`, o cache de três, os pedidos de página e os estados de erro.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

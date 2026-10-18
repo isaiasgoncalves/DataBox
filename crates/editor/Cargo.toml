@@ -3,6 +3,7 @@ name = "editor"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 name = "DataBox"
@@ -42,3 +43,6 @@ amostras = { workspace = true }
 # para ser desenvolvida sem depender do estado dos crates de tela.
 default = ["telas"]
 telas = ["dep:tela_dados", "dep:tela_esquema", "dep:tela_consulta", "dep:tela_exportar", "dep:tela_texto", "dep:tela_csv", "dep:tela_planilha"]
+
+[lints]
+workspace = true

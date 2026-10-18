@@ -8,6 +8,9 @@
 //! - `terceiros.txt` (em OUT_DIR), a lista da janela "Licenças de terceiros": as bibliotecas de fora que entram no
 //!   programa, com versão e licença (ver [`terceiros`]). Nunca derruba o build: o que não for lido sai sem licença.
 
+// script de build: sem CARGO_MANIFEST_DIR ou OUT_DIR não há o que fazer, e o cargo mostra o motivo
+#![allow(clippy::expect_used)]
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;

@@ -1,5 +1,8 @@
 //! Comportamento das peças com o `egui_kittest` (cliques, teclas, foco, tempo), sem renderizar.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use comum::Celula;
 use egui::accesskit::{Role, Toggled};
 use egui::{Key, Modifiers, Ui};

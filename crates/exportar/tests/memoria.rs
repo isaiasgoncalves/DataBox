@@ -4,6 +4,11 @@
 //! Fica num teste de integração (crate à parte) porque contar as alocações exige um alocador global, e o
 //! `lib.rs` proíbe `unsafe`. O único `unsafe` aqui repassa cada chamada ao alocador do sistema como veio.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+// o alocador que conta (abaixo) é o único `unsafe` liberado fora da FFI do SQLite
+#![allow(unsafe_code)]
+
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicIsize, Ordering};

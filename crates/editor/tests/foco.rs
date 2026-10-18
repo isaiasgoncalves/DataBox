@@ -2,6 +2,9 @@
 //! ordem da tela (a barra de título, a barra de ferramentas, a barra de ícones, os painéis e o documento), as setas
 //! do menu aberto ficam no painel dele e as do Explorador ficam na árvore, e o Esc do menu devolve o foco ao botão.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

@@ -3,6 +3,9 @@
 //! sumiu, o Fechar pasta, a troca de banco que mantém as abas de arquivo, a releitura na volta do foco e a linha de
 //! comando. Tudo com o `Editor` inteiro sobre o `Ambiente::com_pasta` (uma pasta de dados de verdade).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::cell::RefCell;

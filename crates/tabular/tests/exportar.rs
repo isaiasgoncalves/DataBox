@@ -1,6 +1,9 @@
 //! A leitura e a gravação do CSV fecham o círculo com o que o Exportar do DataBox faz: o que ele grava abre
 //! igual, e o que o `tabular` regrava de uma linha sai com os mesmos bytes do Exportar.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};

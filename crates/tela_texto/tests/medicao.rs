@@ -7,6 +7,9 @@
 //! letra por quadro e com o Ctrl+Z. As dependências do dev profile são otimizadas (`opt-level = 2`), então o egui é medido
 //! como roda no executável; o que está abaixo de uns 50 ms por tecla se sente como instantâneo.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::time::{Duration, Instant};
 
 use egui::{Event, Id, Key, Modifiers};

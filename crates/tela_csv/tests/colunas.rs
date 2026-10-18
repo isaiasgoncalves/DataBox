@@ -1,6 +1,9 @@
 //! Passo 12 da etapa 5: as colunas do CSV (seleção, menu do cabeçalho, nova, renomear, excluir, copiar e colar;
 //! prancheta 16).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

@@ -1,6 +1,9 @@
 //! O "Trazer colunas" de ponta a ponta, sem tela: ler as duas tabelas, sugerir as chaves, casar, trazer colunas
 //! novas, atualizar uma que existe, marcar as linhas sem par, desfazer e salvar.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};

@@ -29,7 +29,8 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
 
 ## 1. Toolchain e build
 
-- Rust estável (rustup, host `x86_64-pc-windows-gnu`) em `%USERPROFILE%\.cargo` e `.rustup`; GCC 16 da WinLibs
+- Rust estável, 1.95 ou mais novo (`rust-version` do workspace; o egui 0.36 pede essa) (rustup, host
+  `x86_64-pc-windows-gnu`) em `%USERPROFILE%\.cargo` e `.rustup`; GCC 16 da WinLibs
   (MSVCRT, sem LLVM) em `%LOCALAPPDATA%\Programs\winlibs-gcc16\mingw64`.
 - **Sempre pelo `cargo.ps1`** da raiz (põe as ferramentas no PATH e liga o intermediário de link):
   `.\cargo.ps1 test -p banco`, `.\cargo.ps1 build --release`. Ele roda de qualquer pasta.
@@ -46,6 +47,11 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
   dependências de cada crate; se faltar uma, ela só pode vir de `[workspace.dependencies]` e o relatório diz).
 - Formatação: `rustfmt.toml` (largura 120). Lint: `.\cargo.ps1 clippy -p <crate> --target-dir target\ag-<nome>`
   sem avisos novos.
+- Lints do workspace (`[workspace.lints]` no `Cargo.toml` da raiz; cada crate herda com `[lints] workspace = true`):
+  `unsafe_code = "deny"`, `clippy::unwrap_used` e `clippy::expect_used = "deny"`. O `clippy.toml` libera unwrap e
+  expect dentro de `#[test]` e `#[cfg(test)]`; os testes de integração (`tests/*.rs`), os exemplos e o
+  `estado::apoio_testes` liberam com `#![allow(...)]` no topo. Fora disso, um `#[allow]` local precisa de
+  comentário dizendo por quê (o `build.rs` do editor, o alocador de `exportar/tests/memoria.rs`, a FFI do `banco`).
 
 ---
 
@@ -125,7 +131,7 @@ seção "Tabela" das Propriedades, o "Abrir na Consulta SQL", a busca da barra e
    manda gravar é `Entrada` (a coerção pela afinidade da coluna é `banco::coagir`). Inteiros são `i64`, texto
    inválido é `Valor::TextoBruto`.
 5. **Nada de pânico com dado da pessoa ou do arquivo**: sem `unwrap`/`expect`/índice que possa estourar fora
-   de testes; erro vira `ErroBanco`. `Mutex` envenenado não derruba o app (recupere o conteúdo).
+   de testes; erro vira `ErroBanco`. `unwrap`/`expect` são barrados pelo clippy (§1); o índice, ainda só na revisão. `Mutex` envenenado não derruba o app (recupere o conteúdo).
 6. **Concorrência.** `Banco`, `Preferencias` e `Servico` são `Send + Sync` e usados por `Arc` de várias threads.
    A thread da interface **nunca** toca no SQLite nem no disco: tudo vai por `estado::Promessa` (thread de
    fundo que acorda a interface ao terminar).

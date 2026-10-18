@@ -13,6 +13,9 @@
 //! depois do ponteiro e com o menu de contexto aberto; a aba de um arquivo de dados; o Início com os recentes de cada
 //! tipo e o vazio dos três cartões; e a releitura da pasta na volta do foco da janela, que não deixa quadro pendente.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

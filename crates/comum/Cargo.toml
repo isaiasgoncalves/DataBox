@@ -3,6 +3,10 @@ name = "comum"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 rusqlite = { workspace = true }
+
+[lints]
+workspace = true

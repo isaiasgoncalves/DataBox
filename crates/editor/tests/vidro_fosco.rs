@@ -3,6 +3,9 @@
 //! capturas `vidro-fosco-{escuro,claro}.png` (em `capturas/rust/`) mostram um menu sobre a Visão geral, para ver se o
 //! texto de trás some e o do menu continua nítido.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

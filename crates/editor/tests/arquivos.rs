@@ -6,6 +6,9 @@
 //! "Salvar as alterações em…?" (Não salvar · Cancelar · Salvar), a gravação esperada e a que falha. As capturas da
 //! pergunta vão para `capturas/rust/` (fechar-aba-alterada-{claro,escuro}).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::cell::RefCell;

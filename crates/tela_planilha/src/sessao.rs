@@ -341,10 +341,9 @@ impl SessaoDaFolha {
             }
             egui.request_repaint();
         }
-        if let Some(pedido) = &mut self.pedido
-            && let Some(r) = pedido.promessa.tomar()
+        if let Some(r) = self.pedido.as_mut().and_then(|p| p.promessa.tomar())
+            && let Some(pedido) = self.pedido.take()
         {
-            let pedido = self.pedido.take().expect("o pedido em voo");
             match r {
                 Ok(Volta { planilha, pagina }) => {
                     self.devolver(planilha);

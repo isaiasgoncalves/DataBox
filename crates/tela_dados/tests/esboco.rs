@@ -1,5 +1,8 @@
 //! Fumaça do apoio de testes: a aba Dados desenha a primeira página de clientes num palco com o banco de exemplo.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use estado::apoio_testes::{Ambiente, capturar, esperar, palco};
 use interface::tema::Tema;
 use tela_dados::AbaDados;

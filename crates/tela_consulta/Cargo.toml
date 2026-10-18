@@ -3,6 +3,7 @@ name = "tela_consulta"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 egui = { workspace = true }
@@ -21,3 +22,6 @@ log = { workspace = true }
 estado = { workspace = true, features = ["apoio-testes"] }
 egui_kittest = { workspace = true }
 amostras = { workspace = true }
+
+[lints]
+workspace = true

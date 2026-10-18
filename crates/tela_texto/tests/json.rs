@@ -3,6 +3,9 @@
 //! a estrutura do documento com páginas de 200, a migalha e o rodapé que acompanham o cursor, e o leitor com a validação
 //! feita uma vez. As capturas `json-*` e `json-invalido-*` vão para `capturas/rust/`, para comparar com as pranchetas 8 e 15.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

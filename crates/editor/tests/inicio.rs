@@ -3,6 +3,9 @@
 //! contagem por tipo em Preferências › Geral. O desenho e as ações de cada gesto, no palco, ficam nos testes do
 //! módulo (`src/inicio/testes.rs`).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

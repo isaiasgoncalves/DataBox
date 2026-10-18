@@ -2,6 +2,9 @@
 //! larguras do arquivo, as mesclas, o painel congelado, a linha oculta, a seleção e a cópia; a faixa das planilhas, as
 //! Propriedades, o rodapé, o status, os verbos e o arquivo que muda no disco. As capturas `planilha-*`.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

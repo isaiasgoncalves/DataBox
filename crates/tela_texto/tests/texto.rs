@@ -3,6 +3,9 @@
 //! como a casca desenha (`palco_documento`: a barra com os verbos, o documento com a faixa, o conteúdo e o rodapé, e as
 //! Propriedades à direita). As capturas `texto-*` vão para `capturas/rust/`.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

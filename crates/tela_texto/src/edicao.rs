@@ -143,15 +143,15 @@ impl Editor {
     }
 
     pub(crate) fn medidas(&mut self) -> &Medidas {
-        if self.medidas.as_ref().is_none_or(|m| m.versao != self.versao) {
-            self.medidas = Some(Medidas {
-                versao: self.versao,
-                linhas: contar_linhas(&self.texto),
-                caracteres: self.texto.chars().count(),
-                recuo: recuo_do_texto(&self.texto),
-            });
+        if self.medidas.as_ref().is_some_and(|m| m.versao != self.versao) {
+            self.medidas = None;
         }
-        self.medidas.as_ref().expect("acabou de ser feita")
+        self.medidas.get_or_insert_with(|| Medidas {
+            versao: self.versao,
+            linhas: contar_linhas(&self.texto),
+            caracteres: self.texto.chars().count(),
+            recuo: recuo_do_texto(&self.texto),
+        })
     }
 
     /// O cursor em linha e coluna e o caminho dele na estrutura; `indice` é o cursor em caracteres.
@@ -162,12 +162,14 @@ impl Editor {
             .as_ref()
             .is_some_and(|p| p.versao == self.versao && p.geracao == geracao && p.indice == indice);
         if !valido {
+            self.posicao = None;
+        }
+        self.posicao.get_or_insert_with(|| {
             let byte = byte_do_caractere(&self.texto, indice);
             let (linha, coluna) = linha_e_coluna(&self.texto, byte);
             let caminho = crate::estrutura::caminho_do_cursor(&self.json, &self.texto, self.versao, byte);
-            self.posicao = Some(Posicao { versao: self.versao, geracao, indice, linha, coluna, caminho });
-        }
-        self.posicao.as_ref().expect("acabou de ser feita")
+            Posicao { versao: self.versao, geracao, indice, linha, coluna, caminho }
+        })
     }
 
     /// Onde marcar o erro de JSON no texto de agora: só quando a validação é a do texto de agora (senão o lugar do erro

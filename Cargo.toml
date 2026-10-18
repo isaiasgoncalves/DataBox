@@ -5,7 +5,18 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+# o egui 0.36 pede o Rust 1.95
+rust-version = "1.95"
 publish = false
+
+# As convenções do ARQUITETURA.md §3 com trava mecânica (cada crate herda com `[lints] workspace = true`). O clippy
+# roda com `-D warnings`: aviso aqui é erro no CI. Nos testes, unwrap/expect valem (clippy.toml).
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
 
 [workspace.dependencies]
 # crates do próprio projeto

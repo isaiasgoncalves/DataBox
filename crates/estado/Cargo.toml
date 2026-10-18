@@ -3,6 +3,7 @@ name = "estado"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 egui = { workspace = true }
@@ -26,3 +27,6 @@ amostras = { workspace = true }
 
 [features]
 apoio-testes = ["dep:amostras", "dep:egui_kittest"]
+
+[lints]
+workspace = true

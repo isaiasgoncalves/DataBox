@@ -2,6 +2,8 @@
 //! Explorador), pelo caminho (o Ctrl+O e os recentes) e ao soltar; a planilha entra nas origens do "Trazer colunas"
 //! (`Contexto::fontes`); a barra de status diz "Somente leitura"; e a volta do foco avisa do arquivo que mudou.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 // sem o recurso `telas`, o Excel abre na ficha (o `pasta.rs` confere): nada daqui vale
 #![cfg(feature = "telas")]
 

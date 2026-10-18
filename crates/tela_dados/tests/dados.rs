@@ -2,6 +2,9 @@
 //! busca, filtros, ordenação, paginação, edição no lugar, janela da linha (NULL, padrão, BLOB), exclusão de
 //! marcadas e visão só leitura. O que é gravado é conferido lendo o arquivo pelo serviço.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use amostras::{N_CLIENTES, N_EVENTOS};

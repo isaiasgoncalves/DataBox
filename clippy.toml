@@ -1,0 +1,3 @@
+# Nos testes, unwrap/expect valem (as regras de workspace.lints no Cargo.toml são para o código de produção).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

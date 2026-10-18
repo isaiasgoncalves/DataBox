@@ -478,10 +478,9 @@ impl TelaCsv {
                 }
             }
         }
-        if let Some(rod) = self.rodando.as_mut()
-            && let Some(r) = rod.promessa.tomar()
+        if let Some(r) = self.rodando.as_mut().and_then(|rod| rod.promessa.tomar())
+            && let Some(rod) = self.rodando.take()
         {
-            let rod = self.rodando.take().expect("a tarefa que acabou de responder");
             self.resposta(ectx, ctx, rod.trabalho, rod.seq, r);
         }
         self.receber_calculo();

@@ -2,6 +2,9 @@
 //! do egui, com a filtragem previsível, ignorava): uma risca de 1px a cada 4px na diagonal, também na peça de
 //! cantos arredondados, e nada fora do contorno.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use egui::{CornerRadius, Rect, pos2, vec2};
 use egui_kittest::Harness;
 use interface::fontes;

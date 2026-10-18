@@ -5,6 +5,9 @@
 //! foreign_key_list, index_list e table_list do original e da volta, e repetem INSERTs e leituras de
 //! sqlite_sequence e table_xinfo.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};

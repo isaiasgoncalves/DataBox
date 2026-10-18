@@ -1,5 +1,8 @@
 //! Passo 10 da etapa 5: o CSV aberto na grade (prancheta 7).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::sync::Arc;

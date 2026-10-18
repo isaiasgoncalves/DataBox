@@ -6,6 +6,9 @@
 //! `Editor::acoes_do_explorador`; a casca também cumpre o pedido (passo 8: lê a pasta de verdade), por isso os testes
 //! que trocam um nó à mão esperam a leitura dela terminar antes.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::cell::RefCell;

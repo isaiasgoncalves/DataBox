@@ -3,6 +3,7 @@ name = "prefs"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 comum = { workspace = true }
@@ -11,3 +12,6 @@ log = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

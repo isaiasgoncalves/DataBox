@@ -3,6 +3,7 @@ name = "tela_csv"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 egui = { workspace = true }
@@ -15,3 +16,6 @@ log = { workspace = true }
 [dev-dependencies]
 estado = { workspace = true, features = ["apoio-testes"] }
 egui_kittest = { workspace = true }
+
+[lints]
+workspace = true

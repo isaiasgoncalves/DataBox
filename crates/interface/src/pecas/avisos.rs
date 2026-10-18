@@ -428,6 +428,11 @@ impl Aviso {
     /// anterior: quando muda, o quadro é refeito na hora (`request_discard`), sem a caixa pular. O primeiro aviso de
     /// um corpo de cartão ou de janela deixa [`ESPACO_APOS_AVISO`] até o item seguinte.
     pub fn mostrar(self, ui: &mut Ui, conteudo: impl FnOnce(&mut Ui, CoresAviso)) -> Response {
+        self.mostrar_com(ui, conteudo).0
+    }
+
+    /// O [`Aviso::mostrar`] devolvendo também o que o conteúdo devolveu.
+    pub(crate) fn mostrar_com<R>(self, ui: &mut Ui, conteudo: impl FnOnce(&mut Ui, CoresAviso) -> R) -> (Response, R) {
         let p = paleta(ui);
         let e = &p.estudio;
         let primeiro = inicio_de_corpo(ui);
@@ -487,7 +492,7 @@ impl Aviso {
         let mut filho =
             ui.new_child(egui::UiBuilder::new().max_rect(interno).layout(egui::Layout::top_down(egui::Align::Min)));
         filho.spacing_mut().item_spacing = vec2(8.0, 8.0);
-        conteudo(&mut filho, cores);
+        let saida = conteudo(&mut filho, cores);
         let altura_texto = filho.min_rect().height();
         if altura_conhecida.is_none_or(|a| (a - altura_texto).abs() > 0.5) {
             ui.ctx().data_mut(|d| d.insert_temp(id_altura, altura_texto));
@@ -524,6 +529,6 @@ impl Aviso {
         if primeiro {
             ui.add_space((ESPACO_APOS_AVISO - ui.spacing().item_spacing.y).max(0.0));
         }
-        resp
+        (resp, saida)
     }
 }

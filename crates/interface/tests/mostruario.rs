@@ -1,6 +1,9 @@
 //! Renderiza o mostruário com o `egui_kittest` (wgpu) nos dois temas e grava as capturas em
 //! `capturas/rust/` na raiz do projeto, para conferir contra as pranchetas de `design/canvas`.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::path::PathBuf;
 
 use egui::UiBuilder;

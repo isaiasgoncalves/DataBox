@@ -4,6 +4,9 @@
 //! volta na próxima abertura, e a janela estreita encolhe os painéis antes de esconder as Propriedades. As capturas
 //! vão para `capturas/rust/paineis-redimensionados-*.png`.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::sync::Arc;

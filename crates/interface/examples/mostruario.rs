@@ -19,6 +19,9 @@
 //! Lá, o seletor "Sistema · Claro · Escuro" do cabeçalho (e o do menu Arquivo) alterna o tema na hora, e o "Ver a
 //! casca" do cartão dos ícones troca a página pela casca nova inteira (Ajuda › Mostruário das peças volta).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::path::PathBuf;
 
 use egui::UiBuilder;

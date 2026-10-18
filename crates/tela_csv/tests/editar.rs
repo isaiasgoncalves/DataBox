@@ -1,5 +1,8 @@
 //! Passo 11 da etapa 5: editar o CSV (células, linhas, marcas, desfazer, salvar; prancheta 15).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::sync::Arc;

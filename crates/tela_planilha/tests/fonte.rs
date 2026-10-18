@@ -2,6 +2,9 @@
 //! regra da decisão 16 (número cru com a vírgula do destino, datas pelo exibir, booleano e erro como texto), o cabeçalho
 //! pela heurística, e o menu do cabeçalho (Copiar coluna · Trazer colunas desta planilha).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::sync::Arc;

@@ -5,6 +5,9 @@
 //! lida, a janela de uma linha sem chave e a com erro do serviço; a faixa com as etiquetas, o popover da condição
 //! (a parada 2, sem prancheta: claro e escuro) e a janela de 960px. O mouse fica fora da tela (nada em hover).
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use apoio::*;

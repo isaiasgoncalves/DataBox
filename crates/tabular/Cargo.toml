@@ -3,6 +3,7 @@ name = "tabular"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 comum = { workspace = true }
@@ -10,3 +11,6 @@ comum = { workspace = true }
 [dev-dependencies]
 # só nos testes: a gravação e a leitura fecham o círculo com o CSV que o Exportar do DataBox faz
 exportar = { workspace = true }
+
+[lints]
+workspace = true

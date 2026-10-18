@@ -1,5 +1,8 @@
 //! Fechar o aplicativo: o que o `main` faz entre a janela fechar e o processo sair.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

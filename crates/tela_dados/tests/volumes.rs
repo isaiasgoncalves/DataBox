@@ -5,6 +5,9 @@
 //! A lentidão vem dos ganchos de teste da aba: a contagem espera um sinal do teste e o
 //! `tempo_ms` da página é trocado por um valor alto. A leitura substituída usa uma tabela grande de verdade.
 
+// teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod apoio;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
