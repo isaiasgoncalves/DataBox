@@ -274,10 +274,11 @@ fn gravacao_concorrente_nunca_e_interrompida() {
         let erros = erros_leitura.lock().unwrap();
         assert!(erros.is_empty(), "{:?}", &erros[..erros.len().min(3)]);
         let (ok, substituida, interrompida) = (ok.into_inner(), substituida.into_inner(), interrompida.into_inner());
-        assert!(
-            substituida > 0 && interrompida > 0 && ok > 0,
-            "ok {ok}, substituída {substituida}, interrompida {interrompida}"
-        );
+        // Quantas leituras terminam ou são interrompidas no meio depende de como o sistema reparte as threads (numa
+        // máquina de 2 núcleos, ou com --test-threads=1, pode não haver nenhuma): só a disputa é certa. A interrupção
+        // no meio do comando tem o teste dela, `leitura_em_execucao_e_interrompida`.
+        eprintln!("ok {ok}, substituída {substituida}, interrompida {interrompida}");
+        assert!(substituida > 0, "ok {ok}, substituída {substituida}, interrompida {interrompida}");
         let estado = b.leituras.lock();
         assert!(estado.em_curso.is_none() && estado.grupos.is_empty());
         drop(estado);

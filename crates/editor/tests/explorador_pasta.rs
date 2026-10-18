@@ -212,6 +212,8 @@ fn itens_do_menu(h: &H) -> Vec<String> {
 /// A pasta de dados no editor, com o banco de dentro dela aberto (prancheta 1).
 fn harness_da_pasta(amb: &Ambiente, tema: Tema) -> H {
     let mut h = harness_com(amb, tema, TAMANHO, editor::Partida::default(), |_| None);
+    // a leitura de verdade da partida termina antes: chegando depois, ela trocaria a árvore montada à mão
+    assentar(&mut h);
     simular(&mut h, Some(pasta_de_dados(&dados(amb))));
     acoes(&mut h);
     h
@@ -544,10 +546,15 @@ fn banco_dentro_de_pasta_fechada_abre_os_pais() {
     let mut h = harness_com(&amb, Tema::Claro, TAMANHO, editor::Partida::default(), |_| None);
     let raiz = dados(&amb);
     let sub = raiz.join("sub");
+    assentar(&mut h);
     simular(&mut h, Some(pasta_de_dados(&raiz)));
     // a subpasta abre sozinha e pede a leitura; enquanto ela não chega, o banco não vira segunda raiz
     assert_eq!(h.get(by().role(Role::Link).label("sub, pasta")).accesskit_node().data().is_expanded(), Some(true));
     assert_eq!(acoes(&mut h), [listar(&sub)]);
+    // a leitura de verdade que a casca pediu pode chegar a qualquer quadro (numa máquina carregada, já nos dois de
+    // cima): ela termina antes de o teste pôr a subpasta em leitura à mão
+    assentar(&mut h);
+    com_no(&mut h, &sub, NoDaPasta::Lendo);
     assert!(!existe(&h, Role::Link, "fundo.db"));
     com_no(&mut h, &sub, pronta(&sub, vec![entrada(&sub, "fundo.db", Natureza::Banco)], 0));
     // no lugar dele, dois níveis abaixo da raiz, com a subárvore
