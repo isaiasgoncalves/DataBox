@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WINLIBS_URL: https://github.com/brechtsanders/winlibs_mingw/releases/download/16.2.0posix-23.1.3-14.0.0-msvcrt-r3/winlibs-x86_64-posix-seh-gcc-16.2.0-mingw-w64msvcrt-14.0.0-r3.zip
+
+jobs:
+  testar:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust (toolchain GNU)
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal -c clippy -c rustfmt
+          rustup default stable-x86_64-pc-windows-gnu
+          rustc -vV
+
+      - name: Cache do MinGW (WinLibs)
+        id: cache-mingw
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Programs\winlibs-gcc16
+          key: winlibs-${{ env.WINLIBS_URL }}
+
+      - name: MinGW (WinLibs)
+        if: steps.cache-mingw.outputs.cache-hit != 'true'
+        run: |
+          $destino = "$env:LOCALAPPDATA\Programs\winlibs-gcc16"
+          New-Item -ItemType Directory -Force $destino | Out-Null
+          Invoke-WebRequest -UseBasicParsing $env:WINLIBS_URL -OutFile "$env:RUNNER_TEMP\winlibs.zip"
+          tar -xf "$env:RUNNER_TEMP\winlibs.zip" -C $destino
+
+      - name: Cache do cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+            target
+          key: cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Formatação
+        run: ./cargo.ps1 fmt --all '--' --check
+
+      - name: Clippy
+        run: ./cargo.ps1 clippy --workspace --all-targets '--' -D warnings
+
+      - name: Testes
+        # O renderizador de software do Windows (WARP) às vezes cai com STATUS_ACCESS_VIOLATION quando vários testes
+        # de tela criam o wgpu ao mesmo tempo; se a rodada em paralelo falhar, repete tudo numa thread só.
+        run: |
+          ./cargo.ps1 test --workspace
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Repetindo os testes numa thread só"
+            ./cargo.ps1 test --workspace --no-fail-fast '--' --test-threads=1
+          }
+          exit $LASTEXITCODE
+
+      - name: Testes do editor sem as telas
+        run: ./cargo.ps1 test -p editor --no-default-features
