@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>rasterizando</title>
+<style>body{font:12px Consolas,monospace;margin:12px;background:#fff;color:#222}</style>
+</head>
+<body>
+<pre id="log"></pre>
+<script>
+// Lê a lista (?lista=arquivo.json, relativa a esta pasta) com itens
+//   {"svg": "../../logo/databox.svg", "tamanhos": [16, 24], "saida": "logo/databox-{t}.png"}
+// e, para cada tamanho, desenha o SVG num canvas t×t (fundo transparente) e manda o PNG ao servidor.
+// O título da página vira "pronto: N arquivos" ou "erro: …".
+const log = (t) => { document.getElementById('log').textContent += t + '\n'; };
+
+async function rasterizar(svgTexto, tamanho) {
+  const url = URL.createObjectURL(new Blob([svgTexto], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image();
+    img.decoding = 'sync';
+    await new Promise((ok, falha) => { img.onload = ok; img.onerror = () => falha(new Error('SVG não carregou')); img.src = url; });
+    const canvas = document.createElement('canvas');
+    canvas.width = tamanho; canvas.height = tamanho;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, tamanho, tamanho);
+    return await new Promise((ok) => canvas.toBlob(ok, 'image/png'));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+(async () => {
+  try {
+    const lista = new URLSearchParams(location.search).get('lista');
+    const itens = await (await fetch(lista, { cache: 'no-store' })).json();
+    let n = 0;
+    for (const item of itens) {
+      const svg = await (await fetch(item.svg, { cache: 'no-store' })).text();
+      for (const t of item.tamanhos) {
+        const png = await rasterizar(svg, t);
+        const caminho = item.saida.replace('{t}', String(t));
+        const r = await fetch('/salvar/' + caminho, { method: 'POST', body: png });
+        if (!r.ok) throw new Error(caminho + ': ' + r.status);
+        log(caminho + ' (' + png.size + ' bytes)');
+        n++;
+      }
+    }
+    document.title = 'pronto: ' + n + ' arquivos';
+  } catch (e) {
+    document.title = 'erro: ' + e.message;
+    log('erro: ' + e.message);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Tabela clientes, aba Dados</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0f11}
+.est{--acc:#2c6fdc;--fundo0:#131416;--c:#1b1c1f;--p:#222327;--h:rgba(255,255,255,.07);--f:#141518;--fb:rgba(255,255,255,.14);--b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.12);--t:#ececee;--t2:#b9bbc0;--t3:#9597a0;--vidro:rgba(36,37,41,.55);--flut:rgba(30,31,35,.78);--vidrob:rgba(255,255,255,.09);--vidroluz:rgba(255,255,255,.06);--desfoque:blur(24px) saturate(150%);--veu:rgba(6,7,9,.45);--perigo:#ff8a80;--ok:#5fd09a;--aviso:#f2b65e;--sh:0 18px 50px rgba(0,0,0,.55);--acct:color-mix(in oklab,var(--acc) 58%,white);--sel:color-mix(in oklab,var(--acc) 30%,transparent);--selh:color-mix(in oklab,var(--acc) 12%,transparent);--tint:color-mix(in oklab,var(--acc) 20%,transparent);--bt1:#3b3c40;--bt2:#26272a;--btb:rgba(0,0,0,.6);--btluz:rgba(255,255,255,.13);--btsomb:0 1px 1px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.3);--textura:repeating-linear-gradient(135deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px);--brilho:color-mix(in oklab,var(--acc) 60%,transparent);--brilhof:color-mix(in oklab,var(--acc) 78%,transparent);--volneu:linear-gradient(to bottom,var(--bt1),var(--bt2));--volpri:linear-gradient(to bottom,color-mix(in oklab,var(--acc) 72%,white),var(--acc) 25%,color-mix(in oklab,var(--acc) 80%,black));--volrisco:linear-gradient(to bottom,#de6a5e,#c0392b 50%,#a32f23);--ambiente:radial-gradient(900px 560px at 12% 0%,color-mix(in oklab,var(--acc) 26%,transparent),transparent 62%),radial-gradient(1000px 700px at 100% 10%,color-mix(in oklab,var(--acc) 14%,transparent),transparent 60%),radial-gradient(900px 600px at 55% 115%,color-mix(in oklab,var(--acc) 12%,transparent),transparent 60%),var(--fundo0);--kw:#8ab4f8;--nu:#f2b65e;--st:#7fd1a8;--chave:#c9a0ff;--csv:#4cc38a;--xls:#3fae6a;--json:#e8b04b;--txt:#a8abb3;font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;font-size:12px;line-height:1.4;color:var(--t);background:var(--fundo0)}
+.est.claro{--fundo0:#e8eaee;--c:#ffffff;--p:#f5f6f8;--h:rgba(0,0,0,.05);--f:#ffffff;--fb:rgba(0,0,0,.16);--b:rgba(0,0,0,.07);--b2:rgba(0,0,0,.12);--t:#1b1c1f;--t2:#45474d;--t3:#62656c;--vidro:rgba(255,255,255,.52);--flut:rgba(255,255,255,.8);--vidrob:rgba(0,0,0,.08);--vidroluz:rgba(255,255,255,.8);--veu:rgba(20,22,28,.22);--perigo:#c4262e;--ok:#0f7a4c;--aviso:#8f5400;--sh:0 18px 50px rgba(0,0,0,.16);--acct:color-mix(in oklab,var(--acc) 85%,black);--sel:color-mix(in oklab,var(--acc) 17%,transparent);--selh:color-mix(in oklab,var(--acc) 7%,transparent);--tint:color-mix(in oklab,var(--acc) 11%,transparent);--bt1:#ffffff;--bt2:#e6e7ea;--btb:rgba(0,0,0,.18);--btluz:rgba(255,255,255,.95);--btsomb:0 1px 1px rgba(0,0,0,.12),0 3px 8px rgba(0,0,0,.08);--textura:repeating-linear-gradient(135deg,rgba(0,0,0,.02) 0 1px,transparent 1px 3px);--brilho:color-mix(in oklab,var(--acc) 45%,transparent);--brilhof:color-mix(in oklab,var(--acc) 62%,transparent);--ambiente:radial-gradient(900px 560px at 12% 0%,color-mix(in oklab,var(--acc) 17%,transparent),transparent 62%),radial-gradient(1000px 700px at 100% 10%,color-mix(in oklab,var(--acc) 10%,transparent),transparent 60%),radial-gradient(900px 600px at 55% 115%,color-mix(in oklab,var(--acc) 9%,transparent),transparent 60%),var(--fundo0);--kw:#1f5fbf;--nu:#a35200;--st:#0f7a4c;--chave:#7a3fc4;--csv:#11804f;--xls:#16733f;--json:#9a6400;--txt:#5d6068}
+.est.ac-verde{--acc:#0d7f74}.est.ac-violeta{--acc:#6b4fd8}.est.ac-laranja{--acc:#c2540a}
+.est *{box-sizing:border-box}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.vidro{background:var(--vidro);-webkit-backdrop-filter:var(--desfoque);backdrop-filter:var(--desfoque);border:1px solid var(--vidrob);box-shadow:inset 0 1px 0 var(--vidroluz)}
+.flut{background:var(--flut);-webkit-backdrop-filter:var(--desfoque);backdrop-filter:var(--desfoque);border:1px solid var(--vidrob);box-shadow:var(--sh),inset 0 1px 0 var(--vidroluz)}
+.doc{background:var(--c);border:1px solid var(--vidrob);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.faixa{height:42px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 14px;background:var(--p);border-bottom:1px solid var(--b)}
+.rodape{height:34px;flex:none;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px;background:var(--p);border-top:1px solid var(--b);color:var(--t2);font-variant-numeric:tabular-nums}
+.btn{height:28px;padding:0 15px;border-radius:999px;border:1px solid var(--btb);background:var(--textura),var(--volneu);color:var(--t);font:inherit;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;box-shadow:inset 0 1px 0 var(--btluz),inset 0 -2px 3px rgba(0,0,0,.18),var(--btsomb);transition:box-shadow .2s ease,filter .2s ease}
+.btn .ic{width:14px;height:14px}
+.btn:hover{filter:brightness(1.07);box-shadow:inset 0 1px 0 var(--btluz),inset 0 -2px 3px rgba(0,0,0,.18),var(--btsomb),0 0 0 1px var(--brilho),0 0 18px var(--brilho)}
+.btn:active{filter:brightness(.95);box-shadow:inset 0 2px 5px rgba(0,0,0,.4)}
+.btn.pri{color:#fff;border-color:color-mix(in oklab,var(--acc) 65%,black);background:var(--textura),var(--volpri);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -2px 3px rgba(0,0,0,.22),0 1px 1px rgba(0,0,0,.4),0 4px 12px color-mix(in oklab,var(--acc) 35%,transparent)}
+.btn.pri:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -2px 3px rgba(0,0,0,.22),0 0 0 1px var(--brilhof),0 0 24px var(--brilhof)}
+.btn.risco{color:#fff;border-color:#7f2219;background:var(--textura),var(--volrisco);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -2px 3px rgba(0,0,0,.22),0 1px 1px rgba(0,0,0,.4)}
+.btn.risco:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 0 0 1px rgba(232,96,80,.6),0 0 22px rgba(232,96,80,.55)}
+.btn.sutil{background:transparent;border-color:transparent;box-shadow:none;color:var(--t2)}
+.btn.sutil:hover{background:var(--textura),var(--volneu);border-color:var(--btb);color:var(--t);box-shadow:inset 0 1px 0 var(--btluz),var(--btsomb),0 0 16px var(--brilho)}
+.btn.sutil.perigo{color:var(--perigo)}
+.btn.sutil.perigo:hover{box-shadow:inset 0 1px 0 var(--btluz),var(--btsomb),0 0 16px color-mix(in oklab,var(--perigo) 50%,transparent)}
+.btn.pq{height:24px;padding:0 10px}
+.btn.lista{width:100%;justify-content:flex-start;font-weight:400}
+.btn.lista .ic{color:var(--t3)}
+.btn:disabled,.btn:disabled:hover{opacity:.45;cursor:default;filter:none}
+.ib{width:30px;height:30px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--t2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:box-shadow .2s ease;flex:none}
+.ib:hover{color:var(--t);border-color:var(--btb);background:var(--textura),var(--volneu);box-shadow:inset 0 1px 0 var(--btluz),var(--btsomb),0 0 14px var(--brilho)}
+.ib.on{color:var(--t);border-color:var(--btb);background:var(--textura),var(--volneu);box-shadow:inset 0 1px 0 var(--btluz),var(--btsomb)}
+.ib.pri,.ib.pri:hover{color:#fff;border-color:color-mix(in oklab,var(--acc) 65%,black);background:var(--textura),var(--volpri)}
+.ib.pri{box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 2px 8px color-mix(in oklab,var(--acc) 35%,transparent)}
+.ib.pri:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 0 0 1px var(--brilhof),0 0 20px var(--brilhof)}
+.ib:disabled,.ib:disabled:hover{opacity:.3;cursor:default;background:transparent;border-color:transparent;box-shadow:none}
+.ib.pq{width:26px;height:26px}.ib.pq .ic{width:14px;height:14px}
+.sep{width:1px;height:22px;background:var(--vidrob);margin:0 6px;flex:none}
+.campo{height:28px;border-radius:8px;border:1px solid var(--fb);background:var(--f);color:var(--t);padding:0 9px;font:inherit;display:inline-flex;align-items:center;gap:6px;min-width:0;cursor:pointer}
+.campo input{border:0;background:transparent;color:var(--t);font:inherit;outline:0;flex:1;min-width:0;padding:0}
+.campo input::placeholder{color:var(--t3)}
+.busca{height:30px;width:250px;border-radius:999px;cursor:text}
+.kbd{font-size:10.5px;color:var(--t3);border:1px solid var(--b2);border-radius:4px;padding:0 4px;line-height:16px;font-weight:400}
+.tit{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.mono{font-family:Consolas,"Cascadia Mono",monospace}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:999px;background:var(--h);color:var(--t2);white-space:nowrap}
+.pill.ok{background:color-mix(in oklab,var(--ok) 18%,transparent);color:var(--ok)}
+.pill.ac{background:var(--tint);color:var(--acct)}
+.menu{height:24px;padding:0 10px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--t2);font:inherit;cursor:pointer}
+.menu:hover,.menu.on{color:var(--t);border-color:var(--btb);background:var(--textura),var(--volneu);box-shadow:inset 0 1px 0 var(--btluz),var(--btsomb),0 0 14px var(--brilho)}
+.rail{width:36px;height:36px;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;padding:0;transition:box-shadow .2s ease}
+.rail .ic{width:18px;height:18px}
+.rail:hover{color:var(--t);border-color:var(--btb);background:var(--textura),var(--volneu);box-shadow:inset 0 1px 0 var(--btluz),var(--btsomb),0 0 16px var(--brilho)}
+.rail.on{color:var(--t);border-color:var(--btb);background:var(--textura),var(--volneu);box-shadow:inset 0 1px 0 var(--btluz),inset 0 -2px 3px rgba(0,0,0,.18),var(--btsomb)}
+.rail.on::before{content:"";position:absolute;left:-8px;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--acc);box-shadow:0 0 8px var(--brilhof)}
+.cab{height:38px;flex:none;display:flex;align-items:center;gap:2px;padding:0 6px 0 14px;border-bottom:1px solid var(--vidrob)}
+.no{height:24px;display:flex;align-items:center;gap:6px;padding-right:10px;color:var(--t2);text-decoration:none;border-radius:6px;margin:0 6px;white-space:nowrap}
+.no:hover{background:var(--h);color:var(--t)}
+.no.on{background:var(--sel);color:var(--t)}
+.no .q{margin-left:auto;color:var(--t3);font-size:11px;font-variant-numeric:tabular-nums}
+.no .ic{width:14px;height:14px;color:var(--t3)}
+.no .seta{width:10px;height:10px;color:var(--t3)}
+.no .vz{width:10px;flex:none}
+.no.on .ic{color:var(--acct)}
+.aba{height:34px;display:flex;align-items:center;gap:4px;padding:0 6px 0 12px;border-radius:10px 10px 0 0;color:var(--t2);white-space:nowrap;position:relative;border:1px solid transparent;border-bottom:0}
+.aba:hover{background:var(--h);color:var(--t)}
+.aba.on{background:var(--c);color:var(--t);border-color:var(--vidrob)}
+.aba.on::before{content:"";position:absolute;left:12px;right:12px;top:-1px;height:2px;border-radius:2px;background:var(--acc);box-shadow:0 0 8px var(--brilhof)}
+.aba a{display:flex;align-items:center;gap:7px;color:inherit;text-decoration:none}
+.aba .ic{width:14px;height:14px}
+.aba .sub{color:var(--t3)}
+.aba .x{width:20px;height:20px;border:0;border-radius:50%;background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--t3);cursor:pointer;padding:0;margin-left:4px}
+.aba .x:hover{background:var(--h);color:var(--t)}
+.aba .mod{width:7px;height:7px;border-radius:50%;background:var(--acct);margin:0 6px 0 8px}
+.lista-t{width:100%;border-collapse:collapse}
+.lista-t th,.grade th{height:30px;text-align:left;padding:0 12px;font-size:11.5px;font-weight:600;color:var(--t2);border-bottom:1px solid var(--b2);white-space:nowrap;background:var(--p)}
+.lista-t td{height:32px;padding:0 12px;border-bottom:1px solid var(--b);white-space:nowrap;color:var(--t)}
+.lista-t tr:last-child td{border-bottom:0}
+.lista-t tr:hover td,.grade tr:hover td{background:var(--selh)}
+.grade{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.grade th{padding:0 10px;border-right:1px solid var(--b);overflow:hidden}
+.grade th .tp{font-size:10px;font-weight:400;color:var(--t3);margin-left:6px;letter-spacing:.03em}
+.grade th.num,.lista-t th.num{text-align:right}
+.grade td{height:28px;padding:0 10px;border-bottom:1px solid var(--b);border-right:1px solid var(--b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t)}
+.grade td.lin{color:var(--t3);text-align:right;background:var(--p);font-variant-numeric:tabular-nums}
+.grade tr.mar td{background:var(--sel)}
+.grade td.ativa{outline:2px solid var(--acc);outline-offset:-2px;box-shadow:inset 0 0 12px var(--brilho)}
+.grade td.chave{color:var(--acct);font-weight:600}
+.grade td.nulo{color:var(--t3);font-style:italic}
+.grade input[type=checkbox],.op input{accent-color:var(--acc);width:14px;height:14px;margin:0;vertical-align:middle}
+.link{color:var(--acct);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.link .ic{width:14px;height:14px;color:var(--t3)}
+.chip{height:24px;display:inline-flex;align-items:center;gap:5px;padding:0 3px 0 10px;border-radius:999px;border:1px solid color-mix(in oklab,var(--acc) 45%,transparent);background:var(--tint);color:var(--t2);white-space:nowrap}
+.chip b{font-weight:600;color:var(--t)}
+.chip .x{width:18px;height:18px;border:0;border-radius:50%;background:transparent;color:var(--t2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.chip .x:hover{background:var(--h);color:var(--t)}
+.sec{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;font-weight:600;color:var(--t)}
+.sec .ic{width:12px;height:12px;color:var(--t3)}
+.sec+.sec,.det+.sec,div+.sec{border-top:1px solid var(--vidrob)}
+.det{display:grid;grid-template-columns:112px minmax(0,1fr);gap:7px 10px;padding:2px 14px 14px;margin:0}
+.det dt{color:var(--t3)}
+.det dd{margin:0;color:var(--t);overflow-wrap:anywhere}
+.atalho{display:block;padding:7px 10px;border-radius:10px;color:var(--acct);text-decoration:none;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px;background:var(--h);border:1px solid var(--vidrob)}
+.atalho:hover{border-color:var(--acc);box-shadow:0 0 12px var(--brilho)}
+a{color:var(--acct)}a:hover{color:var(--t)}
+.est,.est.claro{--ambiente:var(--fundo0)}
+.est{--fundo0:#111214;--painel:#1e1f22;--c:#191a1d;--p:#212226}
+.est.claro{--fundo0:#e3e5e9;--painel:#f4f5f7;--c:#ffffff;--p:#f6f7f9}
+.vidro{background:var(--painel);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 1px 0 var(--vidroluz),0 1px 3px rgba(0,0,0,.2)}
+.est.claro .vidro{box-shadow:inset 0 1px 0 var(--vidroluz),0 1px 3px rgba(0,0,0,.08)}
+.aba.on::before{display:none}
+.aba.on{box-shadow:inset 0 1px 0 var(--vidroluz)}
+.mono{font-family:inherit;font-weight:350}
+.atalho,.hist{font-family:inherit;font-size:12px}
+.campo{box-shadow:inset 0 1px 2px rgba(0,0,0,.3),0 1px 0 var(--vidroluz);transition:box-shadow .2s ease,border-color .2s ease}
+.campo:hover{border-color:color-mix(in oklab,var(--acc) 45%,var(--fb))}
+.campo:focus-within{border-color:var(--acc);box-shadow:inset 0 1px 2px rgba(0,0,0,.3),0 0 0 1px var(--acc),0 0 14px var(--brilho)}
+.est.claro .campo:not(:focus-within){box-shadow:inset 0 1px 2px rgba(0,0,0,.08),0 1px 0 rgba(255,255,255,.9)}
+.mi:hover,.mi.on{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 12px var(--brilho)}
+.mi .ck{width:14px;height:14px;flex:none;color:var(--acct)}
+.no.on,.hist.on{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 10px color-mix(in oklab,var(--acc) 22%,transparent)}
+.chip{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 3px rgba(0,0,0,.25)}
+.flut{background-image:linear-gradient(to bottom,rgba(255,255,255,.05),transparent 140px)}
+.barra{height:8px;border-radius:999px;background:var(--f);border:1px solid var(--fb);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+.barra>div{height:100%;border-radius:999px;background:var(--textura),var(--volpri);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 10px var(--brilhof)}
+.form{display:grid;grid-template-columns:88px minmax(0,1fr);gap:6px 10px;align-items:center;padding:2px 14px 10px}
+.form>span{color:var(--t3)}
+.est input[type=checkbox],.est input[type=radio]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;flex:none;vertical-align:middle;border:1px solid var(--btb);background:var(--textura),var(--volneu);box-shadow:inset 0 1px 0 var(--btluz),0 1px 2px rgba(0,0,0,.3);display:inline-grid;place-content:center;cursor:pointer;transition:box-shadow .2s ease,filter .2s ease}
+.est input[type=checkbox]{border-radius:50%}
+.est input[type=radio]{border-radius:50%}
+.est input[type=checkbox]:hover,.est input[type=radio]:hover{filter:brightness(1.08);box-shadow:inset 0 1px 0 var(--btluz),0 0 0 1px var(--brilho),0 0 12px var(--brilho)}
+.est input[type=checkbox]:checked,.est input[type=radio]:checked{border-color:color-mix(in oklab,var(--acc) 65%,black);background:var(--textura),var(--volpri);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 1px 4px color-mix(in oklab,var(--acc) 35%,transparent)}
+.est input[type=checkbox]:checked:hover,.est input[type=radio]:checked:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 0 1px var(--brilhof),0 0 14px var(--brilhof)}
+.est input[type=checkbox]::before{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:translateY(-1px) rotate(-45deg);opacity:0}
+.est input[type=radio]::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff;opacity:0}
+.est input:checked::before{opacity:1}
+.grade th.selc,.grade td.selc{width:32px;padding:0;text-align:center;border-right:0}
+.grade th.selc input,.grade td.selc input{vertical-align:middle}
+.est{--sup-meio:color-mix(in oklab,var(--bt1),var(--bt2))}
+.aba.on{background:var(--textura),linear-gradient(to bottom,var(--bt1),var(--sup-meio));background-attachment:fixed,scroll;box-shadow:inset 0 1px 0 var(--btluz)}
+.faixa,.grade th,.lista-t th{background:var(--textura),linear-gradient(to bottom,var(--sup-meio),var(--bt2));background-attachment:fixed,scroll;border-bottom-color:var(--btb)}
+.cab{background:var(--textura),linear-gradient(to bottom,var(--bt1),var(--bt2));background-attachment:fixed,scroll;border-bottom-color:var(--btb);box-shadow:inset 0 1px 0 var(--btluz)}
+.sil{width:16px;height:16px;fill:currentColor;stroke:none;flex:none}
+.rail .sil{width:18px;height:18px}.ib.pq .sil{width:14px;height:14px}.btn .sil{width:14px;height:14px}
+.sk{position:relative;display:inline-flex;flex:none;line-height:1;vertical-align:middle}
+.sk svg{display:block}
+.sk .rot{position:absolute;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-family:"Segoe UI Variable Text","Segoe UI",sans-serif;letter-spacing:.02em;text-shadow:0 1px 1px rgba(0,0,0,.4);pointer-events:none;white-space:nowrap;line-height:1}
+.sk.arq .rot{left:4.2%;top:43.75%;width:83.3%;height:43.75%}
+.sk.s32.arq .rot{font-size:8.5px}.sk.s24.arq .rot{font-size:6.5px;letter-spacing:0}.sk.s16.arq .rot{font-size:5.5px;letter-spacing:-.15px;text-shadow:0 .5px .5px rgba(0,0,0,.45)}
+.sk.tipo .rot{left:0;top:0;width:100%;height:100%}
+.sk.s16.tipo.g1 .rot{font-size:10px}.sk.s16.tipo.g2 .rot{font-size:7.5px}.sk.s16.tipo.g3 .rot{font-size:6.5px}
+.sk.inativo{opacity:.5;filter:grayscale(1)}
+.oculto{display:none}
+.logo{display:block;flex:none}.logo .luzA{display:none}
+.grade th .sk{margin-right:6px}
+.det dd.tipo-d{display:flex;align-items:center;gap:7px}
+.campo{border-radius:999px;padding:0 12px}
+.sk.s16.arq.l4 .rot{font-size:4.9px;letter-spacing:-.2px}
+.flut{z-index:30}
+.titulo{height:30px;flex:none;display:flex;align-items:center;position:relative;color:var(--t2);background:var(--fundo0)}
+.titulo .marca{width:36px;height:30px;display:flex;align-items:center;justify-content:center;flex:none}
+.titulo .nome{position:absolute;left:50%;top:0;height:30px;transform:translateX(-50%);display:flex;align-items:center;color:var(--t3);pointer-events:none;white-space:nowrap}
+/* ajustes de 15/10/2026 */
+.doc,.vidro,.esq,.dlg{border-radius:10px}
+.campo,.busca{border-radius:10px}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr}
+.seg button{justify-content:center}
+.blk .seg{display:grid}
+.est input[type=checkbox]{border-radius:5px}
+/* trilho final de 16/10/2026 */
+.rail .sk{display:flex}
+/* revisão de 15/10/2026: contraste */
+.cab .tit,.aba.on .sub,.no.on .q,.mi:hover .at,.mi.on .at,.grade tr.mar td.lin,.grade tr.mar td.nulo{color:var(--t2)}
+.est{--fbc:rgba(255,255,255,.40)}
+.est.claro{--fbc:rgba(0,0,0,.46)}
+.campo{border-color:var(--fbc)}
+.campo:hover{border-color:color-mix(in oklab,var(--acc) 45%,var(--fbc))}
+.campo:focus-within{border-color:var(--acc)}
+.campo:is(:disabled,[aria-disabled=true]),.campo:has(input:disabled){border-color:var(--fb)}
+.est input:is([type=checkbox],[type=radio]):not(:checked){border-color:rgba(255,255,255,.35)}
+.est.claro input:is([type=checkbox],[type=radio]):not(:checked){border-color:rgba(0,0,0,.5)}
+.est.claro .pill.ok{color:#0b6a41}
+/* revisão de 15/10/2026: ícones */
+/* revisão de 15/10/2026: barra e acessibilidade */
+.jan{width:46px;height:30px;border:0;border-radius:0;background:transparent;color:inherit;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.jan:hover{background:var(--h);color:var(--t)}
+.jan.fechar:hover{background:#c42b1c;color:#fff}
+/* revisão de 15/10/2026: medidas */
+/* revisão de 15/10/2026: textos */
+.aba:not(.on),.aba:not(.on) a{min-width:0}
+.aba:not(.on) .sub{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* cabeçalho fino de 16/10/2026 */
+.cab{height:23px;padding:0 4px 0 12px}.cab .ib,.cab .ib.pq{width:20px;height:20px}.cab .ib .sil,.cab .ib .ic{width:12px;height:12px}.cab .tit{font-size:10.5px;line-height:1}
+/* cabeçalho na largura da linha de 17/10/2026 */
+.cab{margin:6px 6px 0;border:1px solid var(--btb);border-radius:6px}
+</style>
+</helmet>
+<div class="est {{classes}}" style="width:100%;min-height:900px;height:900px;display:flex;flex-direction:column;overflow:hidden;position:relative">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<linearGradient id="icPapel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ffffff"></stop><stop offset="1" style="stop-color:#d6dbe3"></stop></linearGradient>
+<linearGradient id="icDobra" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:#f7f9fb"></stop><stop offset="1" style="stop-color:#b9c1cd"></stop></linearGradient>
+<linearGradient id="icRealce" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ffffff;stop-opacity:.6"></stop><stop offset="1" style="stop-color:#ffffff;stop-opacity:0"></stop></linearGradient>
+<linearGradient id="icFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#000000;stop-opacity:0"></stop><stop offset="1" style="stop-color:#000000;stop-opacity:.22"></stop></linearGradient>
+<linearGradient id="icMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#4b5462"></stop><stop offset=".28" style="stop-color:#c9d2de"></stop><stop offset=".55" style="stop-color:#8c96a6"></stop><stop offset="1" style="stop-color:#424a57"></stop></linearGradient>
+<radialGradient id="icTampa" cx=".45" cy=".35" r=".8"><stop offset="0" style="stop-color:#f3f6f9"></stop><stop offset="1" style="stop-color:#97a1b0"></stop></radialGradient>
+<linearGradient id="icPastaTras" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#e6ad46"></stop><stop offset="1" style="stop-color:#c4861f"></stop></linearGradient>
+<linearGradient id="icPasta" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ffd97c"></stop><stop offset="1" style="stop-color:#e6a133"></stop></linearGradient>
+<linearGradient id="icAmbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ffd166"></stop><stop offset="1" style="stop-color:#d6841a"></stop></linearGradient>
+<linearGradient id="icPena" x1="1" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#c6e6ff"></stop><stop offset=".55" style="stop-color:#5aa6ef"></stop><stop offset="1" style="stop-color:#1f5fb8"></stop></linearGradient>
+<clipPath id="icCorpoCil"><path d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z"></path></clipPath>
+<linearGradient id="icVolCil" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#000000;stop-opacity:.45"></stop><stop offset=".28" style="stop-color:#ffffff;stop-opacity:.3"></stop><stop offset=".55" style="stop-color:#000000;stop-opacity:.05"></stop><stop offset="1" style="stop-color:#000000;stop-opacity:.5"></stop></linearGradient>
+<linearGradient id="icStErro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ff8a7a"></stop><stop offset="1" style="stop-color:#c0392b"></stop></linearGradient>
+<linearGradient id="icStOk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#6fdc98"></stop><stop offset="1" style="stop-color:#1f8a4c"></stop></linearGradient>
+<linearGradient id="icStInfo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#7cb4ff"></stop><stop offset="1" style="stop-color:#1f5fc8"></stop></linearGradient>
+<linearGradient id="icStAjuda" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#5fc7c0"></stop><stop offset="1" style="stop-color:#17706b"></stop></linearGradient>
+<linearGradient id="icStBloq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#b8c0cc"></stop><stop offset="1" style="stop-color:#5f6774"></stop></linearGradient>
+<filter id="icSombra" x="-25%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="1" stdDeviation="1.1" style="flood-color:#000000;flood-opacity:.4"></feDropShadow></filter>
+<linearGradient id="lgAbaTE" x1="1" y1="1" x2="0" y2="0"><stop offset="0" style="stop-color:#f0c48a"></stop><stop offset="1" style="stop-color:#c9904f"></stop></linearGradient>
+<linearGradient id="lgAbaTD" x1="0" y1="1" x2="1" y2="0"><stop offset="0" style="stop-color:#e3b377"></stop><stop offset="1" style="stop-color:#b97f41"></stop></linearGradient>
+<linearGradient id="lgAbaFE" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#e6b678"></stop><stop offset="1" style="stop-color:#c88d4e"></stop></linearGradient>
+<linearGradient id="lgAbaFD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#cf975a"></stop><stop offset="1" style="stop-color:#aa713a"></stop></linearGradient>
+<linearGradient id="lgFaceE" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#d39a5c"></stop><stop offset="1" style="stop-color:#ad7239"></stop></linearGradient>
+<linearGradient id="lgFaceD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ad7238"></stop><stop offset="1" style="stop-color:#8a5624"></stop></linearGradient>
+<linearGradient id="lgParedeE" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:#8d5d2e"></stop><stop offset="1" style="stop-color:#4b2e13"></stop></linearGradient>
+<linearGradient id="lgParedeD" x1="1" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#7b4e25"></stop><stop offset="1" style="stop-color:#422710"></stop></linearGradient>
+<linearGradient id="lgMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#4b5462"></stop><stop offset=".28" style="stop-color:#c9d2de"></stop><stop offset=".55" style="stop-color:#8c96a6"></stop><stop offset="1" style="stop-color:#424a57"></stop></linearGradient>
+<radialGradient id="lgTampa" cx=".45" cy=".35" r=".8"><stop offset="0" style="stop-color:#f3f6f9"></stop><stop offset="1" style="stop-color:#97a1b0"></stop></radialGradient>
+<linearGradient id="lgPapel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ffffff"></stop><stop offset="1" style="stop-color:#d6dbe3"></stop></linearGradient>
+<linearGradient id="lgRealce" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#ffffff;stop-opacity:.6"></stop><stop offset="1" style="stop-color:#ffffff;stop-opacity:0"></stop></linearGradient>
+<radialGradient id="lgLuzA" cx=".5" cy=".5" r=".5"><stop offset="0" style="stop-color:#f2f8ff;stop-opacity:.95"></stop><stop offset=".24" style="stop-color:#a8d0ff;stop-opacity:.65"></stop><stop offset=".6" style="stop-color:#3f86ee;stop-opacity:.2"></stop><stop offset="1" style="stop-color:#2c6fdc;stop-opacity:0"></stop></radialGradient>
+<radialGradient id="lgLuzB" cx=".5" cy=".5" r=".5"><stop offset="0" style="stop-color:#fffbea;stop-opacity:.95"></stop><stop offset=".24" style="stop-color:#ffe39a;stop-opacity:.68"></stop><stop offset=".6" style="stop-color:#f2a93b;stop-opacity:.2"></stop><stop offset="1" style="stop-color:#e08a1e;stop-opacity:0"></stop></radialGradient>
+<radialGradient id="lgDentroA" cx=".5" cy=".4" r=".6"><stop offset="0" style="stop-color:#cfe6ff;stop-opacity:.55"></stop><stop offset="1" style="stop-color:#2c6fdc;stop-opacity:0"></stop></radialGradient>
+<radialGradient id="lgDentroB" cx=".5" cy=".4" r=".6"><stop offset="0" style="stop-color:#fff1c4;stop-opacity:.6"></stop><stop offset="1" style="stop-color:#f2a93b;stop-opacity:0"></stop></radialGradient>
+<linearGradient id="lgRaioA" x1="0" y1="1" x2="0" y2="0"><stop offset="0" style="stop-color:#e6f2ff;stop-opacity:.45"></stop><stop offset="1" style="stop-color:#e6f2ff;stop-opacity:0"></stop></linearGradient>
+<linearGradient id="lgRaioB" x1="0" y1="1" x2="0" y2="0"><stop offset="0" style="stop-color:#fff4d6;stop-opacity:.45"></stop><stop offset="1" style="stop-color:#fff4d6;stop-opacity:0"></stop></linearGradient>
+<filter id="lgSombra" x="-15%" y="-15%" width="130%" height="135%"><feDropShadow dx="0" dy="10" stdDeviation="10" style="flood-color:#000000;flood-opacity:.4"></feDropShadow></filter>
+<filter id="lgSombraPeca" x="-20%" y="-20%" width="140%" height="145%"><feDropShadow dx="0" dy="5" stdDeviation="5" style="flood-color:#000000;flood-opacity:.35"></feDropShadow></filter>
+</defs></svg>
+
+<div class="titulo">
+<span class="marca"><svg class="logo" viewBox="0 0 512 512" width="16" height="16" aria-hidden="true"><!-- luz -->
+<circle cx="256" cy="236" r="222" fill="url(#lgLuzB)"></circle>
+<!-- abas de trás -->
+<g filter="url(#lgSombra)"><path d="M256 147.4 L87.3 244.8 L47.2 162.3 L215.8 64.9Z" fill="url(#lgAbaTE)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M256 147.4 L424.7 244.8 L464.8 162.3 L296.2 64.9Z" fill="url(#lgAbaTD)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M47.2 162.3 L215.8 64.9 M464.8 162.3 L296.2 64.9" stroke="#fff3dc" style="stroke-opacity:.75;stroke-width:3;stroke-linecap:round"></path></g>
+<!-- raios -->
+<path d="M256 329.2 L61.7 171.9 L105.5 129.5Z" fill="url(#lgRaioB)"></path>
+<path d="M256 329.2 L146.4 104.5 L187.1 88.9Z" fill="url(#lgRaioB)"></path>
+<path d="M256 329.2 L227.7 80.8 L293 81.9Z" fill="url(#lgRaioB)"></path>
+<path d="M256 329.2 L333.3 91.4 L373.4 108.4Z" fill="url(#lgRaioB)"></path>
+<path d="M256 329.2 L411.6 133.5 L451.7 173.6Z" fill="url(#lgRaioB)"></path>
+<!-- interior da caixa -->
+<path d="M256 147.4 L424.7 244.8 L256 342.2 L87.3 244.8Z" fill="#3a2410"></path>
+<path d="M256 147.4 L87.3 244.8 L199.8 309.7 L256 277.2Z" fill="url(#lgParedeE)"></path>
+<path d="M256 147.4 L424.7 244.8 L312.2 309.7 L256 277.2Z" fill="url(#lgParedeD)"></path>
+<path d="M256 147.4 L424.7 244.8 L256 342.2 L87.3 244.8Z" fill="url(#lgDentroB)"></path>
+<path d="M256 147.4 L424.7 244.8 L256 342.2 L87.3 244.8Z" fill="none" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path>
+<!-- gráfico -->
+<g transform="translate(279.62 191.54) rotate(18) scale(1.12 1) translate(-279.62 -191.54) translate(228.83 76.92) scale(0.9563) translate(-233 -30.2)"><g filter="url(#lgSombraPeca)"><path d="M260.6 237.1 L333.2 260.2 L316.2 59.3 L243.5 36.2Z" fill="#b9c1cd" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M256 240.9 L328.7 263.9 L311.6 63 L239 40Z" fill="url(#lgPapel)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<defs><linearGradient id="lgVolBarra" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#ffffff;stop-opacity:.4"></stop><stop offset=".45" style="stop-color:#ffffff;stop-opacity:.04"></stop><stop offset="1" style="stop-color:#000000;stop-opacity:.2"></stop></linearGradient></defs>
+<path d="M254.8 142.8 L267.1 146.7 L263.7 106.5 L251.3 102.6Z" fill="#2c6fdc" stroke="#000000" style="stroke-opacity:.3;stroke-width:1.6;stroke-linejoin:round"></path>
+<path d="M254.8 142.8 L267.1 146.7 L263.7 106.5 L251.3 102.6Z" fill="url(#lgVolBarra)"></path>
+<path d="M270.7 147.8 L283.1 151.7 L277.3 83.4 L264.9 79.5Z" fill="#1f8a8a" stroke="#000000" style="stroke-opacity:.3;stroke-width:1.6;stroke-linejoin:round"></path>
+<path d="M270.7 147.8 L283.1 151.7 L277.3 83.4 L264.9 79.5Z" fill="url(#lgVolBarra)"></path>
+<path d="M286.7 152.9 L299.1 156.8 L294.8 106.6 L282.5 102.7Z" fill="#e6a133" stroke="#000000" style="stroke-opacity:.3;stroke-width:1.6;stroke-linejoin:round"></path>
+<path d="M286.7 152.9 L299.1 156.8 L294.8 106.6 L282.5 102.7Z" fill="url(#lgVolBarra)"></path>
+<path d="M302.7 158 L315.1 161.9 L307.9 77.5 L295.6 73.6Z" fill="#2e9e5b" stroke="#000000" style="stroke-opacity:.3;stroke-width:1.6;stroke-linejoin:round"></path>
+<path d="M302.7 158 L315.1 161.9 L307.9 77.5 L295.6 73.6Z" fill="url(#lgVolBarra)"></path>
+<path d="M251.1 141.6 L318 162.8 M251.1 141.6 L243.3 49.2" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linecap:round"></path>
+<path d="M239 40 L311.6 63" stroke="#ffffff" style="stroke-opacity:.9;stroke-width:3;stroke-linecap:round"></path></g></g>
+<!-- planilha -->
+<g transform="translate(16.08 14.82)"><g filter="url(#lgSombraPeca)"><path d="M286.1 304.2 L390.9 339.6 L410.8 176.7 L306 141.2Z" fill="#b9c1cd" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M283 308.4 L387.8 343.9 L407.7 180.9 L302.9 145.4Z" fill="url(#lgPapel)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M298.5 181.3 L403.3 216.7 L407.7 180.9 L302.9 145.4Z" fill="#2c6fdc"></path>
+<path d="M300.7 163.4 L405.5 198.8 L407.7 180.9 L302.9 145.4Z" fill="url(#lgRealce)"></path>
+<path d="M283 308.4 L387.8 343.9 L407.7 180.9 L302.9 145.4Z" fill="none" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M294.6 213.1 L399.4 248.5 M290.7 244.8 L395.6 280.3 M286.9 276.6 L391.7 312.1 M317.6 320.1 L333.1 193 M352.2 331.8 L367.7 204.7" stroke="#000000" style="stroke-opacity:.16;stroke-width:3"></path>
+<path d="M302.9 145.4 L407.7 180.9" stroke="#ffffff" style="stroke-opacity:.9;stroke-width:3;stroke-linecap:round"></path></g></g>
+<!-- banco -->
+<g transform="translate(195.62 250.27) rotate(-11) translate(-195.62 -250.27) translate(-16.48 -6.22)"><g filter="url(#lgSombraPeca)"><path d="M129.5 185.7 L129.5 362.3 A82.7 47.7 0 0 0 294.8 362.3 L294.8 185.7 A82.7 47.7 0 0 0 129.5 185.7Z" fill="url(#lgMetal)"></path>
+<defs><clipPath id="lgCorpoC"><path d="M129.5 185.7 L129.5 362.3 A82.7 47.7 0 0 0 294.8 362.3 L294.8 185.7 A82.7 47.7 0 0 0 129.5 185.7Z"></path></clipPath><linearGradient id="lgVolCil" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#000000;stop-opacity:.45"></stop><stop offset=".28" style="stop-color:#ffffff;stop-opacity:.3"></stop><stop offset=".55" style="stop-color:#000000;stop-opacity:.05"></stop><stop offset="1" style="stop-color:#000000;stop-opacity:.5"></stop></linearGradient></defs>
+<g style="clip-path:url(#lgCorpoC)">
+<path d="M129.5 214.2 A82.7 47.7 0 0 0 294.8 214.2 L294.8 227.4 A82.7 47.7 0 0 1 129.5 227.4Z" fill="#2c6fdc"></path>
+<path d="M129.5 214.2 A82.7 47.7 0 0 0 294.8 214.2 L294.8 227.4 A82.7 47.7 0 0 1 129.5 227.4Z" fill="url(#lgVolCil)"></path>
+<path d="M129.5 212.9 A82.7 47.7 0 0 0 294.8 212.9" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:2.6"></path>
+<path d="M129.5 228.6 A82.7 47.7 0 0 0 294.8 228.6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:2.4"></path>
+<path d="M129.5 249.2 A82.7 47.7 0 0 0 294.8 249.2 L294.8 262.4 A82.7 47.7 0 0 1 129.5 262.4Z" fill="#2c6fdc"></path>
+<path d="M129.5 249.2 A82.7 47.7 0 0 0 294.8 249.2 L294.8 262.4 A82.7 47.7 0 0 1 129.5 262.4Z" fill="url(#lgVolCil)"></path>
+<path d="M129.5 247.9 A82.7 47.7 0 0 0 294.8 247.9" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:2.6"></path>
+<path d="M129.5 263.6 A82.7 47.7 0 0 0 294.8 263.6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:2.4"></path>
+</g>
+<path d="M129.5 185.7 L129.5 362.3 A82.7 47.7 0 0 0 294.8 362.3 L294.8 185.7" fill="none" stroke="#000000" style="stroke-opacity:.4;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M166.7 241.5 L166.7 356.3" stroke="#ffffff" style="stroke-opacity:.45;stroke-width:10.7;stroke-linecap:round"></path>
+<path d="M131.5 193.7 L131.5 362.3 M292.8 193.7 L292.8 362.3" stroke="#fff1cf" style="stroke-opacity:.8;stroke-width:3"></path>
+<ellipse cx="212.1" cy="185.7" rx="82.7" ry="47.7" fill="url(#lgTampa)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></ellipse>
+<ellipse cx="203.9" cy="176.2" rx="46.3" ry="20.5" fill="#ffffff" style="fill-opacity:.4"></ellipse></g></g>
+<!-- lápis -->
+<g transform="translate(201.92 297.35) rotate(-13) translate(-201.92 -297.35) translate(-10.67 134.86)"><g filter="url(#lgSombraPeca)"><path d="M243.7 270 L248.9 267.9 L177.9 92.2 L172.7 94.3Z" fill="#ffd86b"></path>
+<path d="M248.9 267.9 L254.1 265.8 L183.1 90.1 L177.9 92.2Z" fill="#f2b829"></path>
+<path d="M254.1 265.8 L259.3 263.7 L188.3 87.9 L183.1 90.1Z" fill="#cf8d12"></path>
+<path d="M172.7 94.3 L188.3 87.9 L172.8 64.8 L167.8 66.8Z" fill="#f1cf9c"></path>
+<path d="M183.1 90.1 L188.3 87.9 L172.8 64.8 L171.1 65.5Z" fill="#000000" style="fill-opacity:.12"></path>
+<path d="M167.8 66.8 L172.8 64.8 L165.9 55Z" fill="#3b3f46"></path>
+<path d="M243.7 270 L259.3 263.7 L188.3 87.9 L172.8 64.8 L165.9 55 L167.8 66.8 L172.7 94.3Z" fill="none" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M244 263.4 L177.5 98.8" stroke="#ffffff" style="stroke-opacity:.55;stroke-width:2.2;stroke-linecap:round"></path></g></g>
+<!-- lupa -->
+<g transform="translate(-36.28 32.45)"><g filter="url(#lgSombraPeca)"><defs><linearGradient id="lgCabo" gradientUnits="userSpaceOnUse" x1="350.4" y1="253.6" x2="334.5" y2="245.1"><stop offset="0" style="stop-color:#1f130a"></stop><stop offset=".3" style="stop-color:#8a6040"></stop><stop offset=".62" style="stop-color:#4a2f1a"></stop><stop offset="1" style="stop-color:#1a0f07"></stop></linearGradient><linearGradient id="lgAnel" gradientUnits="userSpaceOnUse" x1="356.1" y1="237.5" x2="344.7" y2="231.4"><stop offset="0" style="stop-color:#4b5462"></stop><stop offset=".3" style="stop-color:#dfe5ec"></stop><stop offset=".6" style="stop-color:#8c96a6"></stop><stop offset="1" style="stop-color:#3a414d"></stop></linearGradient><radialGradient id="lgVidro" cx=".38" cy=".32" r=".75"><stop offset="0" style="stop-color:#ffffff;stop-opacity:.34"></stop><stop offset=".65" style="stop-color:#fff4d6;stop-opacity:.12"></stop><stop offset="1" style="stop-color:#f2a93b;stop-opacity:.26"></stop></radialGradient></defs>
+<path d="M350.4 253.6 L334.5 245.1 L282.2 345.2 L296.8 353Z" fill="url(#lgCabo)" stroke="#000000" style="stroke-opacity:.45;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M343.3 255.5 L294.3 347.1" stroke="#ffffff" style="stroke-opacity:.28;stroke-width:2.3;stroke-linecap:round"></path>
+<path d="M358 233.9 L346.6 227.9 L335 245.4 L349.9 253.3Z" fill="url(#lgAnel)" stroke="#000000" style="stroke-opacity:.45;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M353 245.4 L339.9 238.4" stroke="#000000" style="stroke-opacity:.3;stroke-width:1.6"></path>
+<ellipse cx="362.5" cy="204.9" rx="42.8" ry="34.3" transform="rotate(18 362.5 204.9)" fill="none" stroke="#4f5764" style="stroke-width:7.3"></ellipse>
+<ellipse cx="363.8" cy="204.2" rx="42.8" ry="34.3" transform="rotate(18 363.8 204.2)" fill="none" stroke="#5d6673" style="stroke-width:7.3"></ellipse>
+<ellipse cx="365.1" cy="203.4" rx="42.8" ry="34.3" transform="rotate(18 365.1 203.4)" fill="none" stroke="#6d7784" style="stroke-width:7.3"></ellipse>
+<ellipse cx="366.4" cy="202.7" rx="42.8" ry="34.3" transform="rotate(18 366.4 202.7)" fill="none" stroke="#7d8794" style="stroke-width:7.3"></ellipse>
+<ellipse cx="367.7" cy="201.9" rx="42.8" ry="34.3" transform="rotate(18 367.7 201.9)" fill="none" stroke="#8d97a4" style="stroke-width:7.3"></ellipse>
+<ellipse cx="362.5" cy="204.9" rx="46.5" ry="37.2" transform="rotate(18 362.5 204.9)" fill="none" stroke="#000000" style="stroke-opacity:.4;stroke-width:2.4;stroke-linejoin:round"></ellipse>
+<ellipse cx="367.7" cy="201.9" rx="42.8" ry="34.3" transform="rotate(18 367.7 201.9)" fill="url(#lgVidro)"></ellipse>
+<ellipse cx="369.8" cy="204.1" rx="36.8" ry="29.5" transform="rotate(18 369.8 204.1)" fill="none" stroke="#7a4a12" style="stroke-opacity:.18;stroke-width:3"></ellipse>
+<ellipse cx="367.7" cy="201.9" rx="42.8" ry="34.3" transform="rotate(18 367.7 201.9)" fill="none" stroke="url(#lgMetal)" style="stroke-width:7.3"></ellipse>
+<ellipse cx="367.7" cy="201.9" rx="46.5" ry="37.2" transform="rotate(18 367.7 201.9)" fill="none" stroke="#000000" style="stroke-opacity:.45;stroke-width:2.4;stroke-linejoin:round"></ellipse>
+<ellipse cx="367.7" cy="201.9" rx="39.2" ry="31.4" transform="rotate(18 367.7 201.9)" fill="none" stroke="#000000" style="stroke-opacity:.3;stroke-width:1.8;stroke-linejoin:round"></ellipse>
+<path d="M342 187.1 A30 24 18 0 1 371 178.1" fill="none" stroke="#ffffff" style="stroke-opacity:.8;stroke-width:4.3;stroke-linecap:round"></path>
+<circle cx="381.1" cy="219" r="2.8" fill="#ffffff" style="fill-opacity:.55"></circle></g></g>
+<!-- frente da caixa -->
+<g filter="url(#lgSombra)"><path d="M87.3 244.8 L256 342.2 L256 472 L87.3 374.6Z" fill="url(#lgFaceE)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M256 342.2 L424.7 244.8 L424.7 374.6 L256 472Z" fill="url(#lgFaceD)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M87.3 244.8 L256 342.2 L224.6 414.1 L55.9 316.8Z" fill="url(#lgAbaFE)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M256 342.2 L424.7 244.8 L456.1 316.8 L287.4 414.1Z" fill="url(#lgAbaFD)" stroke="#000000" style="stroke-opacity:.3;stroke-width:2.4;stroke-linejoin:round"></path>
+<path d="M224.6 414.1 L55.9 316.8 M456.1 316.8 L287.4 414.1" stroke="#fff3dc" style="stroke-opacity:.75;stroke-width:3;stroke-linecap:round"></path>
+<path d="M87.3 244.8 L256 342.2 L424.7 244.8" fill="none" stroke="#ffffff" style="stroke-opacity:.55;stroke-width:2.6;stroke-linejoin:round"></path>
+<path d="M256 342.2 L256 472" stroke="#ffffff" style="stroke-opacity:.35;stroke-width:2.4"></path></g></svg></span>
+<nav aria-label="Menus" style="display:flex;align-items:center;gap:2px">
+<button class="menu">Arquivo</button><button class="menu">Editar</button><button class="menu">Exibir</button><button class="menu">Ajuda</button>
+</nav>
+<span style="flex:1;align-self:stretch"></span>
+<span class="nome">dados · DataBox</span>
+<span style="display:flex;height:30px">
+<button class="jan" aria-label="Minimizar" title="Minimizar"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:1.2"><path d="M4 12h16"></path></svg></button>
+<button class="jan" aria-label="Maximizar" title="Maximizar"><svg class="ic" viewBox="0 0 24 24" style="width:11px;height:11px;stroke-width:1.2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg></button>
+<button class="jan fechar" aria-label="Fechar" title="Fechar"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke-width:1.2"><path d="M4 4l16 16M20 4L4 20"></path></svg></button>
+</span>
+</div>
+
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--ambiente)">
+<header class="vidro" style="flex:none;margin:6px 8px 0;border-radius:10px;display:flex;flex-direction:column">
+<div role="toolbar" aria-label="Ferramentas" style="height:44px;display:flex;align-items:center;gap:2px;padding:0 8px">
+<button class="ib" aria-label="Voltar" title="Voltar (Alt+←)"><svg class="sil" viewBox="0 0 24 24"><path d="M10.5 4.6 3.2 12l7.3 7.4V15H19.8a1.2 1.2 0 0 0 1.2-1.2v-3.6A1.2 1.2 0 0 0 19.8 9H10.5z"></path></svg></button>
+<button class="ib" disabled="" aria-label="Avançar" title="Avançar (Alt+→)"><svg class="sil" viewBox="0 0 24 24"><path d="M13.5 4.6 20.8 12l-7.3 7.4V15H4.2A1.2 1.2 0 0 1 3 13.8v-3.6A1.2 1.2 0 0 1 4.2 9h9.3z"></path></svg></button>
+<span class="sep"></span>
+<button class="ib" aria-label="Abrir pasta" title="Abrir pasta"><svg class="sil" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2h8A1.5 1.5 0 0 1 21 8.5V9H3z" style="opacity:.6"></path><path d="M2.2 10.5h19.6l-1.5 8.3A1.5 1.5 0 0 1 18.8 20H5.2a1.5 1.5 0 0 1-1.5-1.2z"></path></svg></button>
+<button class="ib" aria-label="Abrir arquivo" title="Abrir arquivo (Ctrl+O)"><svg class="sil" viewBox="0 0 24 24"><path d="M6.2 3H13v4.8A2.2 2.2 0 0 0 15.2 10H20v9.8a1.2 1.2 0 0 1-1.2 1.2H6.2A1.2 1.2 0 0 1 5 19.8V4.2A1.2 1.2 0 0 1 6.2 3z"></path><path d="M14.6 3.3 19.7 8.4H15.2a.6.6 0 0 1-.6-.6z" style="opacity:.6"></path></svg></button>
+<button class="ib" disabled="" aria-label="Salvar" title="Salvar (Ctrl+S)"><svg class="sil" viewBox="0 0 24 24"><path d="M5.2 3h10.6L21 8.2v11.6a1.2 1.2 0 0 1-1.2 1.2H5.2A1.2 1.2 0 0 1 4 19.8V4.2A1.2 1.2 0 0 1 5.2 3zM7.5 4.8v4.4h8V4.8zM7.5 13.5v6h10v-6z" style="fill-rule:evenodd"></path></svg></button>
+<span class="sep"></span>
+<button class="ib" aria-label="Nova linha" title="Nova linha"><svg class="sil" viewBox="0 0 24 24"><path d="M6.5 3h11A3.5 3.5 0 0 1 21 6.5v11a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 17.5v-11A3.5 3.5 0 0 1 6.5 3zM10.9 7.5v3.4H7.5v2.2h3.4v3.4h2.2v-3.4h3.4v-2.2h-3.4V7.5z" style="fill-rule:evenodd"></path></svg></button>
+<button class="ib" disabled="" aria-label="Nova coluna" title="Nova coluna"><svg class="sil" viewBox="0 0 24 24"><path d="M5.5 3h4A2.5 2.5 0 0 1 12 5.5v13A2.5 2.5 0 0 1 9.5 21h-4A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3zM4.6 8.4v1.3h5.8V8.4zM4.6 14.3v1.3h5.8v-1.3z" style="fill-rule:evenodd"></path><path d="M16.4 8.3v2.6h-2.6v2.2h2.6v2.6h2.2v-2.6h2.6v-2.2h-2.6V8.3z"></path></svg></button>
+<button class="ib" aria-label="Duplicar" title="Duplicar as 2 linhas marcadas"><svg class="sil" viewBox="0 0 24 24"><path d="M4.2 3h9.6A1.2 1.2 0 0 1 15 4.2V6H8.5A2.5 2.5 0 0 0 6 8.5V15H4.2A1.2 1.2 0 0 1 3 13.8V4.2A1.2 1.2 0 0 1 4.2 3z" style="opacity:.6"></path><path d="M9.2 8h10.6A1.2 1.2 0 0 1 21 9.2v10.6a1.2 1.2 0 0 1-1.2 1.2H9.2A1.2 1.2 0 0 1 8 19.8V9.2A1.2 1.2 0 0 1 9.2 8z"></path></svg></button>
+<button class="ib" aria-label="Excluir" title="Excluir as 2 linhas marcadas"><svg class="sil" viewBox="0 0 24 24"><path d="M9.3 2.5h5.4l.9 1.7h4.2a1.1 1.1 0 0 1 0 2.2H4.2a1.1 1.1 0 0 1 0-2.2h4.2z"></path><path d="M5.6 7.6h12.8l-1 12.5a2 2 0 0 1-2 1.9H8.6a2 2 0 0 1-2-1.9zM9.3 10.2v8.4h1.7v-8.4zM13 10.2v8.4h1.7v-8.4z" style="fill-rule:evenodd"></path></svg></button>
+<button class="ib" disabled="" aria-label="Desfazer" title="Desfazer (Ctrl+Z)"><svg class="sil" viewBox="0 0 24 24"><path d="M9 3.8 2.6 9.5 9 15.2v-3.6h5.2a3.9 3.9 0 0 1 0 7.8H11V22h3.2a6.5 6.5 0 0 0 0-13H9z"></path></svg></button>
+<button class="ib" disabled="" aria-label="Refazer" title="Refazer (Ctrl+Y)"><svg class="sil" viewBox="0 0 24 24"><path d="M15 3.8l6.4 5.7-6.4 5.7v-3.6H9.8a3.9 3.9 0 0 0 0 7.8H13V22H9.8a6.5 6.5 0 0 1 0-13H15z"></path></svg></button>
+<span class="sep"></span>
+<label class="campo busca"><svg class="sil" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--t3)"><path d="M10.5 3a7.5 7.5 0 0 1 6 12l4.2 4.2a1.3 1.3 0 0 1-1.8 1.8l-4.2-4.2a7.5 7.5 0 1 1-4.2-13.8zm0 2.7a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6z" style="fill-rule:evenodd"></path></svg><input placeholder="Buscar em clientes" aria-label="Buscar"><span class="kbd">Ctrl+F</span></label>
+<button class="ib on" aria-pressed="true" aria-label="Filtrar" title="Filtrar (1 condição)"><svg class="sil" viewBox="0 0 24 24"><path d="M3.6 3.8h16.8a1 1 0 0 1 .8 1.6L15 13.6v5.6a1 1 0 0 1-.5.9l-3 1.7a1 1 0 0 1-1.5-.9v-7.3L2.8 5.4a1 1 0 0 1 .8-1.6z"></path></svg></button>
+<button class="ib" aria-label="Atualizar" title="Atualizar (F5)"><svg class="sil" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 0 1 6.1 2.6L20.5 3.7V10.5h-6.8l2.6-2.6A6 6 0 1 0 17.8 14h2.6A8.5 8.5 0 1 1 12 3.5z"></path></svg></button>
+<span class="sep"></span>
+<button class="ib" disabled="" aria-label="Executar" title="Executar (Ctrl+Enter)"><svg class="sil" viewBox="0 0 24 24"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.9l11.8-7.4a1 1 0 0 0 0-1.7L8.5 3.8A1 1 0 0 0 7 4.6z"></path></svg></button>
+<button class="ib" aria-label="Nova consulta" title="Nova consulta SQL"><svg class="sil" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM6.2 9.3 8.9 12l-2.7 2.7 1.2 1.2 3.9-3.9-3.9-3.9zM12.5 15.1v1.7h5v-1.7z" style="fill-rule:evenodd"></path></svg></button>
+<button class="ib" aria-label="Exportar" title="Exportar clientes"><svg class="sil" viewBox="0 0 24 24"><path d="M12 2.8 17.4 8.2h-3.7v6.3h-3.4V8.2H6.6z"></path><path d="M3.8 13h2.4v5.6h11.6V13h2.4v6.8a1.2 1.2 0 0 1-1.2 1.2H5a1.2 1.2 0 0 1-1.2-1.2z"></path></svg></button>
+<span style="flex:1"></span>
+<button class="ib on" aria-pressed="true" aria-label="Painel de propriedades" title="Painel de propriedades"><svg class="sil" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2.2v11.6h10.2V6.2z" style="fill-rule:evenodd"></path></svg></button>
+</div>
+</header>
+
+<div style="flex:1;min-height:0;display:flex;gap:8px;padding:8px;flex-wrap:wrap">
+<nav class="vidro" aria-label="Áreas" style="width:52px;flex:none;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0">
+<button class="rail" aria-label="Início" title="Início"><span class="sk" aria-hidden="true"><svg viewBox="0 0 48 48" width="22" height="22"><defs><linearGradient id="casa_c_parede" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:#ece7e0"></stop><stop offset=".55" style="stop-color:#d6cfc6"></stop><stop offset="1" style="stop-color:#b9b0a5"></stop></linearGradient><linearGradient id="casa_c_telhado" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#f2535f"></stop><stop offset="1" style="stop-color:#bf1f31"></stop></linearGradient><linearGradient id="casa_c_chamine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#e9e5e0"></stop><stop offset="1" style="stop-color:#b8b1a8"></stop></linearGradient><linearGradient id="casa_c_vidro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:#ffffff"></stop><stop offset="1" style="stop-color:#bfe0e4"></stop></linearGradient><linearGradient id="casa_c_madeira" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#9a6420"></stop><stop offset="1" style="stop-color:#5f3b0e"></stop></linearGradient><linearGradient id="casa_c_porta" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#d8b425"></stop><stop offset="1" style="stop-color:#a3820b"></stop></linearGradient></defs><rect x="32.4" y="7.5" width="5.2" height="12" rx=".6" fill="url(#casa_c_chamine)" stroke="#000000" style="stroke-opacity:.3"></rect><path filter="url(#icSombra)" d="M9.5 23 24 9.8 38.5 23V42.2a.8.8 0 0 1-.8.8H10.3a.8.8 0 0 1-.8-.8z" fill="url(#casa_c_parede)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path><path d="M10 23.2 24 10.5 31 16.9 10 36z" fill="#ffffff" style="fill-opacity:.16"></path><rect x="10" y="33" width="28" height="9.5" fill="url(#icFundo)" style="opacity:.6"></rect><path filter="url(#icSombra)" d="M3.2 23.4 24 4 44.8 23.4 41.9 26.2 24 9.6 6.1 26.2z" fill="url(#casa_c_telhado)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path><path d="M6.4 22.8 24 6.4 41.6 22.8" fill="none" stroke="#ffffff" style="stroke-opacity:.45;stroke-width:1;stroke-linecap:round"></path><rect x="18.4" y="17.4" width="11.2" height="9.2" rx=".8" fill="url(#casa_c_madeira)" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="19.7" y="18.7" width="8.6" height="6.6" fill="url(#casa_c_vidro)"></rect><path d="M24 18.7v6.6M19.7 22h8.6" stroke="#6e4612" style="stroke-width:1.2"></path><rect x="19" y="30.4" width="10" height="12.1" fill="#5f3b0e" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="20.3" y="31.7" width="7.4" height="10.8" fill="url(#casa_c_porta)"></rect><rect x="21.4" y="33" width="5.2" height="8.2" fill="none" stroke="#ffffff" style="stroke-opacity:.25;stroke-width:.8"></rect><rect x="18.4" y="42.4" width="11.2" height="1.6" rx=".4" fill="#c9a316" stroke="#000000" style="stroke-opacity:.3"></rect></svg></span></button>
+<button class="rail on" aria-current="page" aria-label="Explorador" title="Explorador"><span class="sk" aria-hidden="true"><svg viewBox="0 0 48 48" width="22" height="22"><defs><linearGradient id="explorador_b_aco" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#bcc6d3"/><stop offset="1" style="stop-color:#6f7a8b"/></linearGradient><linearGradient id="explorador_b_cromo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#e6ebf0"/><stop offset=".5" style="stop-color:#a7b1be"/><stop offset="1" style="stop-color:#687283"/></linearGradient></defs><path d="M8 24V10.5a1.5 1.5 0 0 1 1.5-1.5H10l1.5-3.7a1.2 1.2 0 0 1 1.1-.8h7.8a1.2 1.2 0 0 1 1.1.8L23 9h15.5a1.5 1.5 0 0 1 1.5 1.5V24z" fill="url(#icPastaTras)" stroke="#000000" style="stroke-opacity:.3;stroke-linejoin:round"/><rect x="12" y="13" width="19" height="11" rx=".6" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.25"/><path filter="url(#icSombra)" d="M6.5 24V18.5a1.5 1.5 0 0 1 1.5-1.5h17.5l1.5-3.7a1.2 1.2 0 0 1 1.1-.8h7.8a1.2 1.2 0 0 1 1.1.8L38.5 17h1.5a1.5 1.5 0 0 1 1.5 1.5V24z" fill="url(#icPasta)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"/><path d="M28.4 13.9h7.2" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:1.1;stroke-linecap:round"/><rect filter="url(#icSombra)" x="4" y="20.5" width="40" height="22.5" rx="3" fill="url(#explorador_b_aco)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"/><rect x="4.6" y="21.1" width="38.8" height="9" rx="2.4" fill="url(#icRealce)"/><rect x="4" y="32" width="40" height="11" rx="3" fill="url(#icFundo)"/><rect x="5.5" y="22" width="37" height="19.5" rx="1.8" fill="none" stroke="#ffffff" style="stroke-opacity:.3;stroke-width:.9"/><rect x="17" y="23.8" width="14" height="7" rx="1.3" fill="#586170" stroke="#000000" style="stroke-opacity:.35"/><rect x="18" y="24.8" width="12" height="5" rx=".6" fill="url(#icPapel)"/><rect x="12" y="33" width="24" height="5.6" rx="2.8" fill="#000000" style="fill-opacity:.4"/><rect x="13.5" y="33.6" width="21" height="3.4" rx="1.7" fill="url(#explorador_b_cromo)" stroke="#000000" style="stroke-opacity:.35"/></svg></span></button>
+<button class="rail" aria-label="Histórico de consultas" title="Histórico de consultas"><span class="sk" aria-hidden="true"><svg viewBox="0 0 48 48" width="22" height="22"><defs><radialGradient id="historico_b_mostrador" cx=".5" cy=".42" r=".58"><stop offset=".6" style="stop-color:#ffffff"></stop><stop offset="1" style="stop-color:#d6dce5"></stop></radialGradient></defs><circle filter="url(#icSombra)" cx="24.5" cy="24" r="19" fill="url(#icMetal)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></circle><circle cx="24.5" cy="24" r="19" fill="url(#icFundo)"></circle><circle cx="24.5" cy="24" r="12.8" fill="url(#historico_b_mostrador)" stroke="#000000" style="stroke-opacity:.45;stroke-width:1.3"></circle><path d="M24.5 14.9V24l5.4 3.1" stroke="#000000" style="fill:none;stroke-opacity:.2;stroke-width:3.3;stroke-linecap:round;stroke-linejoin:round" transform="translate(0 .8)"></path><path d="M24.5 14.9V24l5.4 3.1" stroke="#2b3140" style="fill:none;stroke-width:3.3;stroke-linecap:round;stroke-linejoin:round"></path><circle cx="24.5" cy="24" r="2.5" fill="#2b3140"></circle><path filter="url(#icSombra)" d="M24.5 43A19 19 0 1 0 11.07 10.57L8 7.5L8.1 21.1L18.6 18.1L15.45 14.95A12.8 12.8 0 1 1 24.5 36.8Z" fill="url(#icStInfo)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path><path d="M15.8 8.9A17.4 17.4 0 0 1 40.9 18.1" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:1.3;stroke-linecap:round"></path></svg></span></button>
+<span style="flex:1"></span>
+<button class="rail" aria-label="Preferências" title="Preferências (Ctrl+,)"><span class="sk" aria-hidden="true"><svg viewBox="0 0 48 48" width="22" height="22"><defs><linearGradient id="engrenagens_atras" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#3f4753"></stop><stop offset=".3" style="stop-color:#aab3c0"></stop><stop offset=".6" style="stop-color:#76808f"></stop><stop offset="1" style="stop-color:#38404b"></stop></linearGradient></defs><path filter="url(#icSombra)" d="M33.91 5.53L34.78 3.00L38.66 3.83L38.43 6.49A7.9 7.9 0 0 1 40.32 7.95L42.84 7.06L44.62 10.61L42.39 12.09A7.9 7.9 0 0 1 42.43 14.48L44.70 15.89L43.03 19.49L40.48 18.67A7.9 7.9 0 0 1 38.63 20.19L38.95 22.85L35.09 23.79L34.15 21.29A7.9 7.9 0 0 1 31.81 20.79L29.92 22.69L26.79 20.26L28.15 17.96A7.9 7.9 0 0 1 27.08 15.82L24.42 15.54L24.36 11.57L27.01 11.20A7.9 7.9 0 0 1 28.02 9.03L26.58 6.77L29.65 4.25L31.59 6.10A7.9 7.9 0 0 1 33.91 5.53z" fill="url(#engrenagens_atras)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path><circle cx="34.6" cy="13.4" r="4.6" fill="url(#icTampa)" stroke="#000000" style="stroke-opacity:.25"></circle><circle cx="34.6" cy="13.4" r="2" fill="#1d1e21" stroke="#000000" style="stroke-opacity:.4"></circle><path filter="url(#icSombra)" d="M16.59 15.66L17.15 11.78L22.05 11.78L22.61 15.66A12.9 12.9 0 0 1 26.34 17.20L29.47 14.86L32.94 18.33L30.60 21.46A12.9 12.9 0 0 1 32.14 25.19L36.02 25.75L36.02 30.65L32.14 31.21A12.9 12.9 0 0 1 30.60 34.94L32.94 38.07L29.47 41.54L26.34 39.20A12.9 12.9 0 0 1 22.61 40.74L22.05 44.62L17.15 44.62L16.59 40.74A12.9 12.9 0 0 1 12.86 39.20L9.73 41.54L6.26 38.07L8.60 34.94A12.9 12.9 0 0 1 7.06 31.21L3.18 30.65L3.18 25.75L7.06 25.19A12.9 12.9 0 0 1 8.60 21.46L6.26 18.33L9.73 14.86L12.86 17.20A12.9 12.9 0 0 1 16.59 15.66z" fill="url(#icMetal)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path><circle cx="19.6" cy="28.2" r="7.6" fill="url(#icTampa)" stroke="#000000" style="stroke-opacity:.25"></circle><circle cx="19.6" cy="28.2" r="3.5" fill="#1d1e21" stroke="#000000" style="stroke-opacity:.4"></circle><path d="M16.6 27.4a3.2 3.2 0 0 1 6 0" fill="none" stroke="#ffffff" style="stroke-opacity:.2;stroke-width:1.1"></path></svg></span></button>
+</nav>
+
+<aside class="vidro" aria-label="Explorador" style="width:258px;flex:none;border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden">
+<div class="cab"><span class="tit">Explorador</span><span style="flex:1"></span>
+<button class="ib pq" aria-label="Abrir pasta" title="Abrir pasta"><svg class="sil" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2h8A1.5 1.5 0 0 1 21 8.5V9H3z" style="opacity:.6"></path><path d="M2.2 10.5h19.6l-1.5 8.3A1.5 1.5 0 0 1 18.8 20H5.2a1.5 1.5 0 0 1-1.5-1.2z"></path></svg></button>
+<button class="ib pq" aria-label="Recolher tudo" title="Recolher tudo"><svg class="sil" viewBox="0 0 24 24"><path d="M6.3 3.5h11.4L12 9.6z"></path><path d="M6.3 20.5h11.4L12 14.4z"></path></svg></button></div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:6px 0 8px">
+<div class="no" style="padding-left:8px" title="C:\dados"><svg class="seta ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path d="M4 12a3 3 0 0 1 3-3h11l4 4h19a3 3 0 0 1 3 3v22a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="url(#icPastaTras)" stroke="#000000" style="stroke-opacity:.3"></path><path d="M6 17h36" stroke="#000000" style="stroke-opacity:.18;stroke-width:1.2"></path><path d="M10.5 14.5h20.5l4.5 4.5v10H10.5z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.25"></path><path d="M31 14.5v4.5h4.5" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path filter="url(#icSombra)" d="M7 41H41Q44 41 44.4 38L46.7 23Q47 21 45 21H11.5Q9.5 21 9 22.9L4.8 38.1Q4 41 7 41z" fill="url(#icPasta)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4;stroke-linejoin:round"></path><path d="M11.2 22.5H45" stroke="#ffffff" style="stroke-opacity:.65;stroke-width:1.4;stroke-linecap:round"></path></svg></span><span>dados</span></div>
+<a class="no" href="#" style="padding-left:20px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z" fill="url(#icMetal)"></path><g style="clip-path:url(#icCorpoCil)"><path d="M8 19.7c0 3.3 7.2 6 16 6s16-2.7 16-6V22.3c0 3.3-7.2 6-16 6S8 25.6 8 22.3z" fill="#2c6fdc"></path><path d="M8 19.7c0 3.3 7.2 6 16 6s16-2.7 16-6V22.3c0 3.3-7.2 6-16 6S8 25.6 8 22.3z" fill="url(#icVolCil)"></path><path d="M8 19.35c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:.8"></path><path d="M8 22.65c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:.7"></path><path d="M8 28.2c0 3.3 7.2 6 16 6s16-2.7 16-6V30.8c0 3.3-7.2 6-16 6S8 34.1 8 30.8z" fill="#2c6fdc"></path><path d="M8 28.2c0 3.3 7.2 6 16 6s16-2.7 16-6V30.8c0 3.3-7.2 6-16 6S8 34.1 8 30.8z" fill="url(#icVolCil)"></path><path d="M8 27.85c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:.8"></path><path d="M8 31.15c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:.7"></path></g><path d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z" fill="none" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><ellipse cx="24" cy="12" rx="16" ry="6" fill="url(#icTampa)" stroke="#000000" style="stroke-opacity:.35"></ellipse><ellipse cx="22" cy="10.8" rx="9" ry="2.6" fill="#ffffff" style="fill-opacity:.4"></ellipse><path d="M12.5 17.5v17" stroke="#ffffff" style="stroke-opacity:.45;stroke-width:2;stroke-linecap:round"></path><g filter="url(#icSombra)"><path d="M46 2C35.5 3.5 29 10 27 18.5c-.9 3.8-.8 7.6-.1 10.6l1.8-1.9c-.2-2.4.1-4.8.8-7.1l3.4 1.2-2.7-3.1c.6-1.6 1.4-3.1 2.4-4.5l4 1-3-2.6c1.1-1.3 2.4-2.5 3.8-3.6l4.4.2-3.1-1.8C43 4.6 44.6 3.4 46 2z" fill="url(#icPena)" stroke="#000000" style="stroke-opacity:.35"></path></g><path d="M44.5 3.5C36.5 10.5 30 20 24.5 34" fill="none" stroke="#ffffff" style="stroke-opacity:.85;stroke-width:1.3;stroke-linecap:round"></path></svg></span><span style="font-weight:600">exemplo.db</span></a>
+<a class="no" href="#" style="padding-left:34px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg><span>Tabelas</span><span class="q">7</span></a>
+<a class="no" href="#" style="padding-left:48px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="5" y="8" width="38" height="32" rx="4" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><path d="M5 12a4 4 0 0 1 4-4h30a4 4 0 0 1 4 4v6H5z" fill="#2c6fdc"></path><path d="M5.5 12a3.5 3.5 0 0 1 3.5-3.5h30a3.5 3.5 0 0 1 3.5 3.5v2.5h-37z" fill="url(#icRealce)"></path><path d="M5 26h38M5 33h38M17 18v22M30 18v22" stroke="#000000" style="stroke-opacity:.16;stroke-width:1.4"></path></svg></span><span>clientes</span><span class="q">60</span></a>
+<a class="no on" href="#" style="padding-left:78px"><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="5" y="8" width="38" height="32" rx="4" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="5.5" y="8.5" width="37" height="6" rx="3.5" fill="url(#icRealce)"></rect><path d="M5 18.5h38M5 29h38M17.5 8v32M30.5 8v32" stroke="#000000" style="stroke-opacity:.18;stroke-width:1.4"></path><rect x="18.2" y="19.2" width="11.6" height="9.1" rx="1" fill="#2c6fdc" stroke="#2c6fdc" style="fill-opacity:.22;stroke-width:2"></rect></svg></span><span>Dados</span></a>
+<a class="no" href="#" style="padding-left:78px"><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="5" y="8" width="38" height="32" rx="4" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="5.5" y="8.5" width="37" height="6" rx="3.5" fill="url(#icRealce)"></rect><rect x="10" y="12.5" width="7" height="7" rx="2" fill="#b38a14" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="10.5" y="13.0" width="6" height="3" rx="1.5" fill="url(#icRealce)"></rect><rect x="20" y="14.5" width="17" height="3" rx="1.5" fill="#000000" style="fill-opacity:.2"></rect><rect x="10" y="21.5" width="7" height="7" rx="2" fill="#5f6b7a" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="10.5" y="22.0" width="6" height="3" rx="1.5" fill="url(#icRealce)"></rect><rect x="20" y="23.5" width="13" height="3" rx="1.5" fill="#000000" style="fill-opacity:.2"></rect><rect x="10" y="30.5" width="7" height="7" rx="2" fill="#1f8a8a" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="10.5" y="31.0" width="6" height="3" rx="1.5" fill="url(#icRealce)"></rect><rect x="20" y="32.5" width="15" height="3" rx="1.5" fill="#000000" style="fill-opacity:.2"></rect></svg></span><span>Estrutura</span></a>
+<a class="no" href="#" style="padding-left:78px"><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="6" y="6" width="36" height="36" rx="6" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="11" y="12" width="26" height="6" rx="2.5" fill="#2c6fdc"></rect><rect x="11" y="21.5" width="19" height="6" rx="2.5" fill="#2c6fdc" style="fill-opacity:.82"></rect><rect x="11" y="31" width="12" height="6" rx="2.5" fill="#2c6fdc" style="fill-opacity:.64"></rect><rect x="11" y="12" width="26" height="3" rx="1.5" fill="url(#icRealce)"></rect><circle cx="35" cy="35" r="9.5" fill="url(#icAmbar)" stroke="#000000" style="stroke-opacity:.35"></circle><ellipse cx="35" cy="31" rx="6" ry="3.3" fill="#ffffff" style="fill-opacity:.35"></ellipse><path d="M36.3 28.4 30.6 36.4h4.2L33.6 41.8l5.9-8.1h-4.2z" fill="#ffffff" stroke="#000000" style="stroke-opacity:.25"></path></svg></span><span>Índices e gatilhos</span></a>
+<a class="no" href="#" style="padding-left:78px"><span class="sk s16 arq" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path d="M15 12.5h9M15 17h13" stroke="#000000" style="stroke-opacity:.13;stroke-width:1.8;stroke-linecap:round"></path><rect x="2" y="21" width="40" height="21" rx="3.5" fill="#2c6fdc" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="2.5" y="21.5" width="39" height="3" rx="3" fill="url(#icRealce)"></rect><rect x="2.5" y="32" width="39" height="9.5" rx="3" fill="url(#icFundo)"></rect></svg><span class="rot">SQL</span></span><span>Definição SQL</span></a>
+<sc-for list="{{outras}}" as="t" hint-placeholder-count="6">
+<a class="no" href="#" style="padding-left:48px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="5" y="8" width="38" height="32" rx="4" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><path d="M5 12a4 4 0 0 1 4-4h30a4 4 0 0 1 4 4v6H5z" fill="{{t.cor}}"></path><path d="M5.5 12a3.5 3.5 0 0 1 3.5-3.5h30a3.5 3.5 0 0 1 3.5 3.5v2.5h-37z" fill="url(#icRealce)"></path><path d="M5 26h38M5 33h38M17 18v22M30 18v22" stroke="#000000" style="stroke-opacity:.16;stroke-width:1.4"></path><g class="{{t.clsOlho}}"><circle cx="33" cy="32" r="10" fill="{{t.cor}}" stroke="#000000" style="stroke-opacity:.35"></circle><path d="M26.5 32s2.6-4.2 6.5-4.2 6.5 4.2 6.5 4.2-2.6 4.2-6.5 4.2-6.5-4.2-6.5-4.2z" fill="#ffffff"></path><circle cx="33" cy="32" r="1.9" fill="{{t.cor}}"></circle></g><g class="{{t.clsChave}}"><circle cx="33" cy="32" r="10" fill="{{t.cor}}" stroke="#000000" style="stroke-opacity:.35"></circle><path d="M25.6 34.7a4.7 4.7 0 1 0 9.4 0a4.7 4.7 0 1 0 -9.4 0zM28.2 34.7a2.1 2.1 0 1 0 4.2 0a2.1 2.1 0 1 0 -4.2 0z" fill="#ffffff" style="fill-rule:evenodd"></path><path d="M30.9 31.7L37.2 25.4L41.2 29.4L40 30.6L39 29.6L38.2 30.4L39.2 31.4L37.9 32.7L36.3 31.1L33.3 34.1z" fill="#ffffff"></path></g><g class="{{t.clsLupa}}"><circle cx="32" cy="31" r="7" fill="#ffffff" style="fill-opacity:.85"></circle><circle cx="32" cy="31" r="7" fill="none" stroke="{{t.cor}}" style="stroke-width:2.6"></circle><path d="M37 36l5 5" stroke="{{t.cor}}" style="stroke-width:3.4;stroke-linecap:round"></path></g></svg></span><span>{{t.nome}}</span><span class="q">{{t.q}}</span></a>
+</sc-for>
+<a class="no" href="#" style="padding-left:34px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg><span>Visões</span><span class="q">1</span></a>
+<a class="no" href="#" style="padding-left:34px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg><span>Sistema</span><span class="q">7</span></a>
+<a class="no" href="#" style="padding-left:20px"><svg class="seta ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z" fill="url(#icMetal)"></path><g style="clip-path:url(#icCorpoCil)"><path d="M8 19.7c0 3.3 7.2 6 16 6s16-2.7 16-6V22.3c0 3.3-7.2 6-16 6S8 25.6 8 22.3z" fill="#2c6fdc"></path><path d="M8 19.7c0 3.3 7.2 6 16 6s16-2.7 16-6V22.3c0 3.3-7.2 6-16 6S8 25.6 8 22.3z" fill="url(#icVolCil)"></path><path d="M8 19.35c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:.8"></path><path d="M8 22.65c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:.7"></path><path d="M8 28.2c0 3.3 7.2 6 16 6s16-2.7 16-6V30.8c0 3.3-7.2 6-16 6S8 34.1 8 30.8z" fill="#2c6fdc"></path><path d="M8 28.2c0 3.3 7.2 6 16 6s16-2.7 16-6V30.8c0 3.3-7.2 6-16 6S8 34.1 8 30.8z" fill="url(#icVolCil)"></path><path d="M8 27.85c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:.8"></path><path d="M8 31.15c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:.7"></path></g><path d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z" fill="none" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><ellipse cx="24" cy="12" rx="16" ry="6" fill="url(#icTampa)" stroke="#000000" style="stroke-opacity:.35"></ellipse><ellipse cx="22" cy="10.8" rx="9" ry="2.6" fill="#ffffff" style="fill-opacity:.4"></ellipse><path d="M12.5 17.5v17" stroke="#ffffff" style="stroke-opacity:.45;stroke-width:2;stroke-linecap:round"></path><g filter="url(#icSombra)"><path d="M46 2C35.5 3.5 29 10 27 18.5c-.9 3.8-.8 7.6-.1 10.6l1.8-1.9c-.2-2.4.1-4.8.8-7.1l3.4 1.2-2.7-3.1c.6-1.6 1.4-3.1 2.4-4.5l4 1-3-2.6c1.1-1.3 2.4-2.5 3.8-3.6l4.4.2-3.1-1.8C43 4.6 44.6 3.4 46 2z" fill="url(#icPena)" stroke="#000000" style="stroke-opacity:.35"></path></g><path d="M44.5 3.5C36.5 10.5 30 20 24.5 34" fill="none" stroke="#ffffff" style="stroke-opacity:.85;stroke-width:1.3;stroke-linecap:round"></path></svg></span><span>estoque_2026.db</span></a>
+<a class="no" href="#" style="padding-left:20px"><span class="vz"></span><span class="sk s16 arq" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path d="M15 12.5h9M15 17h13" stroke="#000000" style="stroke-opacity:.13;stroke-width:1.8;stroke-linecap:round"></path><rect x="2" y="21" width="40" height="21" rx="3.5" fill="#27854c" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="2.5" y="21.5" width="39" height="3" rx="3" fill="url(#icRealce)"></rect><rect x="2.5" y="32" width="39" height="9.5" rx="3" fill="url(#icFundo)"></rect></svg><span class="rot">CSV</span></span><span>vendas_2025.csv</span></a>
+<a class="no" href="#" style="padding-left:20px"><span class="vz"></span><span class="sk s16 arq l4" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path d="M15 12.5h9M15 17h13" stroke="#000000" style="stroke-opacity:.13;stroke-width:1.8;stroke-linecap:round"></path><rect x="2" y="21" width="40" height="21" rx="3.5" fill="#1d7443" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="2.5" y="21.5" width="39" height="3" rx="3" fill="url(#icRealce)"></rect><rect x="2.5" y="32" width="39" height="9.5" rx="3" fill="url(#icFundo)"></rect></svg><span class="rot">XLSX</span></span><span>relatorio_q3.xlsx</span></a>
+<a class="no" href="#" style="padding-left:20px"><span class="vz"></span><span class="sk s16 arq l4" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path d="M15 12.5h9M15 17h13" stroke="#000000" style="stroke-opacity:.13;stroke-width:1.8;stroke-linecap:round"></path><rect x="2" y="21" width="40" height="21" rx="3.5" fill="#9c6c0c" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="2.5" y="21.5" width="39" height="3" rx="3" fill="url(#icRealce)"></rect><rect x="2.5" y="32" width="39" height="9.5" rx="3" fill="url(#icFundo)"></rect></svg><span class="rot">JSON</span></span><span>config.json</span></a>
+</div>
+</aside>
+
+<section style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;min-height:0">
+<div role="tablist" aria-label="Abas abertas" style="height:35px;flex:none;display:flex;align-items:flex-end;gap:2px;padding:0 10px;margin-bottom:-1px;position:relative;z-index:1">
+<div class="aba" role="presentation"><a href="#" role="tab" aria-selected="false"><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z" fill="url(#icMetal)"></path><g style="clip-path:url(#icCorpoCil)"><path d="M8 19.7c0 3.3 7.2 6 16 6s16-2.7 16-6V22.3c0 3.3-7.2 6-16 6S8 25.6 8 22.3z" fill="#2c6fdc"></path><path d="M8 19.7c0 3.3 7.2 6 16 6s16-2.7 16-6V22.3c0 3.3-7.2 6-16 6S8 25.6 8 22.3z" fill="url(#icVolCil)"></path><path d="M8 19.35c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:.8"></path><path d="M8 22.65c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:.7"></path><path d="M8 28.2c0 3.3 7.2 6 16 6s16-2.7 16-6V30.8c0 3.3-7.2 6-16 6S8 34.1 8 30.8z" fill="#2c6fdc"></path><path d="M8 28.2c0 3.3 7.2 6 16 6s16-2.7 16-6V30.8c0 3.3-7.2 6-16 6S8 34.1 8 30.8z" fill="url(#icVolCil)"></path><path d="M8 27.85c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#000000" style="stroke-opacity:.5;stroke-width:.8"></path><path d="M8 31.15c0 3.3 7.2 6 16 6s16-2.7 16-6" fill="none" stroke="#ffffff" style="stroke-opacity:.6;stroke-width:.7"></path></g><path d="M8 12v24c0 3.9 7.2 7 16 7s16-3.1 16-7V12z" fill="none" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><ellipse cx="24" cy="12" rx="16" ry="6" fill="url(#icTampa)" stroke="#000000" style="stroke-opacity:.35"></ellipse><ellipse cx="22" cy="10.8" rx="9" ry="2.6" fill="#ffffff" style="fill-opacity:.4"></ellipse><path d="M12.5 17.5v17" stroke="#ffffff" style="stroke-opacity:.45;stroke-width:2;stroke-linecap:round"></path><g filter="url(#icSombra)"><path d="M46 2C35.5 3.5 29 10 27 18.5c-.9 3.8-.8 7.6-.1 10.6l1.8-1.9c-.2-2.4.1-4.8.8-7.1l3.4 1.2-2.7-3.1c.6-1.6 1.4-3.1 2.4-4.5l4 1-3-2.6c1.1-1.3 2.4-2.5 3.8-3.6l4.4.2-3.1-1.8C43 4.6 44.6 3.4 46 2z" fill="url(#icPena)" stroke="#000000" style="stroke-opacity:.35"></path></g><path d="M44.5 3.5C36.5 10.5 30 20 24.5 34" fill="none" stroke="#ffffff" style="stroke-opacity:.85;stroke-width:1.3;stroke-linecap:round"></path></svg></span>exemplo.db<span class="sub">Visão geral</span></a><button class="x" aria-label="Fechar aba"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+<div class="aba on" role="presentation" style="width: 154px; height: 34px"><a href="#" role="tab" aria-selected="true"><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="5" y="8" width="38" height="32" rx="4" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><path d="M5 12a4 4 0 0 1 4-4h30a4 4 0 0 1 4 4v6H5z" fill="#2c6fdc"></path><path d="M5.5 12a3.5 3.5 0 0 1 3.5-3.5h30a3.5 3.5 0 0 1 3.5 3.5v2.5h-37z" fill="url(#icRealce)"></path><path d="M5 26h38M5 33h38M17 18v22M30 18v22" stroke="#000000" style="stroke-opacity:.16;stroke-width:1.4"></path></svg></span>clientes<span class="sub">Dados</span></a><button class="x" aria-label="Fechar aba"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+<div class="aba" role="presentation"><a href="#" role="tab" aria-selected="false"><span class="sk s16" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="5" y="8" width="38" height="32" rx="4" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><path d="M5 12a4 4 0 0 1 4-4h30a4 4 0 0 1 4 4v6H5z" fill="#2c6fdc"></path><path d="M5.5 12a3.5 3.5 0 0 1 3.5-3.5h30a3.5 3.5 0 0 1 3.5 3.5v2.5h-37z" fill="url(#icRealce)"></path><path d="M5 26h38M5 33h38M17 18v22M30 18v22" stroke="#000000" style="stroke-opacity:.16;stroke-width:1.4"></path></svg></span>clientes<span class="sub">Estrutura</span></a><button class="x" aria-label="Fechar aba"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+<div class="aba" role="presentation"><a href="#" role="tab" aria-selected="false"><span class="sk s16 arq" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path d="M15 12.5h9M15 17h13" stroke="#000000" style="stroke-opacity:.13;stroke-width:1.8;stroke-linecap:round"></path><rect x="2" y="21" width="40" height="21" rx="3.5" fill="#2c6fdc" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="2.5" y="21.5" width="39" height="3" rx="3" fill="url(#icRealce)"></rect><rect x="2.5" y="32" width="39" height="9.5" rx="3" fill="url(#icFundo)"></rect></svg><span class="rot">SQL</span></span>Consulta 1</a><button class="x" aria-label="Fechar aba"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+<div class="aba" role="presentation"><a href="#" role="tab" aria-selected="false"><span class="sk s16 arq" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><path filter="url(#icSombra)" d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#icPapel)" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></path><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="url(#icDobra)" stroke="#000000" style="stroke-opacity:.25;stroke-width:1.6"></path><path d="M15 12.5h9M15 17h13" stroke="#000000" style="stroke-opacity:.13;stroke-width:1.8;stroke-linecap:round"></path><rect x="2" y="21" width="40" height="21" rx="3.5" fill="#27854c" stroke="#000000" style="stroke-opacity:.3"></rect><rect x="2.5" y="21.5" width="39" height="3" rx="3" fill="url(#icRealce)"></rect><rect x="2.5" y="32" width="39" height="9.5" rx="3" fill="url(#icFundo)"></rect></svg><span class="rot">CSV</span></span>vendas_2025.csv</a><span class="mod" title="Alterado, não salvo"></span></div>
+<button class="ib pq" aria-label="Nova consulta" title="Nova consulta SQL" style="margin:0 0 4px 4px"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<div class="doc" style="flex:1">
+<div class="faixa">
+<span class="tit">Filtros</span>
+<span class="chip"><b>ativo</b> igual a <b>1</b><button class="x" aria-label="Tirar o filtro"><svg class="ic" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></span>
+<button class="btn sutil pq"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Condição</button>
+<span style="flex:1"></span>
+<span style="color:var(--t3)">41 de 60 linhas</span>
+<button class="btn sutil pq">Limpar filtros</button>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden">
+<table class="grade">
+
+<thead><tr>
+<th class="selc"><input type="checkbox" aria-label="Marcar a página"></th>
+<th class="num" title="INTEGER · chave primária" aria-sort="ascending"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#927010" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">PK</span></span>id <span style="color:var(--acct)">▲</span></th>
+<th title="TEXT"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#5f6b7a" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">Aa</span></span>nome</th>
+<th title="TEXT · único"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#5f6b7a" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">Aa</span></span>email</th>
+<th title="TEXT"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#5f6b7a" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">Aa</span></span>cidade</th>
+<th class="num" title="REAL"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#1d8181" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">,5</span></span>limite</th>
+<th class="num" title="INTEGER"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#2c6fdc" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">12</span></span>ativo</th>
+<th title="TEXT"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#5f6b7a" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">Aa</span></span>criado_em</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{linhas}}" as="r" hint-placeholder-count="18">
+<tr class="{{r.cls}}">
+<td class="selc"><input type="checkbox" checked="{{r.marcada}}" aria-label="Marcar a linha"></td>
+<td class="num chave">{{r.id}}</td>
+<td>{{r.nome}}</td>
+<td class="{{r.emailCls}}">{{r.email}}</td>
+<td>{{r.cidade}}</td>
+<td class="{{r.limiteCls}}">{{r.limite}}</td>
+<td class="num">1</td>
+<td>{{r.criado}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div class="rodape">
+<span>Linhas 1–41 de 41</span><span style="color:var(--t3)">· 2 marcadas</span>
+<span style="flex:1"></span>
+<button class="campo" style="height:26px" aria-label="Linhas por página">100 por página<svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;color:var(--t3)"><path d="M6 9l6 6 6-6"></path></svg></button>
+<button class="ib pq" disabled="" aria-label="Página anterior"><svg class="sil" viewBox="0 0 24 24"><path d="M10.5 4.6 3.2 12l7.3 7.4V15H19.8a1.2 1.2 0 0 0 1.2-1.2v-3.6A1.2 1.2 0 0 0 19.8 9H10.5z"></path></svg></button>
+<span>Página 1 de 1</span>
+<button class="ib pq" disabled="" aria-label="Próxima página"><svg class="sil" viewBox="0 0 24 24"><path d="M13.5 4.6 20.8 12l-7.3 7.4V15H4.2A1.2 1.2 0 0 1 3 13.8v-3.6A1.2 1.2 0 0 1 4.2 9h9.3z"></path></svg></button>
+</div>
+</div>
+</section>
+
+<aside class="vidro" aria-label="Propriedades" style="width:272px;flex:1 0 272px;max-width:272px;border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden">
+<div class="cab"><span class="tit">Propriedades</span></div>
+<div style="flex:1;min-height:0;overflow:hidden">
+<div class="sec"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>Tabela</div>
+<dl class="det">
+<dt>Nome</dt><dd>clientes</dd>
+<dt>Linhas</dt><dd>60</dd>
+<dt>Colunas</dt><dd>7</dd>
+<dt>Sem rowid</dt><dd>não</dd>
+<dt>Estrita</dt><dd>não</dd>
+</dl>
+<div class="sec"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>Coluna<span style="font-weight:400;color:var(--t2)">email</span></div>
+<dl class="det">
+<dt>Tipo</dt><dd class="tipo-d"><span class="sk s16 tipo g2" aria-hidden="true"><svg viewBox="0 0 48 48" width="16" height="16"><rect filter="url(#icSombra)" x="4" y="4" width="40" height="40" rx="11" fill="#5f6b7a" stroke="#000000" style="stroke-opacity:.35;stroke-width:2.4"></rect><rect x="10" y="5.2" width="28" height="6.8" rx="3.4" fill="url(#icRealce)"></rect><rect x="4" y="26" width="40" height="18" rx="11" fill="url(#icFundo)"></rect></svg><span class="rot">Aa</span></span>TEXT</dd>
+<dt>Regras</dt><dd><span class="pill">único</span></dd>
+<dt>Padrão</dt><dd style="color:var(--t3)">—</dd>
+<dt>Valor</dt><dd>bruno.3@example.test</dd>
+</dl>
+<div class="sec"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>Abrir na Consulta SQL</div>
+<div style="padding:2px 14px 14px;display:flex;flex-direction:column;gap:6px">
+<a class="atalho" href="#">SELECT * FROM clientes LIMIT 100</a>
+<a class="atalho" href="#">SELECT count(*) FROM clientes</a>
+</div>
+</div>
+</aside>
+</div>
+
+<footer class="vidro" style="height:26px;flex:none;margin:0 8px 8px;border-radius:10px;display:flex;align-items:center;gap:14px;padding:0 14px;font-size:11px;color:var(--t2)">
+<span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>exemplo.db</span>
+<span title="Você está editando exemplo.db. Tudo o que for salvo grava no arquivo na hora.">Gravação imediata</span>
+<span style="flex:1"></span>
+<span>clientes · 60 linhas · 7 colunas</span><span>SQLite 3.53.2</span><span>UTF-8</span>
+</footer>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tema":{"editor":"enum","options":["escuro","claro"],"default":"escuro"},"acento":{"editor":"enum","options":["azul","verde","violeta","laranja"],"default":"azul"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tema = this.props.tema ?? 'escuro';
+    const acento = this.props.acento ?? 'azul';
+    const tabIco = (nome, tipo) => {
+      const virtual = tipo === 'virtual' || nome === 'notas';
+      const semRowid = tipo === 'sem rowid' || nome === 'produtos';
+      const visao = nome.startsWith('v_');
+      return { cor: virtual ? '#1f8a8a' : semRowid ? '#4f5fc9' : visao ? '#7a52c7' : '#2c6fdc', clsLupa: virtual ? '' : 'oculto', clsOlho: visao ? '' : 'oculto', clsChave: semRowid && !virtual ? '' : 'oculto' };
+    };
+    const outras = [['eventos', '5.000'], ['itens_pedido', '456'], ['notas', '2'], ['pedidos', '240'], ['produtos', '10'], ['Tabela com espaço', '4']];
+    const dados = [
+      [1, 'Lucas Brandão', 'lucas.1@example.test', 'Porto Alegre', '154.03', '2026-01-05 09:14:00'],
+      [2, 'Carla Ibiapina', 'carla.2@example.test', 'Recife', '14542.56', '2026-01-09 16:40:00'],
+      [3, 'Bruno Brandão', 'bruno.3@example.test', 'Recife', '13741.03', '2026-01-12 11:02:00'],
+      [4, 'Olívia Lacerda', 'olivia.4@example.test', 'Curitiba', '17051', '2026-01-20 08:31:00'],
+      [5, 'Bruno Ibiapina', 'bruno.5@example.test', 'Porto Alegre', '4321.49', '2026-02-02 14:55:00'],
+      [6, 'Rafael Ibiapina', 'rafael.6@example.test', 'São Paulo', '10803.61', '2026-02-07 10:20:00'],
+      [7, 'Gabriela Guimarães', 'gabriela.7@example.test', 'Rio de Janeiro', null, '2026-02-15 17:48:00'],
+      [8, 'João Esteves', 'joao.8@example.test', 'Belo Horizonte', '2024.53', '2026-02-21 09:07:00'],
+      [9, 'Marina Coutinho', 'marina.9@example.test', 'Salvador', '8120.4', '2026-03-03 13:26:00'],
+      [11, 'Pedro Lacerda', 'pedro.11@example.test', 'Fortaleza', '3310', '2026-03-14 15:12:00'],
+      [12, 'Ana Coutinho', 'ana.12@example.test', 'Rio de Janeiro', '14200.04', '2026-04-13 12:24:00'],
+      [13, 'Tiago Esteves', 'tiago.13@example.test', 'Manaus', '990.15', '2026-04-18 08:45:00'],
+      [15, 'Helena Brandão', 'helena.15@example.test', 'Curitiba', '6402.77', '2026-05-02 10:33:00'],
+      [16, 'Rafael Guimarães', 'rafael.16@example.test', 'Recife', '12050.3', '2026-05-09 16:01:00'],
+      [18, 'Beatriz Ibiapina', 'beatriz.18@example.test', 'Porto Alegre', '7310.9', '2026-05-27 11:18:00'],
+      [19, 'Lucas Esteves', 'lucas.19@example.test', 'São Paulo', '2299.99', '2026-06-04 09:52:00'],
+      [21, 'Carla Coutinho', 'carla.21@example.test', 'Belo Horizonte', '15880.2', '2026-06-16 14:37:00'],
+      [24, 'Gabriela Lacerda', 'gabriela.24@example.test', 'Salvador', '4410.05', '2026-07-01 08:09:00']
+    ];
+    return {
+      classes: (tema === 'claro' ? 'claro ' : '') + 'ac-' + acento,
+      outras: outras.map((t) => Object.assign({ nome: t[0], q: t[1] }, tabIco(t[0], ''))),
+      linhas: dados.map((d) => ({
+        id: d[0], nome: d[1], email: d[2], cidade: d[3],
+        limite: d[4] === null ? 'NULL' : d[4],
+        limiteCls: d[4] === null ? 'num nulo' : 'num',
+        criado: d[5],
+        marcada: d[0] === 2 || d[0] === 5,
+        cls: d[0] === 2 || d[0] === 5 ? 'mar' : '',
+        emailCls: d[0] === 3 ? 'ativa' : ''
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
