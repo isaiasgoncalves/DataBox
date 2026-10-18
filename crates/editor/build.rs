@@ -147,7 +147,9 @@ fn terceiros(raiz: &Path) -> Option<Vec<Terceiro>> {
             let p = &pacotes[i];
             let (licenca, pasta) = match registro.as_deref() {
                 Some(r) => match licenca_de(r, &p.nome, &p.versao) {
-                    Ok((licenca, pasta)) => (licenca, Some(pasta)),
+                    Ok(Some((licenca, pasta))) => (licenca, Some(pasta)),
+                    // sem a fonte baixada: é de outro sistema (o Cargo.lock não separa), não entra neste build
+                    Ok(None) => (String::new(), None),
                     Err(motivo) => {
                         println!(
                             "cargo:warning=licença de {} {} em branco na lista de terceiros: {motivo}",
@@ -162,6 +164,9 @@ fn terceiros(raiz: &Path) -> Option<Vec<Terceiro>> {
         })
         .collect();
     lista.sort_by(|a, b| (&a.nome, &a.versao).cmp(&(&b.nome, &b.versao)));
+    if registro.is_some() && !lista.is_empty() && lista.iter().all(|t| t.pasta.is_none()) {
+        println!("cargo:warning=nenhuma fonte de terceiros achada no registro do cargo: as licenças saem em branco");
+    }
     Some(lista)
 }
 
@@ -242,9 +247,10 @@ fn pasta_dos_fontes() -> Option<PathBuf> {
 }
 
 /// A licença do pacote, lida do Cargo.toml da fonte baixada (em qualquer índice do registro): o campo `license` ou,
-/// sem ele, o `license-file` ("arquivo LICENSE-X"), com a pasta da fonte. Sem nenhum dos dois, ou sem a fonte, o
-/// motivo, para o aviso do build (a licença sai em branco, e o build segue).
-fn licenca_de(registro: &Path, nome: &str, versao: &str) -> Result<(String, PathBuf), String> {
+/// sem ele, o `license-file` ("arquivo LICENSE-X"), com a pasta da fonte. Sem a fonte baixada, `None` (a biblioteca
+/// é de outro sistema). Sem `license` nem `license-file`, o motivo, para o aviso do build (a licença sai em branco, e
+/// o build segue).
+fn licenca_de(registro: &Path, nome: &str, versao: &str) -> Result<Option<(String, PathBuf)>, String> {
     let pasta = format!("{nome}-{versao}");
     let indices = fs::read_dir(registro).map_err(|e| format!("não li {}: {e}", registro.display()))?;
     for indice in indices.flatten() {
@@ -260,17 +266,17 @@ fn licenca_de(registro: &Path, nome: &str, versao: &str) -> Result<(String, Path
             } else if no_pacote && let Some(v) = linha.strip_prefix("license =") {
                 return valor_entre_aspas(v)
                     .filter(|l| !l.trim().is_empty())
-                    .map(|l| (l, fonte))
+                    .map(|l| Some((l, fonte)))
                     .ok_or_else(|| "o campo license está vazio".to_string());
             } else if no_pacote && let Some(v) = linha.strip_prefix("license-file =") {
                 arquivo = valor_entre_aspas(v).filter(|a| !a.trim().is_empty());
             }
         }
         return arquivo
-            .map(|a| (format!("arquivo {a}"), fonte))
+            .map(|a| Some((format!("arquivo {a}"), fonte)))
             .ok_or_else(|| "o Cargo.toml dela não tem license nem license-file".to_string());
     }
-    Err(format!("a fonte {pasta} não está em {}", registro.display()))
+    Ok(None)
 }
 
 // ------------------------------------------------------------------------------------------------ avisos
@@ -287,15 +293,16 @@ const FONTES_DO_EGUI: &[(&str, &str, &str)] = &[
 /// O THIRD-PARTY-NOTICES.txt (em inglês, como os textos de licença que ele reúne): as fontes do egui, a lista das
 /// bibliotecas e os arquivos de licença e de aviso (LICENSE*, LICENCE*, COPYING*, COPYRIGHT*, NOTICE*, UNLICENSE)
 /// que vêm na fonte de cada uma, com os textos iguais juntos. A lista vem do Cargo.lock, que não separa por sistema:
-/// as que só entram em outros sistemas não têm a fonte baixada num build do Windows e ficam sem texto.
+/// as que só entram em outros sistemas não têm a fonte baixada neste build e ficam sem texto.
 fn avisos(lista: &[Terceiro]) -> String {
     let mut s = String::new();
     s.push_str(
         "DataBox - third-party notices\n\
          =============================\n\n\
-         DataBox is licensed under the MIT License (see LICENSE.txt). DataBox.exe also contains the third-party\n\
-         software listed below, each under its own license. The list comes from Cargo.lock; libraries marked\n\
-         \"not in the Windows build\" only build on other operating systems and are not part of DataBox.exe.\n\n",
+         DataBox is licensed under the MIT License (see LICENSE.txt). The DataBox executable also contains\n\
+         the third-party software listed below, each under its own license. The list comes from Cargo.lock;\n\
+         libraries marked \"not in this build\" only build on other operating systems and\n\
+         are not part of this executable.\n\n",
     );
 
     s.push_str("1. Fonts embedded by egui (epaint_default_fonts)\n");
@@ -324,7 +331,7 @@ fn avisos(lista: &[Terceiro]) -> String {
     s.push_str("2. Libraries\n------------\n\n");
     let largura = lista.iter().map(|t| t.nome.len() + t.versao.len() + 1).max().unwrap_or(0);
     for t in lista {
-        let licenca = if t.pasta.is_none() { "(not in the Windows build)" } else { t.licenca.as_str() };
+        let licenca = if t.pasta.is_none() { "(not in this build)" } else { t.licenca.as_str() };
         s.push_str(&format!("{:largura$}  {licenca}\n", format!("{} {}", t.nome, t.versao)));
     }
     s.push('\n');

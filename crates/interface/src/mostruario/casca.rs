@@ -290,7 +290,8 @@ impl Mostruario {
             }
             m.separador();
             m.submenu("Tema", 210.0, |m| {
-                for (t, nome) in [(Tema::Sistema, "Seguir o Windows"), (Tema::Claro, "Claro"), (Tema::Escuro, "Escuro")]
+                for (t, nome) in
+                    [(Tema::Sistema, comum::app::SEGUIR_O_SISTEMA), (Tema::Claro, "Claro"), (Tema::Escuro, "Escuro")]
                 {
                     if m.item_opcao(nome, tema == t).clicked() {
                         tema = t;

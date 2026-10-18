@@ -393,8 +393,9 @@ pub(crate) const MOSTRAR_NA_PASTA: &str = "Mostrar na pasta";
 /// Windows." (com o nome do tipo nas frases: CSV, Excel, JSON, texto).
 pub(crate) fn frase_da_ficha(tipo: TipoDeArquivo) -> String {
     format!(
-        "O editor de {} ainda não está pronto. Enquanto isso, o arquivo abre no programa padrão do Windows.",
-        tipo.nome()
+        "O editor de {} ainda não está pronto. Enquanto isso, o arquivo abre no {}.",
+        tipo.nome(),
+        comum::app::PROGRAMA_PADRAO
     )
 }
 
@@ -614,7 +615,10 @@ mod testes {
     fn frase_e_tipo_pela_extensao() {
         assert_eq!(
             frase_da_ficha(TipoDeArquivo::Csv),
-            "O editor de CSV ainda não está pronto. Enquanto isso, o arquivo abre no programa padrão do Windows."
+            format!(
+                "O editor de CSV ainda não está pronto. Enquanto isso, o arquivo abre no {}.",
+                comum::app::PROGRAMA_PADRAO
+            )
         );
         assert!(frase_da_ficha(TipoDeArquivo::Xlsx).starts_with("O editor de Excel "));
         assert!(frase_da_ficha(TipoDeArquivo::Texto).starts_with("O editor de texto "));

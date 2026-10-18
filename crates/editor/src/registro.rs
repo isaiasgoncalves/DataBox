@@ -251,6 +251,7 @@ mod testes {
         p
     }
 
+    #[cfg(windows)]
     fn todos(pasta: &Path) -> String {
         let mut texto = String::new();
         for e in std::fs::read_dir(pasta).expect("ler pasta").flatten() {

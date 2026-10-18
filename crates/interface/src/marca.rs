@@ -44,6 +44,11 @@ pub fn icone_janela() -> Option<egui::IconData> {
     Some(egui::IconData { rgba, width, height })
 }
 
+/// O PNG do maior logo (256 px): o ícone do atalho fora do Windows (o `.desktop` do Linux).
+pub fn logo_png_maior() -> &'static [u8] {
+    LOGO.last().map(|&(_, png)| png).unwrap_or_default()
+}
+
 /// O índice do PNG para um lado em pixels físicos: o menor que cubra o lado pedido (ou o maior que houver).
 fn escolher(pixels: f32) -> usize {
     LOGO.iter().position(|&(l, _)| l as f32 >= pixels - 0.5).unwrap_or(LOGO.len() - 1)

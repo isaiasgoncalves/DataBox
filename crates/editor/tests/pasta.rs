@@ -471,11 +471,14 @@ fn ficha_do_arquivo_mostra_tipo_tamanho_data_e_caminho() {
     let (mut h, _) = harness_da_ficha(&amb, "planilha.xlsx", Tema::Claro);
     assert_eq!(h.state().rota(), &Rota::arquivo(&xlsx));
     let frase = if cfg!(feature = "telas") {
-        "O arquivo não é uma planilha válida"
+        "O arquivo não é uma planilha válida".to_string()
     } else {
-        "O editor de Excel ainda não está pronto. Enquanto isso, o arquivo abre no programa padrão do Windows."
+        format!(
+            "O editor de Excel ainda não está pronto. Enquanto isso, o arquivo abre no {}.",
+            comum::app::PROGRAMA_PADRAO
+        )
     };
-    assert!(tem_texto(&h, frase), "{:?}", textos(&h));
+    assert!(tem_texto(&h, &frase), "{:?}", textos(&h));
     // a faixa: o nome e o caminho
     assert!(existe(&h, Role::Label, "planilha.xlsx") && existe(&h, Role::Label, &xlsx.display().to_string()));
     let meta = std::fs::metadata(&xlsx).expect("meta");

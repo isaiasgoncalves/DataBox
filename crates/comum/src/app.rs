@@ -10,6 +10,12 @@ pub const NOME: &str = "DataBox";
 /// A pasta própria do aplicativo dentro da pasta de configuração e da pasta de estado.
 pub const PASTA: &str = "DataBox";
 
+/// A opção de tema que segue o claro ou escuro do sistema: "Seguir o Windows" no Windows, "Seguir o sistema" fora.
+pub const SEGUIR_O_SISTEMA: &str = if cfg!(windows) { "Seguir o Windows" } else { "Seguir o sistema" };
+/// O programa que abre um arquivo pelo tipo dele, na frase: "programa padrão do Windows" ou "do sistema".
+pub const PROGRAMA_PADRAO: &str =
+    if cfg!(windows) { "programa padrão do Windows" } else { "programa padrão do sistema" };
+
 /// A pasta pessoal. No Windows: USERPROFILE (se não estiver vazia); senão
 /// HOMEDRIVE + HOMEPATH; sem nenhuma, a pasta atual.
 #[cfg(windows)]

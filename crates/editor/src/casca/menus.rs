@@ -51,7 +51,7 @@ const GRUPOS_EDITAR: [&[Verbo]; 3] = [
 
 /// As opções do Exibir › Tema.
 pub(crate) const TEMAS: [(Tema, &str); 3] =
-    [(Tema::Sistema, "Seguir o Windows"), (Tema::Claro, "Claro"), (Tema::Escuro, "Escuro")];
+    [(Tema::Sistema, comum::app::SEGUIR_O_SISTEMA), (Tema::Claro, "Claro"), (Tema::Escuro, "Escuro")];
 
 /// O que os menus precisam saber a cada quadro.
 pub(crate) struct Menus<'a> {
@@ -251,7 +251,7 @@ mod testes {
     #[test]
     fn temas_na_ordem_do_exibir() {
         let rotulos: Vec<&str> = TEMAS.iter().map(|(_, r)| *r).collect();
-        assert_eq!(rotulos, ["Seguir o Windows", "Claro", "Escuro"]);
+        assert_eq!(rotulos, [comum::app::SEGUIR_O_SISTEMA, "Claro", "Escuro"]);
         assert_eq!(TEMAS.map(|(t, _)| t), [Tema::Sistema, Tema::Claro, Tema::Escuro]);
     }
 }

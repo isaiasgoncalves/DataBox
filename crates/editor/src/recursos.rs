@@ -76,7 +76,7 @@ impl Dialogador {
         match abrir() {
             Some(e) => RespostaDialogo::Escolhido(e),
             None if inicio.elapsed() < LIMIAR_SEM_DIALOGO => {
-                log::warn!("O diálogo de arquivos do Windows não abriu; o caminho passa a ser digitado numa janela.");
+                log::warn!("O diálogo de arquivos do sistema não abriu; o caminho passa a ser digitado numa janela.");
                 self.indisponivel = true;
                 RespostaDialogo::Indisponivel
             }

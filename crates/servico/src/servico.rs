@@ -267,7 +267,11 @@ impl Servico {
     /// `POST /api/arquivo/revelar`: o Explorador de Arquivos na pasta do arquivo, com ele selecionado.
     /// Vazio → 400; inexistente → 404 "O arquivo não existe (ou foi movido): …".
     pub fn revelar(&self, caminho: &Path) -> Resultado<()> {
-        self.preparar_revelar(caminho)?.executar("Não foi possível abrir o Explorador de Arquivos.")
+        self.preparar_revelar(caminho)?.executar(if cfg!(windows) {
+            "Não foi possível abrir o Explorador de Arquivos."
+        } else {
+            "Não foi possível abrir o gerenciador de arquivos."
+        })
     }
 
     /// `POST /api/arquivo/abrir`: o arquivo no programa associado. Erros como em

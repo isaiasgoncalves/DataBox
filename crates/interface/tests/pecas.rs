@@ -2967,7 +2967,7 @@ fn menu_com_marcas_desligados_e_submenus() {
             }
             m.separador();
             m.submenu("Tema", 210.0, |m| {
-                for (i, nome) in ["Seguir o Windows", "Claro", "Escuro"].into_iter().enumerate() {
+                for (i, nome) in [comum::app::SEGUIR_O_SISTEMA, "Claro", "Escuro"].into_iter().enumerate() {
                     if m.item_opcao(nome, s.tema == i).clicked() {
                         s.tema = i;
                     }
@@ -2996,10 +2996,10 @@ fn menu_com_marcas_desligados_e_submenus() {
     h.get_by_label("Tema").hover();
     h.run_steps(3);
     let tema = h.get_by_label("Tema").rect();
-    let seguir = h.get(by().role(Role::RadioButton).label("Seguir o Windows")).rect();
+    let seguir = h.get(by().role(Role::RadioButton).label(comum::app::SEGUIR_O_SISTEMA)).rect();
     assert_eq!(seguir.top(), tema.top());
     assert_eq!(seguir.left() - tema.right(), 2.0 + 6.0, "2px de folga, a borda e o `padding:5px`");
-    assert_eq!(ligado(&h, Role::RadioButton, "Seguir o Windows"), Some(Toggled::True));
+    assert_eq!(ligado(&h, Role::RadioButton, comum::app::SEGUIR_O_SISTEMA), Some(Toggled::True));
     // ir para o outro submenu fecha este e abre aquele
     h.get_by_label("Abertos recentemente").hover();
     h.run_steps(4);

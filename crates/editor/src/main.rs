@@ -33,6 +33,13 @@ const BARRA_PROPRIA: bool = cfg!(windows);
 
 /// Caixa de mensagem do Windows (sem console é o único jeito de a pessoa ver o que houve).
 fn caixa(texto: &str, erro: bool) {
+    // fora do Windows o programa costuma ser chamado de um terminal, e o diálogo pode não existir (sem portal)
+    #[cfg(not(windows))]
+    if erro {
+        eprintln!("{texto}");
+    } else {
+        println!("{texto}");
+    }
     let nivel = if erro { rfd::MessageLevel::Error } else { rfd::MessageLevel::Info };
     let _ = rfd::MessageDialog::new()
         .set_level(nivel)

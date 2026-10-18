@@ -3,8 +3,11 @@
 //! executável, com o ícone dele (o `databox.ico` embutido pelo build.rs) e a pasta dele como pasta de trabalho.
 //!
 //! O atalho é gravado pelo `WScript.Shell` de um `powershell -NoProfile` filho (sem janela): não exige `unsafe` nem crate novo. O script vai em
-//! `-EncodedCommand` (UTF-16 em base64): caminhos com acento, espaço ou aspas chegam intactos. Fora do Windows não
-//! há atalho `.lnk` nem `WScript.Shell`: [`criar_atalhos`] devolve o erro.
+//! `-EncodedCommand` (UTF-16 em base64): caminhos com acento, espaço ou aspas chegam intactos.
+//!
+//! Fora do Windows (Linux e outros desktops freedesktop), o atalho é o `databox.desktop` em
+//! `$XDG_DATA_HOME/applications` (sem a variável, `~/.local/share/applications`), que o menu de aplicativos lê, com o
+//! logo de 256 px gravado em `$XDG_DATA_HOME/icons/hicolor/256x256/apps/databox.png` ([`gravar_desktop`]).
 
 use std::path::{Path, PathBuf};
 #[cfg(windows)]
@@ -12,6 +15,10 @@ use std::process::Command;
 
 /// O nome do arquivo do atalho.
 pub const NOME_ATALHO: &str = "DataBox.lnk";
+/// O nome do atalho fora do Windows (a entrada do menu de aplicativos).
+pub const NOME_DESKTOP: &str = "databox.desktop";
+/// O nome do ícone gravado ao lado do `.desktop`.
+pub const NOME_ICONE: &str = "databox.png";
 /// A descrição do atalho (a dica do Explorer), a mesma do Sobre.
 pub const DESCRICAO: &str =
     "Toolkit de dados gratuito e aberto para desenvolvedores, cientistas e engenheiros de dados.";
@@ -94,10 +101,89 @@ pub fn criar_atalhos(exe: &Path, pastas: Option<&[PathBuf]>) -> Result<Vec<PathB
     Ok(texto.lines().map(str::trim).filter(|l| !l.is_empty()).map(PathBuf::from).collect())
 }
 
-/// Fora do Windows não há atalho `.lnk`: só o erro.
+/// Fora do Windows, o `databox.desktop` no menu de aplicativos (`pastas` None) ou em cada pasta pedida, com o
+/// ícone; devolve os `.desktop` criados.
 #[cfg(not(windows))]
-pub fn criar_atalhos(_exe: &Path, _pastas: Option<&[PathBuf]>) -> Result<Vec<PathBuf>, String> {
-    Err("O atalho só pode ser criado no Windows.".to_string())
+pub fn criar_atalhos(exe: &Path, pastas: Option<&[PathBuf]>) -> Result<Vec<PathBuf>, String> {
+    let dados = comum::app::base_ou(std::env::var_os("XDG_DATA_HOME"), || {
+        comum::app::pasta_pessoal().join(".local").join("share")
+    });
+    match pastas {
+        Some(lista) => lista.iter().map(|p| gravar_desktop(exe, p, p)).collect(),
+        None => {
+            let icones = dados.join("icons").join("hicolor").join("256x256").join("apps");
+            Ok(vec![gravar_desktop(exe, &dados.join("applications"), &icones)?])
+        }
+    }
+}
+
+/// O texto de um valor do `Exec` do `.desktop`: entre aspas duplas, com `"`, `` ` ``, `$` e `\` precedidos de
+/// barra, essas barras dobradas de novo (o arquivo também usa `\` como escape) e o `%` dobrado (é o dos `%f`).
+fn exec_entre_aspas(texto: &str) -> String {
+    let mut saida = String::from("\"");
+    for c in texto.chars() {
+        match c {
+            '"' | '`' | '$' => {
+                saida.push_str(r"\\");
+                saida.push(c);
+            }
+            '\\' => saida.push_str(r"\\\\"),
+            '%' => saida.push_str("%%"),
+            _ => saida.push(c),
+        }
+    }
+    saida.push('"');
+    saida
+}
+
+/// O conteúdo do `databox.desktop` para `exe`, com o ícone `icone` (caminho absoluto). Caminho com quebra de linha
+/// não cabe no arquivo: erro.
+pub fn conteudo_desktop(exe: &Path, icone: &Path) -> Result<String, String> {
+    let exe_txt = exe.display().to_string();
+    let icone_txt = icone.display().to_string();
+    let pasta_exe = exe.parent().map(|p| p.display().to_string()).unwrap_or_default();
+    if [&exe_txt, &icone_txt, &pasta_exe].iter().any(|t| t.contains(['\n', '\r'])) {
+        return Err("Não foi possível criar o atalho: o caminho do programa tem uma quebra de linha.".to_string());
+    }
+    let tipos = [
+        "application/vnd.sqlite3",
+        "application/x-sqlite3",
+        "text/csv",
+        "text/tab-separated-values",
+        "application/json",
+        "text/plain",
+        "text/markdown",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel.sheet.macroEnabled.12",
+    ];
+    let linhas = [
+        "[Desktop Entry]".to_string(),
+        "Type=Application".to_string(),
+        "Version=1.5".to_string(),
+        format!("Name={}", comum::app::NOME),
+        format!("Comment={DESCRICAO}"),
+        format!("Exec={} %f", exec_entre_aspas(&exe_txt)),
+        format!("Path={pasta_exe}"),
+        format!("Icon={icone_txt}"),
+        "Terminal=false".to_string(),
+        "Categories=Development;Database;Utility;".to_string(),
+        format!("MimeType={};", tipos.join(";")),
+        format!("StartupWMClass={}", comum::app::NOME),
+    ];
+    Ok(linhas.join("\n") + "\n")
+}
+
+/// Grava o `databox.desktop` em `pasta` e o logo em `pasta_icone` (criando as duas); devolve o `.desktop`.
+pub fn gravar_desktop(exe: &Path, pasta: &Path, pasta_icone: &Path) -> Result<PathBuf, String> {
+    let falha = |e: std::io::Error| format!("Não foi possível criar o atalho: {e}");
+    let icone = pasta_icone.join(NOME_ICONE);
+    let conteudo = conteudo_desktop(exe, &icone)?;
+    std::fs::create_dir_all(pasta).map_err(falha)?;
+    std::fs::create_dir_all(pasta_icone).map_err(falha)?;
+    std::fs::write(&icone, interface::marca::logo_png_maior()).map_err(falha)?;
+    let desktop = pasta.join(NOME_DESKTOP);
+    std::fs::write(&desktop, conteudo).map_err(falha)?;
+    Ok(desktop)
 }
 
 #[cfg(test)]
@@ -122,6 +208,32 @@ mod testes {
         assert!(s.contains("'DataBox.lnk'"), "{s}");
         let padrao = script(Path::new(r"C:\x\DataBox.exe"), None);
         assert!(padrao.contains("SpecialFolders('Desktop')") && padrao.contains("SpecialFolders('Programs')"));
+    }
+
+    #[test]
+    fn desktop_protege_o_caminho() {
+        let s = conteudo_desktop(Path::new("/opt/Dados d'Ana/$x/100%/DataBox"), Path::new("/i/databox.png")).unwrap();
+        assert!(s.starts_with("[Desktop Entry]\nType=Application\n"), "{s}");
+        assert!(s.contains(r#"Exec="/opt/Dados d'Ana/\\$x/100%%/DataBox" %f"#), "{s}");
+        assert!(s.contains("\nIcon=/i/databox.png\n"), "{s}");
+        assert!(s.contains("\nStartupWMClass=DataBox\n"), "{s}");
+        assert!(s.contains("text/csv;") && s.contains("spreadsheetml.sheet;"), "{s}");
+        assert_eq!(exec_entre_aspas(r#"a"b\c`"#), r#""a\\"b\\\\c\\`""#);
+        assert!(conteudo_desktop(Path::new("/a\nb"), Path::new("/i.png")).is_err());
+    }
+
+    #[test]
+    fn gravar_desktop_numa_pasta_temporaria() {
+        let pasta = std::env::temp_dir().join(format!("editor-desktop-{}", std::process::id())).join("Área");
+        let _ = std::fs::remove_dir_all(&pasta);
+        let icones = pasta.join("icones");
+        let desktop = gravar_desktop(Path::new("/opt/DataBox/DataBox"), &pasta, &icones).unwrap();
+        assert_eq!(desktop, pasta.join(NOME_DESKTOP));
+        let texto = std::fs::read_to_string(&desktop).unwrap();
+        assert!(texto.contains(&format!("Icon={}", icones.join(NOME_ICONE).display())), "{texto}");
+        let png = std::fs::read(icones.join(NOME_ICONE)).unwrap();
+        assert!(png.starts_with(b"\x89PNG"), "o ícone é o PNG do logo");
+        let _ = std::fs::remove_dir_all(pasta.parent().unwrap_or(&pasta));
     }
 
     #[cfg(windows)]

@@ -503,9 +503,12 @@ fn menus_e_janelas_da_ajuda_parados_nao_repintam() {
     assert!(!menu_aberto(&h.ctx));
 
     abrir_menu(&mut h, "Exibir", Some("Tema"));
-    assert!(h.query(by().role(Role::RadioButton).label("Seguir o Windows")).is_some(), "o submenu do Tema");
+    assert!(h.query(by().role(Role::RadioButton).label(comum::app::SEGUIR_O_SISTEMA)).is_some(), "o submenu do Tema");
     conferir_parado(&mut h, "o menu Exibir com o Tema");
-    assert!(h.query(by().role(Role::RadioButton).label("Seguir o Windows")).is_some(), "o submenu continua aberto");
+    assert!(
+        h.query(by().role(Role::RadioButton).label(comum::app::SEGUIR_O_SISTEMA)).is_some(),
+        "o submenu continua aberto"
+    );
     esc(&mut h);
 
     abrir_menu(&mut h, "Editar", None);

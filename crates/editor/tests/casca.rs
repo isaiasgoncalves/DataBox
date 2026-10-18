@@ -634,7 +634,7 @@ fn menu_arquivo_tema_e_atalhos() {
     for (rotulo, tema, prefs_tema, da_janela) in [
         ("Escuro", Tema::Escuro, prefs::Tema::Escuro, egui::SystemTheme::Dark),
         ("Claro", Tema::Claro, prefs::Tema::Claro, egui::SystemTheme::Light),
-        ("Seguir o Windows", Tema::Sistema, prefs::Tema::Sistema, egui::SystemTheme::SystemDefault),
+        (comum::app::SEGUIR_O_SISTEMA, Tema::Sistema, prefs::Tema::Sistema, egui::SystemTheme::SystemDefault),
     ] {
         abrir_menu(&mut h, "Exibir");
         abrir_submenu(&mut h, "Tema");
@@ -718,7 +718,7 @@ fn menu_exibir_tema_escuro() {
     assert!(!ligado(&h, Role::CheckBox, "Histórico de consultas"));
     abrir_submenu(&mut h, "Tema");
     let escolhidos: Vec<bool> =
-        ["Seguir o Windows", "Claro", "Escuro"].map(|t| ligado(&h, Role::RadioButton, t)).into();
+        [comum::app::SEGUIR_O_SISTEMA, "Claro", "Escuro"].map(|t| ligado(&h, Role::RadioButton, t)).into();
     assert_eq!(escolhidos, [false, false, true], "o ponto no tema escolhido");
     capturar(&mut h, "menu-exibir-tema-escuro.png");
 }

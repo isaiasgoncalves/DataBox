@@ -242,14 +242,14 @@ fn listar_esconde_ocultos_til_dolar_e_pastas_de_ferramentas() {
     c.escrever("dados.csv", b"x");
     // os nomes de ferramenta só escondem pasta: um arquivo com o nome fica
     c.escrever("node_modules.txt", b"x");
-    let mut ocultas = 1; // ~$planilha.xlsx
+    // o ~$planilha.xlsx e, no Windows, o escondido.csv (a pasta oculta sai, mas só os arquivos entram na conta)
+    let ocultas = if cfg!(windows) { 2 } else { 1 };
     #[cfg(windows)]
     {
         let escondido = c.escrever("escondido.csv", b"x");
         esconder(&escondido);
         let pasta_escondida = c.pasta("pasta_escondida");
         esconder(&pasta_escondida);
-        ocultas += 1; // a pasta oculta sai, mas só os arquivos entram na conta
     }
     let l = c.listar();
     assert_eq!(nomes(&l), [".GIT2", ".github", "vendas", "dados.csv", "node_modules.txt"]);
