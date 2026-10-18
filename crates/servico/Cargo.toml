@@ -1,0 +1,19 @@
+[package]
+name = "servico"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+comum = { workspace = true }
+ddl = { workspace = true }
+banco = { workspace = true }
+esquema = { workspace = true }
+exportar = { workspace = true }
+prefs = { workspace = true }
+rusqlite = { workspace = true }
+chrono = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+amostras = { workspace = true }

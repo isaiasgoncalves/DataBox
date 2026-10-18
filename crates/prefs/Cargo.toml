@@ -1,0 +1,13 @@
+[package]
+name = "prefs"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+comum = { workspace = true }
+chrono = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
