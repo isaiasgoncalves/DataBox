@@ -124,6 +124,18 @@ to their 8.3 short names; without it, MinGW's `ld` fails in user folders with ac
 Or double-click [`compilar.bat`](compilar.bat), which builds the release binary and copies it to `dist\DataBox.exe`.
 Keep the project in a shallow folder: paths over 260 characters break the Windows build.
 
+**Linux (experimental):** plain `cargo`, no `cargo.ps1`. On Debian/Ubuntu, install the build packages once:
+
+```bash
+sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+cargo build --release -p editor        # target/release/DataBox
+./target/release/DataBox --criar-atalho  # adds DataBox to the applications menu (~/.local/share/applications)
+```
+
+At run time it uses the desktop's file dialogs (`xdg-desktop-portal`), `xdg-open` (package `xdg-utils`) and the Noto
+Sans or DejaVu fonts. The Linux build is checked by CI but has not been tried on many desktops yet: reports are
+welcome.
+
 More: [`README.pt-BR.md`](README.pt-BR.md) (full guide), [`ARQUITETURA.md`](ARQUITETURA.md) (architecture and crate
 contracts), [`design/README.md`](design/README.md) (visual guide), [`RELEASE.md`](RELEASE.md) (how to publish a
 release).

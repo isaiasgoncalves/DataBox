@@ -24,6 +24,7 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
 | Cada tela é o **documento de uma aba** e tem endereço (`Rota`); Voltar e Avançar andam num **histórico único** (aba + endereço), com Alt+←/→ e os botões laterais do mouse | As abas deixam várias partes de tabela e várias Consultas abertas juntas, e o Voltar funciona como num navegador. |
 | Janela **sem a decoração do Windows**, com a barra de título própria integrada aos menus (só no Windows; `BARRA_PROPRIA` no main.rs) | Uma faixa só de 30 px para o logo, os menus, o título e os botões da janela. Fica dentro do eframe e do winit 0.30, sem `unsafe`: sem o `WM_NCHITTEST`, perdem-se o Snap Layouts no Maximizar e o menu do sistema no clique direito do título (§5). O winit como dependência direta e o subclassing da janela ficaram de fora por decisão de 16/10/2026. |
 | Toolchain **GNU** (MinGW-w64 da WinLibs) e não MSVC | Não exige Visual Studio nem admin. Ver §1. |
+| **Linux** (experimental) com o mesmo código: o que é de cada sistema fica em `cfg(windows)`, sem crate novo | O `rfd` usa o xdg-desktop-portal (sem GTK), as pastas são as do XDG (`comum::app`), as fontes Noto/DejaVu (`interface::fontes`), o "Abrir"/"Mostrar na pasta" o `xdg-open` (`servico::arquivos`; a pasta, sem selecionar o arquivo) e o `--criar-atalho` um `databox.desktop` (`editor::atalho`). A janela usa a moldura do sistema. Textos que citam o sistema saem de `comum::app::{SEGUIR_O_SISTEMA, PROGRAMA_PADRAO}`. O CI roda fmt, clippy e testes no Ubuntu; a versão leva um `.tar.gz`. |
 
 ---
 
@@ -32,6 +33,11 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
 - Rust estável, 1.95 ou mais novo (`rust-version` do workspace; o egui 0.36 pede essa) (rustup, host
   `x86_64-pc-windows-gnu`) em `%USERPROFILE%\.cargo` e `.rustup`; GCC 16 da WinLibs
   (MSVCRT, sem LLVM) em `%LOCALAPPDATA%\Programs\winlibs-gcc16\mingw64`.
+- **No Linux**, o `cargo` direto (o `cargo.ps1` e o `vincular.rs` são só do Windows), com os pacotes de
+  desenvolvimento do X11/Wayland/OpenGL (lista no `ci.yml`). No Windows, dá para conferir o Linux sem máquina Linux:
+  `rustup target add x86_64-unknown-linux-gnu`, e com `$env:CC_x86_64_unknown_linux_gnu = "gcc"` e
+  `$env:AR_x86_64_unknown_linux_gnu = "ar"` (o SQLite embutido só compila, não liga), `.\cargo.ps1 clippy --workspace
+  --all-targets --target x86_64-unknown-linux-gnu --target-dir target\ag-linux '--' -D warnings`.
 - **Sempre pelo `cargo.ps1`** da raiz (põe as ferramentas no PATH e liga o intermediário de link):
   `.\cargo.ps1 test -p banco`, `.\cargo.ps1 build --release`. Ele roda de qualquer pasta.
 - `ferramentas\vincular.rs`: o gcc da WinLibs usa página de código UTF-8 e o ld e o dlltool usam a ANSI (1252);
@@ -859,7 +865,8 @@ linha" · "Fechar".
   completo de 48 px). O executável é o `[[bin]] DataBox` do pacote `editor`, com o ícone, a versão (DataBox
   0.1.1; CompanyName "Isaías Gonçalves" e LegalCopyright "© 2026 Isaías Gonçalves — licença MIT") e o manifesto embutidos de `crates/editor/recursos/databox.rc`; o
   `databox.ico` sai de `design/ferramentas/ico.py` (só o logo completo, de 16 a 256 px: a versão simplificada deixou de ser usada em 17/10/2026).
-  `--criar-atalho` cria o "DataBox.lnk"; a confirmação
+  `--criar-atalho` cria o "DataBox.lnk" (no Linux, o `databox.desktop` em `$XDG_DATA_HOME/applications`, com o
+  logo de 256 px em `icons/hicolor/256x256/apps`); a confirmação
   de fechar com a exportação em andamento se chama "Fechar o DataBox"; o Excel exportado leva
   `<dc:creator>DataBox</dc:creator>` e os arquivos de trabalho do .zip, o prefixo `DataBox-exportar-`.
 

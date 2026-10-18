@@ -5,6 +5,17 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Adicionado
+
+- Versão para Linux (experimental): o `.tar.gz` de cada versão traz o binário `DataBox`. "Abrir no programa padrão"
+  e "Mostrar na pasta" usam o `xdg-open`, e `DataBox --criar-atalho` põe o DataBox no menu de aplicativos (um
+  `databox.desktop` com o logo). O CI roda fmt, clippy e os testes também no Ubuntu.
+
+### Alterado
+
+- Fora do Windows, o tema "Seguir o Windows" se chama "Seguir o sistema", e as frases falam no "programa padrão do
+  sistema".
+
 ## [0.1.1] - 2026-10-18
 
 ### Adicionado

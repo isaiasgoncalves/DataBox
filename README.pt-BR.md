@@ -198,6 +198,21 @@ Ou dê um duplo clique em [`compilar.bat`](compilar.bat): compila a versão otim
 
 Caminhos com mais de 260 caracteres quebram a compilação no Windows: deixe o projeto numa pasta rasa.
 
+### Linux (experimental)
+
+No Linux é o `cargo` direto, sem o `cargo.ps1`. No Debian/Ubuntu, instale uma vez os pacotes de compilação:
+
+```bash
+sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+cargo build --release -p editor          # target/release/DataBox
+./target/release/DataBox --criar-atalho  # põe o DataBox no menu de aplicativos (~/.local/share/applications)
+```
+
+Para rodar, ele usa os diálogos de arquivo da área de trabalho (`xdg-desktop-portal`), o `xdg-open` (pacote
+`xdg-utils`) e as fontes Noto Sans ou DejaVu. As preferências ficam em `~/.config/DataBox` e o log em
+`~/.local/state/DataBox`. A janela usa a moldura do sistema (a barra de título própria é só do Windows). O build do
+Linux passa no CI, mas ainda foi pouco testado em áreas de trabalho de verdade: conte nas issues como foi.
+
 ### Testar
 
 ```powershell
