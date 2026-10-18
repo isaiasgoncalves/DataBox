@@ -6,7 +6,9 @@
 //!   lidos do git. Sem git (ou fora de um repositório), "desconhecida". A variável de ambiente de mesmo nome, se
 //!   definida no build, vale no lugar (compilação reproduzível);
 //! - `terceiros.txt` (em OUT_DIR), a lista da janela "Licenças de terceiros": as bibliotecas de fora que entram no
-//!   programa, com versão e licença (ver [`terceiros`]). Nunca derruba o build: o que não for lido sai sem licença.
+//!   programa, com versão e licença (ver [`terceiros`]). Nunca derruba o build: o que não for lido sai sem licença;
+//! - `THIRD-PARTY-NOTICES.txt` (em OUT_DIR), os avisos de terceiros que vão no .zip da versão: a mesma lista, as
+//!   fontes padrão do egui embutidas no exe e os textos de licença que vêm nos pacotes (ver [`avisos`]).
 
 // script de build: sem CARGO_MANIFEST_DIR ou OUT_DIR não há o que fazer, e o cargo mostra o motivo
 #![allow(clippy::expect_used)]
@@ -27,10 +29,17 @@ fn main() {
     // nunca derruba o build: sem a lista, a janela mostra só o aviso
     let lista = terceiros(&raiz).unwrap_or_else(|| {
         println!("cargo:warning=não li o Cargo.lock: a lista de licenças de terceiros sai vazia");
-        String::new()
+        Vec::new()
     });
-    if let Err(e) = fs::write(saida.join("terceiros.txt"), lista) {
+    let mut texto = String::new();
+    for t in &lista {
+        texto.push_str(&format!("{}\t{}\t{}\t{}\n", t.nome, t.versao, t.licenca, u8::from(t.direta)));
+    }
+    if let Err(e) = fs::write(saida.join("terceiros.txt"), texto) {
         println!("cargo:warning=não gravei terceiros.txt: {e}");
+    }
+    if let Err(e) = fs::write(saida.join("THIRD-PARTY-NOTICES.txt"), avisos(&lista)) {
+        println!("cargo:warning=não gravei THIRD-PARTY-NOTICES.txt: {e}");
     }
     recursos_do_windows(&manifesto, &saida);
 }
@@ -73,11 +82,23 @@ struct Pacote {
     dependencias: Vec<String>,
 }
 
-/// As linhas "nome\tversão\tlicença\tdireta" (direta: 1 se o projeto depende dela, 0 se vem por outra), em ordem
-/// alfabética. As bibliotecas são as que o Cargo.lock traz **alcançáveis pelas dependências normais** dos crates do
+/// Uma biblioteca de fora que entra no programa.
+struct Terceiro {
+    nome: String,
+    versao: String,
+    /// O `license` do Cargo.toml dela ("arquivo X" com só `license-file`); vazio quando não deu para ler.
+    licenca: String,
+    /// O projeto depende dela direto (e não por outra).
+    direta: bool,
+    /// A pasta da fonte baixada, quando achada.
+    pasta: Option<PathBuf>,
+}
+
+/// As bibliotecas em ordem alfabética (no terceiros.txt, linhas "nome\tversão\tlicença\tdireta", com direta 1 se o
+/// projeto depende dela e 0 se vem por outra). As bibliotecas são as que o Cargo.lock traz **alcançáveis pelas dependências normais** dos crates do
 /// projeto (as de teste, como o egui_kittest, ficam de fora). O Cargo.lock não separa por sistema: a lista inclui
 /// também as que só entram em outros sistemas.
-fn terceiros(raiz: &Path) -> Option<String> {
+fn terceiros(raiz: &Path) -> Option<Vec<Terceiro>> {
     println!("cargo:rerun-if-changed={}", raiz.join("Cargo.lock").display());
     println!("cargo:rerun-if-changed={}", raiz.join("Cargo.toml").display());
     let pacotes = ler_lock(&fs::read_to_string(raiz.join("Cargo.lock")).ok()?);
@@ -119,30 +140,29 @@ fn terceiros(raiz: &Path) -> Option<String> {
              de terceiros sai sem as licenças"
         );
     }
-    let mut linhas: Vec<(String, String, String, bool)> = alcancados
+    let mut lista: Vec<Terceiro> = alcancados
         .into_iter()
         .filter(|&i| pacotes[i].de_fora)
         .map(|i| {
             let p = &pacotes[i];
-            let licenca = match registro.as_deref() {
-                Some(r) => licenca_de(r, &p.nome, &p.versao).unwrap_or_else(|motivo| {
-                    println!(
-                        "cargo:warning=licença de {} {} em branco na lista de terceiros: {motivo}",
-                        p.nome, p.versao
-                    );
-                    String::new()
-                }),
-                None => String::new(),
+            let (licenca, pasta) = match registro.as_deref() {
+                Some(r) => match licenca_de(r, &p.nome, &p.versao) {
+                    Ok((licenca, pasta)) => (licenca, Some(pasta)),
+                    Err(motivo) => {
+                        println!(
+                            "cargo:warning=licença de {} {} em branco na lista de terceiros: {motivo}",
+                            p.nome, p.versao
+                        );
+                        (String::new(), None)
+                    }
+                },
+                None => (String::new(), None),
             };
-            (p.nome.clone(), p.versao.clone(), licenca, raizes.contains(&i))
+            Terceiro { nome: p.nome.clone(), versao: p.versao.clone(), licenca, direta: raizes.contains(&i), pasta }
         })
         .collect();
-    linhas.sort();
-    let mut texto = String::new();
-    for (nome, versao, licenca, direta) in linhas {
-        texto.push_str(&format!("{nome}\t{versao}\t{licenca}\t{}\n", u8::from(direta)));
-    }
-    Some(texto)
+    lista.sort_by(|a, b| (&a.nome, &a.versao).cmp(&(&b.nome, &b.versao)));
+    Some(lista)
 }
 
 /// Os pacotes do Cargo.lock (o formato é regular: `[[package]]` com `name`, `version`, `source` e `dependencies`).
@@ -222,13 +242,14 @@ fn pasta_dos_fontes() -> Option<PathBuf> {
 }
 
 /// A licença do pacote, lida do Cargo.toml da fonte baixada (em qualquer índice do registro): o campo `license` ou,
-/// sem ele, o `license-file` ("arquivo LICENSE-X"). Sem nenhum dos dois, ou sem a fonte, o motivo, para o aviso do
-/// build (a licença sai em branco, e o build segue).
-fn licenca_de(registro: &Path, nome: &str, versao: &str) -> Result<String, String> {
+/// sem ele, o `license-file` ("arquivo LICENSE-X"), com a pasta da fonte. Sem nenhum dos dois, ou sem a fonte, o
+/// motivo, para o aviso do build (a licença sai em branco, e o build segue).
+fn licenca_de(registro: &Path, nome: &str, versao: &str) -> Result<(String, PathBuf), String> {
     let pasta = format!("{nome}-{versao}");
     let indices = fs::read_dir(registro).map_err(|e| format!("não li {}: {e}", registro.display()))?;
     for indice in indices.flatten() {
-        let toml = indice.path().join(&pasta).join("Cargo.toml");
+        let fonte = indice.path().join(&pasta);
+        let toml = fonte.join("Cargo.toml");
         let Ok(texto) = fs::read_to_string(&toml) else { continue };
         let mut no_pacote = false;
         let mut arquivo = None;
@@ -239,16 +260,130 @@ fn licenca_de(registro: &Path, nome: &str, versao: &str) -> Result<String, Strin
             } else if no_pacote && let Some(v) = linha.strip_prefix("license =") {
                 return valor_entre_aspas(v)
                     .filter(|l| !l.trim().is_empty())
+                    .map(|l| (l, fonte))
                     .ok_or_else(|| "o campo license está vazio".to_string());
             } else if no_pacote && let Some(v) = linha.strip_prefix("license-file =") {
                 arquivo = valor_entre_aspas(v).filter(|a| !a.trim().is_empty());
             }
         }
         return arquivo
-            .map(|a| format!("arquivo {a}"))
+            .map(|a| (format!("arquivo {a}"), fonte))
             .ok_or_else(|| "o Cargo.toml dela não tem license nem license-file".to_string());
     }
     Err(format!("a fonte {pasta} não está em {}", registro.display()))
+}
+
+// ------------------------------------------------------------------------------------------------ avisos
+
+/// As fontes padrão do egui (crate `epaint_default_fonts`), compiladas dentro do exe: o nome, a licença e o arquivo
+/// dela na pasta `fonts/` do pacote.
+const FONTES_DO_EGUI: &[(&str, &str, &str)] = &[
+    ("Ubuntu Light", "Ubuntu Font Licence 1.0", "UFL.txt"),
+    ("Noto Emoji", "SIL Open Font License 1.1", "OFL.txt"),
+    ("Hack", "MIT, with parts under the Bitstream Vera License", "Hack-Regular.txt"),
+    ("emoji-icon-font", "MIT", "emoji-icon-font-mit-license.txt"),
+];
+
+/// O THIRD-PARTY-NOTICES.txt (em inglês, como os textos de licença que ele reúne): as fontes do egui, a lista das
+/// bibliotecas e os arquivos de licença e de aviso (LICENSE*, LICENCE*, COPYING*, COPYRIGHT*, NOTICE*, UNLICENSE)
+/// que vêm na fonte de cada uma, com os textos iguais juntos. A lista vem do Cargo.lock, que não separa por sistema:
+/// as que só entram em outros sistemas não têm a fonte baixada num build do Windows e ficam sem texto.
+fn avisos(lista: &[Terceiro]) -> String {
+    let mut s = String::new();
+    s.push_str(
+        "DataBox - third-party notices\n\
+         =============================\n\n\
+         DataBox is licensed under the MIT License (see LICENSE.txt). DataBox.exe also contains the third-party\n\
+         software listed below, each under its own license. The list comes from Cargo.lock; libraries marked\n\
+         \"not in the Windows build\" only build on other operating systems and are not part of DataBox.exe.\n\n",
+    );
+
+    s.push_str("1. Fonts embedded by egui (epaint_default_fonts)\n");
+    s.push_str("------------------------------------------------\n\n");
+    for (fonte, licenca, _) in FONTES_DO_EGUI {
+        s.push_str(&format!("{fonte}: {licenca}\n"));
+    }
+    s.push('\n');
+    match lista.iter().find(|t| t.nome == "epaint_default_fonts").and_then(|t| t.pasta.as_ref()) {
+        Some(pasta) => {
+            for (fonte, _, arquivo) in FONTES_DO_EGUI {
+                match fs::read_to_string(pasta.join("fonts").join(arquivo)) {
+                    Ok(texto) => s.push_str(&format!(
+                        "--- {fonte} ({arquivo}) ---\n\n{}\n\n",
+                        texto.replace('\r', "").trim_end()
+                    )),
+                    Err(e) => println!("cargo:warning=não li a licença da fonte {fonte} ({arquivo}): {e}"),
+                }
+            }
+        }
+        None => println!(
+            "cargo:warning=não achei a fonte do epaint_default_fonts: os avisos saem sem as licenças das fontes"
+        ),
+    }
+
+    s.push_str("2. Libraries\n------------\n\n");
+    let largura = lista.iter().map(|t| t.nome.len() + t.versao.len() + 1).max().unwrap_or(0);
+    for t in lista {
+        let licenca = if t.pasta.is_none() { "(not in the Windows build)" } else { t.licenca.as_str() };
+        s.push_str(&format!("{:largura$}  {licenca}\n", format!("{} {}", t.nome, t.versao)));
+    }
+    s.push('\n');
+
+    s.push_str("3. License texts\n----------------\n\n");
+    s.push_str(
+        "The license and notice files shipped with each library, verbatim. Identical texts are shown once, under\n\
+         the list of libraries that ship them. Libraries without such a file are under the standard text of the\n\
+         license named in section 2.\n\n",
+    );
+    // cada texto com as bibliotecas que o trazem, na ordem da lista
+    let mut textos: Vec<(String, Vec<String>)> = Vec::new();
+    let mut sem_arquivo: Vec<String> = Vec::new();
+    for t in lista {
+        let Some(pasta) = &t.pasta else { continue };
+        let arquivos = arquivos_de_licenca(pasta);
+        if arquivos.is_empty() {
+            sem_arquivo.push(format!("{} {} ({})", t.nome, t.versao, t.licenca));
+        }
+        for (arquivo, texto) in arquivos {
+            let quem = format!("{} {} ({arquivo})", t.nome, t.versao);
+            match textos.iter_mut().find(|(x, _)| *x == texto) {
+                Some((_, quem_traz)) => quem_traz.push(quem),
+                None => textos.push((texto, vec![quem])),
+            }
+        }
+    }
+    let regua = "=".repeat(78);
+    for (texto, quem_traz) in &textos {
+        s.push_str(&format!("{regua}\n{}\n{}\n\n{}\n\n", quem_traz.join("\n"), "-".repeat(78), texto.trim_end()));
+    }
+    if !sem_arquivo.is_empty() {
+        s.push_str(&format!(
+            "{regua}\nNo license file in the package (standard text of the license named):\n\n{}\n",
+            sem_arquivo.join("\n")
+        ));
+    }
+    s
+}
+
+/// Os arquivos de licença e de aviso na raiz da fonte de um pacote, em ordem de nome, com o texto (sem `\r`).
+fn arquivos_de_licenca(pasta: &Path) -> Vec<(String, String)> {
+    let Ok(entradas) = fs::read_dir(pasta) else { return Vec::new() };
+    let mut arquivos: Vec<(String, String)> = entradas
+        .flatten()
+        .filter(|e| e.path().is_file())
+        .filter_map(|e| {
+            let nome = e.file_name().to_str()?.to_string();
+            let maiusculo = nome.to_uppercase();
+            ["LICENSE", "LICENCE", "COPYING", "COPYRIGHT", "NOTICE", "UNLICENSE"]
+                .iter()
+                .any(|p| maiusculo.starts_with(p))
+                .then_some(())?;
+            let texto = fs::read_to_string(e.path()).ok()?.replace('\r', "");
+            Some((nome, texto))
+        })
+        .collect();
+    arquivos.sort();
+    arquivos
 }
 
 // ------------------------------------------------------------------------------------------------ recursos

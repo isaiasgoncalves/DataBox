@@ -278,4 +278,4 @@ comentários e as mensagens são em português), como rodar os testes e como abr
 As dependências diretas são MIT e/ou Apache-2.0; entre as indiretas há outras licenças permissivas (Unicode-3.0,
 BSL-1.0, Zlib, ISC, MPL-2.0), e o executável leva as fontes padrão do egui (licenças SIL OFL 1.1 e Ubuntu Font
 Licence), usadas como reserva. A lista das bibliotecas, com a licença de cada uma, está no próprio programa (Ajuda ›
-Sobre › Licenças de terceiros).
+Sobre › Licenças de terceiros) e, com os textos das licenças, no `THIRD-PARTY-NOTICES.txt` do `.zip` de cada versão.

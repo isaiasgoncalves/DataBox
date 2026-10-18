@@ -24,7 +24,8 @@ Duas partes: pôr o repositório no GitHub (uma vez) e publicar cada versão (o 
 
 Uma "release" do GitHub é uma página ligada a uma **tag** do git (por exemplo `v0.1.0`), com notas e arquivos para
 baixar. O workflow [`release.yml`](.github/workflows/release.yml) faz tudo sozinho quando uma tag `v*` chega ao
-GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um `.zip` (executável + licença) e o
+GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um `.zip` (executável, licença e
+`THIRD-PARTY-NOTICES.txt`, os avisos de terceiros que o `build.rs` do editor gera) e o
 `SHA256SUMS.txt`.
 
 ### Passo a passo

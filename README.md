@@ -145,4 +145,5 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 [MIT](LICENSE). The UI uses the fonts that ship with Windows (Segoe UI and Consolas) and DataBox's own logo. Direct
 dependencies are MIT and/or Apache-2.0; transitive ones include other permissive licenses (Unicode-3.0, BSL-1.0, Zlib,
 ISC, MPL-2.0), and the executable embeds egui's default fallback fonts (SIL OFL 1.1 and Ubuntu Font Licence). The list
-of libraries with each license is inside the app (Help › About › Third-party licenses).
+of libraries with each license is inside the app (Help › About › Third-party licenses) and, with the license texts, in
+the `THIRD-PARTY-NOTICES.txt` of each release `.zip`.

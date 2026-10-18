@@ -1,7 +1,8 @@
 name: Release
 
 # Publica uma versão quando uma tag vX.Y.Z é enviada (git tag v0.1.0 && git push origin v0.1.0).
-# Compila o DataBox.exe otimizado e cria a página da versão com o executável, um .zip e o SHA-256.
+# Compila o DataBox.exe otimizado e cria a página da versão com o executável, um .zip (exe, licença e avisos de
+# terceiros) e o SHA-256.
 
 on:
   push:
@@ -50,6 +51,11 @@ jobs:
           New-Item -ItemType Directory -Force pacote | Out-Null
           Copy-Item target\release\DataBox.exe pacote\DataBox.exe
           Copy-Item LICENSE pacote\LICENSE.txt
+          # os avisos de terceiros que o build.rs do editor gerou (a lista, as fontes do egui e os textos de licença)
+          $avisos = Get-ChildItem target\release\build\editor-*\out\THIRD-PARTY-NOTICES.txt |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $avisos) { throw "O build não gerou o THIRD-PARTY-NOTICES.txt." }
+          Copy-Item $avisos.FullName pacote\THIRD-PARTY-NOTICES.txt
           Compress-Archive -Path pacote\* -DestinationPath "DataBox-$tag-windows-x64.zip"
           Copy-Item target\release\DataBox.exe DataBox.exe
           Get-FileHash DataBox.exe, "DataBox-$tag-windows-x64.zip" -Algorithm SHA256 |
