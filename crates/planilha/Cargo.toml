@@ -1,0 +1,12 @@
+[package]
+name = "planilha"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+comum = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+exportar = { workspace = true }
