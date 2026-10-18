@@ -179,7 +179,7 @@ impl Celula {
             ValueRef::Real(r) => Celula::Real(r),
             ValueRef::Text(b) => Celula::de_texto(&String::from_utf8_lossy(b), limite),
             ValueRef::Blob(b) => {
-                Celula::Blob { tamanho: b.len(), inicio: b[..b.len().min(BYTES_INICIO_BLOB)].to_vec() }
+                Celula::Blob { tamanho: b.len(), inicio: b.iter().take(BYTES_INICIO_BLOB).copied().collect() }
             }
         }
     }
@@ -192,7 +192,9 @@ impl Celula {
             Valor::Real(r) => Celula::Real(*r),
             Valor::Texto(s) => Celula::de_texto(s, limite),
             Valor::TextoBruto(b) => Celula::de_texto(&String::from_utf8_lossy(b), limite),
-            Valor::Blob(b) => Celula::Blob { tamanho: b.len(), inicio: b[..b.len().min(BYTES_INICIO_BLOB)].to_vec() },
+            Valor::Blob(b) => {
+                Celula::Blob { tamanho: b.len(), inicio: b.iter().take(BYTES_INICIO_BLOB).copied().collect() }
+            }
         }
     }
 

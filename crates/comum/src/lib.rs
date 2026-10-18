@@ -17,6 +17,10 @@
 //!   Quem varre a pasta é o `servico`.
 //!   (O `arquivos::Entrada` é uma linha da árvore; não confundir com a [`Entrada`] de valores.)
 
+// Índice e fatia que estouram viram pânico; aqui eles passam por .get() ou iterador (ARQUITETURA.md §3).
+// Os testes ficam de fora: neles, o pânico é a falha que se quer ver.
+#![cfg_attr(not(test), deny(clippy::indexing_slicing))]
+
 pub mod app;
 pub mod arquivos;
 mod erro;

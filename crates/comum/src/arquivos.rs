@@ -156,7 +156,7 @@ pub fn e_extensao_de_banco(ext: &str) -> bool {
 
 /// O começo do arquivo (pelo menos 16 bytes) é o cabeçalho do SQLite? Com menos de 16 bytes, não.
 pub fn e_cabecalho_sqlite(inicio: &[u8]) -> bool {
-    inicio.len() >= CABECALHO_SQLITE.len() && inicio[..CABECALHO_SQLITE.len()] == CABECALHO_SQLITE
+    inicio.starts_with(&CABECALHO_SQLITE)
 }
 
 // ---- A ordem dos nomes ----
