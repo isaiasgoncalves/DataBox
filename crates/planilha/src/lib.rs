@@ -78,6 +78,9 @@
 //! parte. Interromper a indexação devolve 409 com `Codigo::Cancelado`.
 
 #![forbid(unsafe_code)]
+// Índice e fatia que estouram viram pânico; aqui eles passam por .get() ou iterador (ARQUITETURA.md §3).
+// Os testes ficam de fora: neles, o pânico é a falha que se quer ver.
+#![cfg_attr(not(test), deny(clippy::indexing_slicing))]
 
 mod datas;
 mod erros;

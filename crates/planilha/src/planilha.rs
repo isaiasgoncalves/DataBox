@@ -134,6 +134,9 @@ impl Planilha {
         self.folha
     }
 
+    // `Planilha::nova` só nasce de uma aba que `folha_com_celulas` conferiu, e a lista de abas da pasta não muda
+    // depois de aberta.
+    #[allow(clippy::indexing_slicing)]
     pub fn folha(&self) -> &Folha {
         &self.pasta.interno.folhas[self.folha]
     }
@@ -251,14 +254,10 @@ impl Planilha {
 
         // os blocos que já estão sobem para a frente; os que faltam são lidos em trechos contínuos
         let faltam: Vec<u32> = (b_ini..=b_fim).filter(|&b| !self.tocar(b)).collect();
-        let mut i = 0;
-        while i < faltam.len() {
-            let mut j = i;
-            while j + 1 < faltam.len() && faltam[j + 1] == faltam[j] + 1 {
-                j += 1;
+        for trecho in faltam.chunk_by(|a, b| *b == a + 1) {
+            if let (Some(&de), Some(&ate)) = (trecho.first(), trecho.last()) {
+                self.carregar(de, ate)?;
             }
-            self.carregar(faltam[i], faltam[j])?;
-            i = j + 1;
         }
 
         let mut linhas = Vec::with_capacity((ultima - primeira + 1) as usize);

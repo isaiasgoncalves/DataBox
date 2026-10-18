@@ -72,9 +72,12 @@ impl Read for Fluxo {
             return Err(e);
         }
         loop {
-            if self.pos < self.atual.len() {
-                let n = (self.atual.len() - self.pos).min(saida.len());
-                saida[..n].copy_from_slice(&self.atual[self.pos..self.pos + n]);
+            let resto = self.atual.get(self.pos..).unwrap_or_default();
+            if !resto.is_empty() {
+                let n = resto.len().min(saida.len());
+                if let (Some(destino), Some(origem)) = (saida.get_mut(..n), resto.get(..n)) {
+                    destino.copy_from_slice(origem);
+                }
                 self.pos += n;
                 return Ok(n);
             }

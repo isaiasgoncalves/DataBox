@@ -158,10 +158,11 @@ impl Formato {
             _ => Tipo::Numero,
         };
         // data, hora e duração só usam a primeira seção
-        let usadas = if matches!(tipo, Tipo::Data | Tipo::Duracao | Tipo::Fracao | Tipo::Geral | Tipo::Texto) {
-            &partes[..partes.len().min(1)]
+        let usadas: &[String] = if matches!(tipo, Tipo::Data | Tipo::Duracao | Tipo::Fracao | Tipo::Geral | Tipo::Texto)
+        {
+            partes.get(..1).unwrap_or(&partes)
         } else {
-            &partes[..]
+            &partes
         };
         let secoes = usadas
             .iter()
@@ -232,13 +233,10 @@ impl Formato {
                 if x < 0.0 { format!("-{corpo}") } else { corpo }
             }
             Tipo::Numero => {
-                let n = self.secoes.len();
-                let (secao, sinal) = if x < 0.0 && n >= 2 {
-                    (&self.secoes[1], false)
-                } else if x == 0.0 && n >= 3 {
-                    (&self.secoes[2], false)
-                } else {
-                    (primeira, x < 0.0)
+                let (secao, sinal) = match (self.secoes.get(1), self.secoes.get(2)) {
+                    (Some(negativos), _) if x < 0.0 => (negativos, false),
+                    (_, Some(zero)) if x == 0.0 => (zero, false),
+                    _ => (primeira, x < 0.0),
                 };
                 let corpo = numerico(&secao.toks, x.abs(), loc);
                 // "-0" não existe: um negativo que arredonda para zero perde o sinal só se a seção for a do zero
@@ -294,11 +292,11 @@ fn limpar(secao: &str) -> (String, bool) {
     let mut limpo = String::new();
     let mut decorrido = false;
     let mut i = 0;
-    while i < c.len() {
-        match c[i] {
+    while let Some(&ch) = c.get(i) {
+        match ch {
             '"' => {
                 i += 1;
-                while i < c.len() && c[i] != '"' {
+                while c.get(i).is_some_and(|&x| x != '"') {
                     i += 1;
                 }
             }
@@ -306,8 +304,8 @@ fn limpar(secao: &str) -> (String, bool) {
             '[' => {
                 let mut j = i + 1;
                 let mut dentro = String::new();
-                while j < c.len() && c[j] != ']' {
-                    dentro.push(c[j]);
+                while let Some(&x) = c.get(j).filter(|&&x| x != ']') {
+                    dentro.push(x);
                     j += 1;
                 }
                 let d = dentro.to_lowercase();
@@ -378,16 +376,16 @@ fn tokenizar(secao: &str, data: bool) -> Vec<Tok> {
         let n = texto.chars().count();
         c.get(i..i + n).is_some_and(|f| f.iter().collect::<String>().eq_ignore_ascii_case(texto))
     };
-    let repete =
-        |i: usize, letra: char| -> usize { c[i..].iter().take_while(|x| x.eq_ignore_ascii_case(&letra)).count() };
-    while i < c.len() {
-        let ch = c[i];
+    let repete = |i: usize, letra: char| -> usize {
+        c.get(i..).unwrap_or_default().iter().take_while(|x| x.eq_ignore_ascii_case(&letra)).count()
+    };
+    while let Some(&ch) = c.get(i) {
         match ch {
             '"' => {
                 let mut j = i + 1;
                 let mut s = String::new();
-                while j < c.len() && c[j] != '"' {
-                    s.push(c[j]);
+                while let Some(&x) = c.get(j).filter(|&&x| x != '"') {
+                    s.push(x);
                     j += 1;
                 }
                 toks.push(Tok::Lit(s));
@@ -413,8 +411,8 @@ fn tokenizar(secao: &str, data: bool) -> Vec<Tok> {
             '[' => {
                 let mut j = i + 1;
                 let mut dentro = String::new();
-                while j < c.len() && c[j] != ']' {
-                    dentro.push(c[j]);
+                while let Some(&x) = c.get(j).filter(|&&x| x != ']') {
+                    dentro.push(x);
                     j += 1;
                 }
                 i = j + 1;
@@ -480,7 +478,7 @@ fn tokenizar(secao: &str, data: bool) -> Vec<Tok> {
                 _ => {}
             }
             if ch == '.' && matches!(toks.last(), Some(Tok::Seg(_))) {
-                let n = c[i + 1..].iter().take_while(|&&x| x == '0').count();
+                let n = c.get(i + 1..).unwrap_or_default().iter().take_while(|&&x| x == '0').count();
                 if n > 0 {
                     toks.push(Tok::Frac(n.min(3) as u8));
                     i += 1 + n;
@@ -499,7 +497,7 @@ fn tokenizar(secao: &str, data: bool) -> Vec<Tok> {
             '@' => toks.push(Tok::Texto),
             '/' => toks.push(Tok::Barra),
             'E' | 'e' if matches!(c.get(i + 1), Some('+' | '-')) => {
-                toks.push(Tok::Exp(c[i + 1] == '+'));
+                toks.push(Tok::Exp(c.get(i + 1) == Some(&'+')));
                 i += 1;
             }
             'G' | 'g' if comeca(i, "general") => {
@@ -519,16 +517,18 @@ fn tokenizar(secao: &str, data: bool) -> Vec<Tok> {
 /// `m` é minuto (e não mês) logo depois de hora ou logo antes de segundo, pulando só o texto fixo.
 fn resolver_minutos(toks: &mut [Tok]) {
     for i in 0..toks.len() {
-        let Tok::Mes(n) = toks[i] else { continue };
+        let Some(&Tok::Mes(n)) = toks.get(i) else { continue };
         if n > 2 {
             continue;
         }
-        let antes = toks[..i].iter().rev().find(|t| !matches!(t, Tok::Lit(_)));
-        let depois = toks[i + 1..].iter().find(|t| !matches!(t, Tok::Lit(_)));
+        let antes = toks.get(..i).unwrap_or_default().iter().rev().find(|t| !matches!(t, Tok::Lit(_)));
+        let depois = toks.get(i + 1..).unwrap_or_default().iter().find(|t| !matches!(t, Tok::Lit(_)));
         let depois_de_hora = matches!(antes, Some(Tok::Hora(_) | Tok::Decorrido('h', _)));
         let antes_de_segundo = matches!(depois, Some(Tok::Seg(_)));
-        if depois_de_hora || antes_de_segundo {
-            toks[i] = Tok::Min(n);
+        if (depois_de_hora || antes_de_segundo)
+            && let Some(t) = toks.get_mut(i)
+        {
+            *t = Tok::Min(n);
         }
     }
 }
@@ -552,7 +552,8 @@ fn decimal_15(x: f64) -> (Vec<u8>, Vec<u8>) {
             int.resize(n, b'0');
             (int, Vec::new())
         } else {
-            (digs[..n].to_vec(), digs[n..].to_vec())
+            let (int, frac) = digs.split_at_checked(n).unwrap_or((&digs, &[]));
+            (int.to_vec(), frac.to_vec())
         }
     } else {
         let mut frac = vec![b'0'; (-exp - 1) as usize];
@@ -583,16 +584,17 @@ fn somar_um(digitos: &mut Vec<u8>) -> bool {
 fn arredondar(x: f64, casas: usize) -> (String, String) {
     let (mut int, mut frac) = decimal_15(x);
     if frac.len() > casas {
-        let sobe = frac[casas] >= b'5';
+        let sobe = frac.get(casas).is_some_and(|&d| d >= b'5');
         frac.truncate(casas);
         if sobe {
             let tam_int = int.len();
             let mut todos = int.clone();
             todos.extend_from_slice(&frac);
             somar_um(&mut todos);
-            let novo_int = todos.len() - casas;
-            frac = todos[novo_int..].to_vec();
-            int = todos[..novo_int].to_vec();
+            let (novo_int, nova_frac) =
+                todos.split_at_checked(todos.len().saturating_sub(casas)).unwrap_or((&todos, &[]));
+            frac = nova_frac.to_vec();
+            int = novo_int.to_vec();
             debug_assert!(int.len() >= tam_int);
         }
     }
@@ -607,11 +609,8 @@ pub(crate) fn geral(x: f64, loc: &Localidade) -> String {
     }
     let sinal = if x < 0.0 { "-" } else { "" };
     let (int, frac) = decimal_15(x.abs());
-    let exp = if int.len() == 1 && int[0] == b'0' {
-        -(frac.iter().take_while(|&&d| d == b'0').count() as i32) - 1
-    } else {
-        int.len() as i32 - 1
-    };
+    let exp =
+        if int == *b"0" { -(frac.iter().take_while(|&&d| d == b'0').count() as i32) - 1 } else { int.len() as i32 - 1 };
     if (-5..=14).contains(&exp) {
         let mut s = String::from_utf8_lossy(&int).into_owned();
         if !frac.is_empty() {
@@ -624,14 +623,15 @@ pub(crate) fn geral(x: f64, loc: &Localidade) -> String {
     let mut todos = int;
     todos.extend_from_slice(&frac);
     let zeros = todos.iter().take_while(|&&d| d == b'0').count();
-    let mut sig: Vec<u8> = todos[zeros..].to_vec();
+    let mut sig: Vec<u8> = todos.get(zeros..).unwrap_or_default().to_vec();
     while sig.last() == Some(&b'0') {
         sig.pop();
     }
-    let mut mant = String::from_utf8_lossy(&sig[..1]).into_owned();
-    if sig.len() > 1 {
+    let (primeiro, resto) = sig.split_at_checked(1).unwrap_or((&sig, &[]));
+    let mut mant = String::from_utf8_lossy(primeiro).into_owned();
+    if !resto.is_empty() {
         mant.push(loc.decimal);
-        mant.push_str(&String::from_utf8_lossy(&sig[1..]));
+        mant.push_str(&String::from_utf8_lossy(resto));
     }
     format!("{sinal}{mant}E{}{:02}", if exp < 0 { '-' } else { '+' }, exp.abs())
 }
@@ -646,7 +646,7 @@ fn numerico(toks: &[Tok], x: f64, loc: &Localidade) -> String {
     }
     // vírgulas depois do último algarismo dividem por mil cada
     let ultimo = toks.iter().rposition(|t| matches!(t, Tok::Dig(_) | Tok::Ponto));
-    let escala = ultimo.map_or(0, |u| toks[u + 1..].iter().filter(|t| matches!(t, Tok::Milhar)).count());
+    let escala = ultimo.map_or(0, |u| antes_e_depois(toks, u).1.iter().filter(|t| matches!(t, Tok::Milhar)).count());
     for _ in 0..escala {
         x /= 1000.0;
     }
@@ -664,8 +664,8 @@ fn numerico(toks: &[Tok], x: f64, loc: &Localidade) -> String {
     }
     let ponto = toks.iter().position(|t| matches!(t, Tok::Ponto));
     let (parte_int, parte_dec): (&[Tok], &[Tok]) = match ponto {
-        Some(p) => (&toks[..p], &toks[p + 1..]),
-        None => (&toks[..], &[]),
+        Some(p) => antes_e_depois(&toks, p),
+        None => (&toks, &[]),
     };
     let casas_max = parte_dec.iter().filter(|t| matches!(t, Tok::Dig(_))).count();
     let casas_min = parte_dec.iter().filter(|t| matches!(t, Tok::Dig('0'))).count();
@@ -690,6 +690,11 @@ fn numerico(toks: &[Tok], x: f64, loc: &Localidade) -> String {
         }
     }
     saida + &depois
+}
+
+/// O que vem antes e o que vem depois do token `p` (que fica de fora).
+fn antes_e_depois(toks: &[Tok], p: usize) -> (&[Tok], &[Tok]) {
+    (toks.get(..p).unwrap_or_default(), toks.get(p + 1..).unwrap_or_default())
 }
 
 fn lit(t: &Tok) -> String {
@@ -722,25 +727,28 @@ fn inteiro_com_mascara(toks: &[Tok], int: &str, loc: &Localidade) -> String {
             saida.push(loc.milhar);
         }
     };
-    for i in (0..toks.len()).rev() {
-        match toks[i] {
+    for (i, &tok) in toks.iter().enumerate().rev() {
+        let a_esquerda = toks.get(..i).unwrap_or_default();
+        match tok {
             Tok::Dig(c) => {
                 if restam > 0 {
                     if Some(i) == primeiro_dig {
                         // o placeholder mais à esquerda leva todos os algarismos que sobraram
-                        while restam > 0 {
-                            restam -= 1;
-                            empurrar(&mut saida, digitos[restam], &mut emitidos, restam > 0);
+                        for (k, &d) in digitos.iter().take(restam).enumerate().rev() {
+                            empurrar(&mut saida, d, &mut emitidos, k > 0);
                         }
+                        restam = 0;
                     } else {
                         restam -= 1;
-                        let mais = restam > 0 || toks[..i].iter().any(|t| matches!(t, Tok::Dig('0' | '?')));
-                        empurrar(&mut saida, digitos[restam], &mut emitidos, mais);
+                        let mais = restam > 0 || a_esquerda.iter().any(|t| matches!(t, Tok::Dig('0' | '?')));
+                        if let Some(&d) = digitos.get(restam) {
+                            empurrar(&mut saida, d, &mut emitidos, mais);
+                        }
                     }
                 } else {
                     match c {
                         '0' => {
-                            let mais = toks[..i].iter().any(|t| matches!(t, Tok::Dig(_)));
+                            let mais = a_esquerda.iter().any(|t| matches!(t, Tok::Dig(_)));
                             empurrar(&mut saida, '0', &mut emitidos, mais);
                         }
                         '?' => saida.push(' '),
@@ -751,7 +759,7 @@ fn inteiro_com_mascara(toks: &[Tok], int: &str, loc: &Localidade) -> String {
             Tok::Lit(l) => {
                 let antes_de_tudo = primeiro_dig.is_none_or(|p| i < p);
                 let depois_de_tudo = ultimo_dig.is_none_or(|u| i > u);
-                let algo_a_esquerda = restam > 0 || toks[..i].iter().any(|t| matches!(t, Tok::Dig('0')));
+                let algo_a_esquerda = restam > 0 || a_esquerda.iter().any(|t| matches!(t, Tok::Dig('0')));
                 if antes_de_tudo || depois_de_tudo || algo_a_esquerda {
                     saida.extend(l.chars().rev());
                 }
@@ -767,7 +775,7 @@ fn cientifico(toks: &[Tok], x: f64, loc: &Localidade) -> String {
     let (antes, depois) = toks.split_at(pos_exp);
     let ponto = antes.iter().position(|t| matches!(t, Tok::Ponto));
     let (parte_int, parte_dec): (&[Tok], &[Tok]) = match ponto {
-        Some(p) => (&antes[..p], &antes[p + 1..]),
+        Some(p) => antes_e_depois(antes, p),
         None => (antes, &[]),
     };
     let k = parte_int.iter().filter(|t| matches!(t, Tok::Dig(_))).count().max(1);
@@ -784,21 +792,22 @@ fn cientifico(toks: &[Tok], x: f64, loc: &Localidade) -> String {
         (vec![b'0'; 15], 0)
     } else {
         let zeros = todos.iter().take_while(|&&d| d == b'0').count();
-        let e = if int.len() == 1 && int[0] == b'0' { -(zeros as i32) } else { int.len() as i32 - 1 };
-        (todos[zeros..].to_vec(), e)
+        let e = if int == *b"0" { -(zeros as i32) } else { int.len() as i32 - 1 };
+        (todos.get(zeros..).unwrap_or_default().to_vec(), e)
     };
     sig.resize(k + casas + 1, b'0');
-    let sobe = sig[k + casas] >= b'5';
+    let sobe = sig.get(k + casas).is_some_and(|&d| d >= b'5');
     sig.truncate(k + casas);
     if sobe && somar_um(&mut sig) {
         sig.pop();
         expoente += 1;
     }
     expoente -= k as i32 - 1;
-    let mut mant = String::from_utf8_lossy(&sig[..k]).into_owned();
+    let (inteiros, decimais) = sig.split_at_checked(k).unwrap_or((&sig, &[]));
+    let mut mant = String::from_utf8_lossy(inteiros).into_owned();
     if casas > 0 {
         mant.push(loc.decimal);
-        mant.push_str(&String::from_utf8_lossy(&sig[k..]));
+        mant.push_str(&String::from_utf8_lossy(decimais));
     }
     let sinal = if expoente < 0 {
         "-"
@@ -815,7 +824,7 @@ fn fracao(toks: &[Tok], x: f64) -> String {
     let Some(barra) = toks.iter().position(|t| matches!(t, Tok::Barra)) else {
         return numerico(toks, x, &Localidade::INVARIANTE);
     };
-    let (esq, dir) = (&toks[..barra], &toks[barra + 1..]);
+    let (esq, dir) = antes_e_depois(toks, barra);
     let digitos_dir = dir.iter().filter(|t| matches!(t, Tok::Dig(_))).count();
     let fixo: Option<u32> = {
         let s: String = dir.iter().filter_map(|t| if let Tok::Lit(l) = t { Some(l.as_str()) } else { None }).collect();
@@ -825,9 +834,10 @@ fn fracao(toks: &[Tok], x: f64) -> String {
     let den_max = fixo.unwrap_or_else(|| 10u32.pow(digitos_dir.clamp(1, 3) as u32) - 1);
     // dígitos do numerador: a última sequência de Dig antes da barra
     let fim_num = esq.iter().rposition(|t| matches!(t, Tok::Dig(_))).map_or(0, |p| p + 1);
-    let ini_num = esq[..fim_num].iter().rposition(|t| !matches!(t, Tok::Dig(_))).map_or(0, |p| p + 1);
+    let ini_num =
+        esq.get(..fim_num).unwrap_or_default().iter().rposition(|t| !matches!(t, Tok::Dig(_))).map_or(0, |p| p + 1);
     let largura_num = (fim_num - ini_num).max(1);
-    let tem_inteiro = esq[..ini_num].iter().any(|t| matches!(t, Tok::Dig(_)));
+    let tem_inteiro = esq.get(..ini_num).unwrap_or_default().iter().any(|t| matches!(t, Tok::Dig(_)));
     let inteiro = if tem_inteiro { x.floor() } else { 0.0 };
     let resto = x - inteiro;
     let (num, den) = if let Some(f) = fixo {
@@ -905,6 +915,11 @@ fn data_com_tokens(toks: &[Tok], d: Data, h: Hora, loc: &Localidade) -> String {
     let mut s = String::new();
     let mes_i = usize::from(d.mes.clamp(1, 12)) - 1;
     let dia_semana = usize::from(dia_da_semana(d));
+    let (meses, dias): (&[&str], &[&str]) = if loc.portugues { (&MESES, &DIAS) } else { (&MESES_EN, &DIAS_EN) };
+    let nome_mes = meses.get(mes_i).copied().unwrap_or_default();
+    let nome_dia = dias.get(dia_semana).copied().unwrap_or_default();
+    let mes_curto = if loc.portugues { MESES_CURTOS.get(mes_i).copied() } else { nome_mes.get(..3) };
+    let dia_curto = if loc.portugues { DIAS_CURTOS.get(dia_semana).copied() } else { nome_dia.get(..3) };
     for t in toks {
         match t {
             Tok::Lit(l) => s.push_str(l),
@@ -912,22 +927,13 @@ fn data_com_tokens(toks: &[Tok], d: Data, h: Hora, loc: &Localidade) -> String {
             Tok::Ano(_) => s.push_str(&format!("{:04}", d.ano)),
             Tok::Mes(1) => s.push_str(&d.mes.to_string()),
             Tok::Mes(2) => s.push_str(&format!("{:02}", d.mes)),
-            Tok::Mes(3) => {
-                let nome = if loc.portugues { MESES_CURTOS[mes_i] } else { &MESES_EN[mes_i][..3] };
-                s.push_str(nome);
-            }
-            Tok::Mes(4) => s.push_str(if loc.portugues { MESES[mes_i] } else { MESES_EN[mes_i] }),
-            Tok::Mes(_) => {
-                let nome = if loc.portugues { MESES[mes_i] } else { MESES_EN[mes_i] };
-                s.extend(nome.chars().next().map(|c| c.to_uppercase().next().unwrap_or(c)));
-            }
+            Tok::Mes(3) => s.push_str(mes_curto.unwrap_or_default()),
+            Tok::Mes(4) => s.push_str(nome_mes),
+            Tok::Mes(_) => s.extend(nome_mes.chars().next().map(|c| c.to_uppercase().next().unwrap_or(c))),
             Tok::Dia(1) => s.push_str(&d.dia.to_string()),
             Tok::Dia(2) => s.push_str(&format!("{:02}", d.dia)),
-            Tok::Dia(3) => {
-                let nome = if loc.portugues { DIAS_CURTOS[dia_semana] } else { &DIAS_EN[dia_semana][..3] };
-                s.push_str(nome);
-            }
-            Tok::Dia(_) => s.push_str(if loc.portugues { DIAS[dia_semana] } else { DIAS_EN[dia_semana] }),
+            Tok::Dia(3) => s.push_str(dia_curto.unwrap_or_default()),
+            Tok::Dia(_) => s.push_str(nome_dia),
             Tok::Hora(n) => {
                 let hora = if ampm {
                     match h.hora % 12 {

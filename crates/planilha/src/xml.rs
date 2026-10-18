@@ -182,10 +182,10 @@ impl<F: Read> Leitor<F> {
         if self.fim - self.pos < 4096 && !self.eof {
             self.garantir(self.buf.len())?;
         }
-        let s = &self.buf[self.pos..self.fim];
+        let s = self.buf.get(self.pos..self.fim).unwrap_or_default();
         let mut i = 0;
         let fim_linha = loop {
-            let Some(k) = s[i..].iter().position(|&c| c == b'<') else {
+            let Some(k) = s.get(i..).and_then(|resto| resto.iter().position(|&c| c == b'<')) else {
                 return Ok(false);
             };
             let j = i + k;
@@ -200,14 +200,14 @@ impl<F: Read> Leitor<F> {
             }
             i = j + 1;
         };
-        let corpo = &s[..fim_linha];
+        let corpo = s.get(..fim_linha).unwrap_or_default();
         self.ultima_ref.clear();
         let mut ate = corpo.len();
-        while let Some(k) = corpo[..ate].iter().rposition(|&c| c == b'<') {
-            let marca = &corpo[k..];
+        while let Some(k) = corpo.get(..ate).and_then(|antes| antes.iter().rposition(|&c| c == b'<')) {
+            let marca = corpo.get(k..).unwrap_or_default();
             if marca.get(1) == Some(&b'c') && matches!(marca.get(2), Some(b' ' | b'>' | b'/' | b'\t' | b'\r' | b'\n')) {
                 let fim_marca = marca.iter().position(|&c| c == b'>').unwrap_or(marca.len());
-                let Some(valor) = valor_do_atributo(&marca[..fim_marca], b"r") else {
+                let Some(valor) = marca.get(..fim_marca).and_then(|m| valor_do_atributo(m, b"r")) else {
                     return Ok(false);
                 };
                 self.ultima_ref.extend_from_slice(valor);
@@ -259,7 +259,7 @@ impl<F: Read> Leitor<F> {
 
     fn ler_fonte(&mut self, de: usize, ate: usize) -> io::Result<usize> {
         loop {
-            match self.fonte.read(&mut self.buf[de..ate]) {
+            match self.fonte.read(self.buf.get_mut(de..ate).unwrap_or_default()) {
                 Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
                 outro => return outro,
             }
@@ -294,7 +294,7 @@ impl<F: Read> Leitor<F> {
         if self.pos >= self.fim && self.garantir(1)? == 0 {
             return Ok(None);
         }
-        Ok(Some(self.buf[self.pos]))
+        Ok(self.buf.get(self.pos).copied())
     }
 
     fn pular_espacos(&mut self) -> io::Result<()> {
@@ -314,14 +314,14 @@ impl<F: Read> Leitor<F> {
             if self.pos >= self.fim && self.garantir(1)? == 0 {
                 return Ok(None);
             }
-            let janela = &self.buf[self.pos..self.fim];
-            match janela.iter().position(|&c| c == a || c == b) {
-                Some(i) => {
-                    let achado = janela[i];
+            let janela = self.buf.get(self.pos..self.fim).unwrap_or_default();
+            match janela.iter().enumerate().find(|&(_, &c)| c == a || c == b) {
+                Some((i, &achado)) => {
+                    let antes = janela.get(..i).unwrap_or_default();
                     match destino {
                         Destino::Nada => {}
-                        Destino::Acumulado => self.acumulado.extend_from_slice(&janela[..i]),
-                        Destino::Tmp => self.tmp.extend_from_slice(&janela[..i]),
+                        Destino::Acumulado => self.acumulado.extend_from_slice(antes),
+                        Destino::Tmp => self.tmp.extend_from_slice(antes),
                     }
                     self.pos += i;
                     return Ok(Some(achado));
@@ -340,13 +340,15 @@ impl<F: Read> Leitor<F> {
 
     /// Anda até depois de `padrao` (comentário `-->`, instrução `?>`).
     fn pular_ate(&mut self, padrao: &[u8], motivo: &'static str) -> R<()> {
-        let primeiro = padrao[0];
+        let Some(&primeiro) = padrao.first() else {
+            return Ok(());
+        };
         loop {
             if self.copiar_ate(primeiro, primeiro, Destino::Nada)?.is_none() {
                 return Err(self.malformado(motivo));
             }
             let n = self.garantir(padrao.len())?;
-            if self.buf[self.pos..self.pos + n].starts_with(padrao) {
+            if self.buf.get(self.pos..self.pos + n).is_some_and(|j| j.starts_with(padrao)) {
                 self.pos += padrao.len();
                 return Ok(());
             }
@@ -362,7 +364,7 @@ impl<F: Read> Leitor<F> {
                 return Err(self.malformado("CDATA sem fim"));
             }
             let n = self.garantir(3)?;
-            if self.buf[self.pos..self.pos + n].starts_with(b"]]>") {
+            if self.buf.get(self.pos..self.pos + n).is_some_and(|j| j.starts_with(b"]]>")) {
                 self.pos += 3;
                 return Ok(());
             }
@@ -396,11 +398,11 @@ impl<F: Read> Leitor<F> {
     /// consome nada (o `&` fica como texto).
     fn entidade(&mut self) -> io::Result<Option<char>> {
         let n = self.garantir(12)?;
-        let janela = &self.buf[self.pos..self.pos + n];
+        let janela = self.buf.get(self.pos..self.pos + n).unwrap_or_default();
         let Some(fim) = janela.iter().take(11).position(|&c| c == b';') else {
             return Ok(None);
         };
-        let nome = &janela[..fim];
+        let nome = janela.get(..fim).unwrap_or_default();
         let c = match nome {
             b"amp" => Some('&'),
             b"lt" => Some('<'),
@@ -429,12 +431,12 @@ impl<F: Read> Leitor<F> {
     fn iniciar(&mut self) -> R<()> {
         self.iniciado = true;
         let n = self.garantir(4)?;
-        let inicio = &self.buf[..n];
+        let inicio = self.buf.get(..n).unwrap_or_default();
         if inicio.starts_with(&[0xEF, 0xBB, 0xBF]) {
             self.pos = 3;
         } else if inicio.starts_with(&[0xFF, 0xFE]) || inicio.starts_with(&[0xFE, 0xFF]) {
             return Err(self.malformado("o XML está em UTF-16; só UTF-8 é suportado"));
-        } else if inicio.len() >= 4 && (inicio[..4] == [b'<', 0, b'?', 0] || inicio[..4] == [0, b'<', 0, b'?']) {
+        } else if inicio.starts_with(&[b'<', 0, b'?', 0]) || inicio.starts_with(&[0, b'<', 0, b'?']) {
             return Err(self.malformado("o XML está em UTF-16 sem BOM; só UTF-8 é suportado"));
         }
         Ok(())
@@ -474,7 +476,7 @@ impl<F: Read> Leitor<F> {
                 }
                 Some(_) => {
                     let n = self.garantir(JANELA_MARCA.min(self.buf.len()))?;
-                    let janela = &self.buf[self.pos..self.pos + n];
+                    let janela = self.buf.get(self.pos..self.pos + n).unwrap_or_default();
                     if janela.starts_with(b"<!--") {
                         self.pos += 4;
                         self.pular_ate(b"-->", "comentário sem fim")?;
@@ -553,11 +555,11 @@ impl<F: Read> Leitor<F> {
     }
 
     fn marca_rapida_opcional(&mut self) -> Option<Rapida> {
-        let s = &self.buf[self.pos..self.fim];
+        let s = self.buf.get(self.pos..self.fim)?;
         let n = s.len();
         if s.get(1) == Some(&b'/') {
             let fim = s.iter().position(|&c| c == b'>')?;
-            let mut nome = &s[2..fim];
+            let mut nome = s.get(2..fim)?;
             while let [resto @ .., ultimo] = nome {
                 if !espaco(*ultimo) {
                     break;
@@ -575,19 +577,18 @@ impl<F: Read> Leitor<F> {
             return Some(Rapida::Evento(Evento::Fecha));
         }
         let mut i = 1;
-        while i < n && !espaco(s[i]) && !matches!(s[i], b'/' | b'>' | b'=') {
+        while s.get(i).is_some_and(|&c| !espaco(c) && !matches!(c, b'/' | b'>' | b'=')) {
             i += 1;
         }
         if i >= n {
             return None;
         }
-        let nome_elemento = std::str::from_utf8(nome_local(&s[1..i])).ok()?;
+        let nome_elemento = std::str::from_utf8(nome_local(s.get(1..i)?)).ok()?;
         if self.filtro.is_some_and(|f| !f.contains(&nome_elemento)) {
             // elemento que ninguém quer: só acha o fim da marca (com aspas em conta) e segue
             let mut aspas = 0u8;
             let mut j = i;
-            while j < n {
-                let c = s[j];
+            while let Some(&c) = s.get(j) {
                 if aspas != 0 {
                     if c == aspas {
                         aspas = 0;
@@ -602,7 +603,7 @@ impl<F: Read> Leitor<F> {
             if j >= n {
                 return None;
             }
-            let vazio = s[j - 1] == b'/';
+            let vazio = s.get(j - 1) == Some(&b'/');
             self.pos += j + 1;
             if !vazio {
                 self.profundidade += 1;
@@ -612,7 +613,7 @@ impl<F: Read> Leitor<F> {
         let mut n_atributos = 0;
         let vazio;
         loop {
-            while i < n && espaco(s[i]) {
+            while s.get(i).is_some_and(|&c| espaco(c)) {
                 i += 1;
             }
             match *s.get(i)? {
@@ -631,21 +632,21 @@ impl<F: Read> Leitor<F> {
                 }
                 _ => {
                     let ini = i;
-                    while i < n && !espaco(s[i]) && !matches!(s[i], b'=' | b'/' | b'>') {
+                    while s.get(i).is_some_and(|&c| !espaco(c) && !matches!(c, b'=' | b'/' | b'>')) {
                         i += 1;
                     }
                     if i == ini {
                         return None;
                     }
-                    let nome_atributo = &s[ini..i];
-                    while i < n && espaco(s[i]) {
+                    let nome_atributo = s.get(ini..i)?;
+                    while s.get(i).is_some_and(|&c| espaco(c)) {
                         i += 1;
                     }
                     if s.get(i) != Some(&b'=') {
                         return None;
                     }
                     i += 1;
-                    while i < n && espaco(s[i]) {
+                    while s.get(i).is_some_and(|&c| espaco(c)) {
                         i += 1;
                     }
                     let aspas = *s.get(i)?;
@@ -654,8 +655,11 @@ impl<F: Read> Leitor<F> {
                     }
                     i += 1;
                     let ini_valor = i;
-                    while i < n && s[i] != aspas {
-                        if s[i] == b'&' {
+                    while let Some(&c) = s.get(i) {
+                        if c == aspas {
+                            break;
+                        }
+                        if c == b'&' {
                             return None;
                         }
                         i += 1;
@@ -663,7 +667,7 @@ impl<F: Read> Leitor<F> {
                     if i >= n {
                         return None;
                     }
-                    let valor = std::str::from_utf8(&s[ini_valor..i]).ok()?;
+                    let valor = std::str::from_utf8(s.get(ini_valor..i)?).ok()?;
                     i += 1;
                     if nome_atributo == b"xmlns" || nome_atributo.starts_with(b"xmlns:") {
                         continue;
@@ -672,7 +676,7 @@ impl<F: Read> Leitor<F> {
                     if n_atributos == self.atributos.len() {
                         self.atributos.push((String::new(), String::new()));
                     }
-                    let (a, v) = &mut self.atributos[n_atributos];
+                    let (a, v) = self.atributos.get_mut(n_atributos)?;
                     a.clear();
                     a.push_str(nome_atributo);
                     v.clear();
@@ -749,9 +753,8 @@ impl<F: Read> Leitor<F> {
             return Ok(());
         }
         let namespace = self.tmp == b"xmlns" || self.tmp.starts_with(b"xmlns:");
-        let (a, b) = (self.tmp.len() - nome_local(&self.tmp).len(), self.tmp.len());
         self.nome_atributo.clear();
-        self.nome_atributo.extend_from_slice(&self.tmp[a..b]);
+        self.nome_atributo.extend_from_slice(nome_local(&self.tmp));
         self.pular_espacos()?;
         self.tmp.clear();
         if self.ver()? == Some(b'=') {
@@ -773,7 +776,9 @@ impl<F: Read> Leitor<F> {
         if i == self.atributos.len() {
             self.atributos.push((String::new(), String::new()));
         }
-        let (nome, valor) = &mut self.atributos[i];
+        let Some((nome, valor)) = self.atributos.get_mut(i) else {
+            return Ok(());
+        };
         nome.clear();
         nome.push_str(&String::from_utf8_lossy(&self.nome_atributo));
         valor.clear();
@@ -808,7 +813,7 @@ impl<F: Read> Leitor<F> {
             }
             if c == b'/' {
                 let n = self.garantir(2)?;
-                if n >= 2 && self.buf[self.pos + 1] == b'>' {
+                if n >= 2 && self.buf.get(self.pos + 1) == Some(&b'>') {
                     break;
                 }
             }
@@ -839,14 +844,14 @@ enum Destino {
 fn valor_do_atributo<'a>(marca: &'a [u8], nome: &[u8]) -> Option<&'a [u8]> {
     let mut i = 0;
     while i + nome.len() + 2 < marca.len() {
-        if espaco(marca[i]) && marca[i + 1..].starts_with(nome) {
+        if marca.get(i).is_some_and(|&c| espaco(c)) && marca.get(i + 1..).is_some_and(|r| r.starts_with(nome)) {
             let mut j = i + 1 + nome.len();
             if marca.get(j) == Some(&b'=') {
                 j += 1;
                 if let Some(&q @ (b'"' | b'\'')) = marca.get(j) {
-                    let ini = j + 1;
-                    let fim = marca[ini..].iter().position(|&c| c == q)?;
-                    return Some(&marca[ini..ini + fim]);
+                    let valor = marca.get(j + 1..)?;
+                    let fim = valor.iter().position(|&c| c == q)?;
+                    return valor.get(..fim);
                 }
             }
         }
@@ -858,7 +863,7 @@ fn valor_do_atributo<'a>(marca: &'a [u8], nome: &[u8]) -> Option<&'a [u8]> {
 /// `x:row` → `row`.
 fn nome_local(nome: &[u8]) -> &[u8] {
     match nome.iter().rposition(|&c| c == b':') {
-        Some(i) => &nome[i + 1..],
+        Some(i) => nome.get(i + 1..).unwrap_or_default(),
         None => nome,
     }
 }

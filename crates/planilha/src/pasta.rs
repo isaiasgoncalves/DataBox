@@ -83,7 +83,10 @@ impl Textos {
 
     pub fn get(&self, i: usize) -> Option<&str> {
         let fim = *self.fins.get(i)?;
-        let inicio = if i == 0 { 0 } else { self.fins[i - 1] };
+        let inicio = match i.checked_sub(1) {
+            Some(anterior) => *self.fins.get(anterior)?,
+            None => 0,
+        };
         self.dados.get(inicio..fim)
     }
 }
@@ -227,9 +230,9 @@ impl Pasta {
     /// Índice da primeira aba com células e visível (a que o Excel abre, se for uma delas); `None` se não há.
     pub fn primeira_planilha_visivel(&self) -> Option<usize> {
         let f = &self.interno.folhas;
-        let ok = |i: &usize| f[*i].tipo == TipoFolha::Planilha && f[*i].estado == Estado::Visivel;
+        let ok = |i: &usize| f.get(*i).is_some_and(|f| f.tipo == TipoFolha::Planilha && f.estado == Estado::Visivel);
         let ativa = self.interno.aba_ativa;
-        if ativa < f.len() && ok(&ativa) { Some(ativa) } else { (0..f.len()).find(ok) }
+        if ok(&ativa) { Some(ativa) } else { (0..f.len()).find(ok) }
     }
 
     /// A aba que estava ativa quando o arquivo foi salvo.
@@ -326,7 +329,7 @@ impl Iterator for Linhas {
 fn ler_ate_encher(arq: &mut File, buf: &mut [u8]) -> std::io::Result<usize> {
     let mut total = 0;
     while total < buf.len() {
-        let n = arq.read(&mut buf[total..])?;
+        let n = arq.read(buf.get_mut(total..).unwrap_or_default())?;
         if n == 0 {
             break;
         }
@@ -358,7 +361,7 @@ fn classificar_ole(arq: &mut File) -> ErroBanco {
             Ok(0) | Err(_) => break,
             Ok(n) => n,
         };
-        janela.extend_from_slice(&bloco[..n]);
+        janela.extend_from_slice(bloco.get(..n).unwrap_or_default());
         if contem(&janela, &protegido) {
             return erros::protegida();
         }
@@ -435,16 +438,16 @@ fn decodificar_percentual(texto: &str) -> String {
     let b = texto.as_bytes();
     let mut saida = Vec::with_capacity(b.len());
     let mut i = 0;
-    while i < b.len() {
-        if b[i] == b'%'
-            && b.get(i + 1).is_some_and(u8::is_ascii_hexdigit)
-            && b.get(i + 2).is_some_and(u8::is_ascii_hexdigit)
+    while let Some(&byte) = b.get(i) {
+        if byte == b'%'
+            && let Some(hex) = b.get(i + 1..i + 3)
+            && hex.iter().all(u8::is_ascii_hexdigit)
         {
-            let hex = std::str::from_utf8(&b[i + 1..i + 3]).unwrap_or("00");
+            let hex = std::str::from_utf8(hex).unwrap_or("00");
             saida.push(u8::from_str_radix(hex, 16).unwrap_or(b'%'));
             i += 3;
         } else {
-            saida.push(b[i]);
+            saida.push(byte);
             i += 1;
         }
     }
@@ -678,7 +681,7 @@ pub(crate) fn desescapar_x(texto: &str) -> Cow<'_, str> {
     let b = texto.as_bytes();
     let hex4 = |i: usize| -> Option<u16> {
         let h = b.get(i + 2..i + 6)?;
-        if b[i] == b'_' && b[i + 1] == b'x' && b.get(i + 6) == Some(&b'_') && h.iter().all(u8::is_ascii_hexdigit) {
+        if b.get(i..i + 2) == Some(b"_x") && b.get(i + 6) == Some(&b'_') && h.iter().all(u8::is_ascii_hexdigit) {
             u16::from_str_radix(std::str::from_utf8(h).ok()?, 16).ok()
         } else {
             None
@@ -688,7 +691,7 @@ pub(crate) fn desescapar_x(texto: &str) -> Cow<'_, str> {
     let mut i = 0;
     let mut inicio = 0;
     while i < b.len() {
-        if b[i] == b'_'
+        if b.get(i) == Some(&b'_')
             && let Some(u) = hex4(i)
         {
             let (c, gasto) = if (0xD800..0xDC00).contains(&u) {

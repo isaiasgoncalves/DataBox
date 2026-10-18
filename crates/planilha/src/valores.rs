@@ -123,7 +123,7 @@ impl Linha {
 
     /// A célula da coluna `coluna` (a partir de 0), se existir no arquivo.
     pub fn celula(&self, coluna: u32) -> Option<&Celula> {
-        self.celulas.binary_search_by_key(&coluna, |c| c.coluna).ok().map(|i| &self.celulas[i])
+        self.celulas.binary_search_by_key(&coluna, |c| c.coluna).ok().and_then(|i| self.celulas.get(i))
     }
 
     /// O valor da coluna: vazio onde não há célula.
@@ -262,11 +262,11 @@ pub fn referencia(texto: &str) -> Option<(u32, u32)> {
     while sem.get(i).is_some_and(u8::is_ascii_alphabetic) {
         i += 1;
     }
-    let coluna = indice_da_coluna(std::str::from_utf8(&sem[ini..i]).ok()?)?;
+    let coluna = indice_da_coluna(std::str::from_utf8(sem.get(ini..i)?).ok()?)?;
     if sem.get(i) == Some(&b'$') {
         i += 1;
     }
-    let digitos = &sem[i..];
+    let digitos = sem.get(i..)?;
     if digitos.is_empty() || digitos.len() > 9 || !digitos.iter().all(u8::is_ascii_digit) {
         return None;
     }
