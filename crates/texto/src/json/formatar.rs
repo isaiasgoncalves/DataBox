@@ -82,18 +82,17 @@ pub fn formatar(texto: &str, recuo: Recuo) -> Result<String, ErroJson> {
         }
     };
 
-    while i < n {
-        let c = b[i];
+    while let Some(&c) = b.get(i) {
         match c {
             _ if e_espaco(c) => i += 1,
             b'{' | b'[' => {
                 let fecho = if c == b'{' { b'}' } else { b']' };
                 let mut j = i + 1;
-                while j < n && e_espaco(b[j]) {
+                while b.get(j).is_some_and(|&x| e_espaco(x)) {
                     j += 1;
                 }
                 saida.push(char::from(c));
-                if j < n && b[j] == fecho {
+                if b.get(j) == Some(&fecho) {
                     // vazio: fica junto
                     saida.push(char::from(fecho));
                     i = j + 1;
@@ -120,8 +119,8 @@ pub fn formatar(texto: &str, recuo: Recuo) -> Result<String, ErroJson> {
             }
             b'"' => {
                 let mut j = i + 1;
-                while j < n {
-                    match b[j] {
+                while let Some(&x) = b.get(j) {
+                    match x {
                         b'\\' => j += 2,
                         b'"' => {
                             j += 1;
@@ -136,7 +135,10 @@ pub fn formatar(texto: &str, recuo: Recuo) -> Result<String, ErroJson> {
             _ => {
                 // número, true, false ou null: até o próximo símbolo
                 let mut j = i;
-                while j < n && !e_espaco(b[j]) && !matches!(b[j], b',' | b':' | b'{' | b'}' | b'[' | b']' | b'"') {
+                while b
+                    .get(j)
+                    .is_some_and(|&x| !e_espaco(x) && !matches!(x, b',' | b':' | b'{' | b'}' | b'[' | b']' | b'"'))
+                {
                     j += 1;
                 }
                 saida.push_str(&texto[i..j]);

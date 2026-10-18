@@ -125,6 +125,9 @@ impl Arvore {
         self.nos.len()
     }
 
+    // O `NoId` só nasce aqui no módulo, do índice de um nó desta arena (a raiz existe sempre), e os elos entre os
+    // nós são os que o analisador gravou: um id que não cabe é erro de programação, não do arquivo.
+    #[allow(clippy::indexing_slicing)]
     pub fn no(&self, id: NoId) -> &No {
         &self.nos[id.0 as usize]
     }

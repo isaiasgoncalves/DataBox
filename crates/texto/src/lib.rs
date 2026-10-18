@@ -54,6 +54,9 @@
 //! `cargo test -p texto`. Os de arquivo usam uma pasta temporária por teste.
 
 #![forbid(unsafe_code)]
+// Índice e fatia que estouram viram pânico; aqui eles passam por .get() ou iterador (ARQUITETURA.md §3).
+// Os testes ficam de fora: neles, o pânico é a falha que se quer ver.
+#![cfg_attr(not(test), deny(clippy::indexing_slicing))]
 
 pub mod arquivo;
 pub mod json;

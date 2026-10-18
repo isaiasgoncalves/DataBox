@@ -143,11 +143,11 @@ impl<'t> Analisador<'t> {
         let id = u32::try_from(self.nos.len()).unwrap_or(NENHUM - 1);
         self.nos.push(No::novo(tipo, inicio, fim, chave, pai, ordem));
         if anterior == NENHUM {
-            if pai != NENHUM {
-                self.nos[pai as usize].primeiro = id;
+            if let Some(no_pai) = self.nos.get_mut(pai as usize) {
+                no_pai.primeiro = id;
             }
-        } else {
-            self.nos[anterior as usize].irmao = id;
+        } else if let Some(no_anterior) = self.nos.get_mut(anterior as usize) {
+            no_anterior.irmao = id;
         }
         if let Some(q) = self.pilha.last_mut() {
             q.ultimo = id;
@@ -175,8 +175,9 @@ impl<'t> Analisador<'t> {
             return;
         };
         self.pos += 1;
-        if self.construir {
-            let no = &mut self.nos[quadro.no as usize];
+        if self.construir
+            && let Some(no) = self.nos.get_mut(quadro.no as usize)
+        {
             no.fim = self.pos;
             no.filhos = quadro.filhos;
         }
@@ -192,11 +193,11 @@ impl<'t> Analisador<'t> {
         let abertura = self.pos;
         let mut i = abertura + 1;
         loop {
-            let Some(rel) = self.bytes[i..].iter().position(|&b| b == b'"' || b == b'\\' || b < 0x20) else {
+            let resto = self.bytes.get(i..).unwrap_or_default();
+            let Some((rel, &b)) = resto.iter().enumerate().find(|&(_, &b)| b == b'"' || b == b'\\' || b < 0x20) else {
                 return Err(self.erro(abertura, Motivo::TextoSemFechamento));
             };
             i += rel;
-            let b = self.bytes[i];
             if b == b'"' {
                 self.pos = i + 1;
                 return Ok(());
@@ -209,17 +210,30 @@ impl<'t> Analisador<'t> {
                 None => return Err(self.erro(abertura, Motivo::TextoSemFechamento)),
                 Some(b'"' | b'\\' | b'/' | b'b' | b'f' | b'n' | b'r' | b't') => i += 2,
                 Some(b'u') => {
-                    let hexa = self.bytes[i + 2..].iter().take(4).take_while(|b| b.is_ascii_hexdigit()).count();
+                    let hexa = self
+                        .bytes
+                        .get(i + 2..)
+                        .unwrap_or_default()
+                        .iter()
+                        .take(4)
+                        .take_while(|b| b.is_ascii_hexdigit())
+                        .count();
                     if hexa < 4 {
-                        let seguinte: String =
-                            self.texto[i + 2..].chars().take(4).take_while(|&c| c != '"' && !c.is_control()).collect();
+                        let seguinte: String = self
+                            .texto
+                            .get(i + 2..)
+                            .unwrap_or_default()
+                            .chars()
+                            .take(4)
+                            .take_while(|&c| c != '"' && !c.is_control())
+                            .collect();
                         return Err(self.erro(i, Motivo::EscapeInvalido(format!("\\u{}", descrever(&seguinte)))));
                     }
                     i += 6;
                 }
                 Some(controle) if controle < 0x20 => return Err(self.controle_solto(abertura, i + 1)),
                 Some(_) => {
-                    let c = self.texto[i + 1..].chars().next().unwrap_or(' ');
+                    let c = self.texto.get(i + 1..).and_then(|t| t.chars().next()).unwrap_or(' ');
                     return Err(self.erro(i, Motivo::EscapeInvalido(format!("\\{}", descrever(&c.to_string())))));
                 }
             }
@@ -229,7 +243,7 @@ impl<'t> Analisador<'t> {
     /// Um caractere de controle dentro de uma cadeia: a quebra de linha tem a frase própria (e aponta a aspa de
     /// abertura, na mesma linha); os outros apontam o próprio caractere.
     fn controle_solto(&self, abertura: usize, onde: usize) -> ErroJson {
-        if matches!(self.bytes[onde], b'\n' | b'\r') {
+        if matches!(self.bytes.get(onde), Some(b'\n' | b'\r')) {
             self.erro(abertura, Motivo::QuebraSolta)
         } else {
             self.erro(onde, Motivo::ControleSolto)
@@ -245,7 +259,7 @@ impl<'t> Analisador<'t> {
     /// com a frase que mais ajuda.
     fn valor_simples(&mut self) -> Result<(), ErroJson> {
         let inicio = self.pos;
-        let primeiro = self.bytes[inicio];
+        let primeiro = self.bytes.get(inicio).copied().unwrap_or(b' ');
         let fim = self.fim_da_palavra(inicio);
         if fim == inicio {
             let c = self.texto[inicio..].chars().next().unwrap_or(' ');
@@ -273,7 +287,7 @@ impl<'t> Analisador<'t> {
 
     /// O símbolo que está em `pos`, como a frase o mostra: a cadeia com as aspas, a palavra ou o caractere.
     fn simbolo_em(&self, pos: usize) -> String {
-        if self.bytes[pos] == b'"' {
+        if self.bytes.get(pos) == Some(&b'"') {
             let mut i = pos + 1;
             while let Some(&b) = self.bytes.get(i) {
                 match b {
@@ -430,7 +444,7 @@ impl<'t> Analisador<'t> {
 /// O tipo de uma palavra que é um número JSON (`-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?`), ou `None`.
 fn tipo_do_numero(palavra: &str) -> Option<Tipo> {
     let b = palavra.as_bytes();
-    let digitos = |de: usize| b[de..].iter().take_while(|c| c.is_ascii_digit()).count();
+    let digitos = |de: usize| b.get(de..).unwrap_or_default().iter().take_while(|c| c.is_ascii_digit()).count();
     let mut i = usize::from(b.first() == Some(&b'-'));
     match b.get(i) {
         Some(b'0') => i += 1,

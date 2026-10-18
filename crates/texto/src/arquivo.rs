@@ -163,8 +163,8 @@ pub fn decodificar(bytes: &[u8], modificado: Option<SystemTime>) -> Resultado<Ca
     if bytes.contains(&0) {
         return Err(if parece_utf16_sem_bom(bytes) { erro_utf16() } else { erro_nao_e_texto() });
     }
-    let (codificacao, texto) = if bytes.starts_with(&BOM_UTF8) {
-        match std::str::from_utf8(&bytes[BOM_UTF8.len()..]) {
+    let (codificacao, texto) = if let Some(depois_do_bom) = bytes.strip_prefix(&BOM_UTF8) {
+        match std::str::from_utf8(depois_do_bom) {
             Ok(t) => (Codificacao::Utf8ComBom, t.to_string()),
             // o BOM de UTF-8 e depois bytes que não são UTF-8: é um arquivo em Windows-1252 que por azar começa
             // com "ï»¿"; lido assim, volta byte a byte igual na gravação (UTF-8 "com perda" gravaria U+FFFD)
@@ -189,7 +189,7 @@ pub fn decodificar(bytes: &[u8], modificado: Option<SystemTime>) -> Resultado<Ca
 /// UTF-16 sem BOM: os bytes nulos se repetem de dois em dois (a letra latina é um byte e um zero). Um arquivo
 /// binário qualquer tem zeros, mas não nesse compasso.
 fn parece_utf16_sem_bom(bytes: &[u8]) -> bool {
-    let amostra = &bytes[..bytes.len().min(AMOSTRA_UTF16)];
+    let amostra = bytes.get(..AMOSTRA_UTF16).unwrap_or(bytes);
     let pares = amostra.len() / 2;
     if pares == 0 {
         return false;
