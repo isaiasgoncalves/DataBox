@@ -219,6 +219,10 @@ pub fn dividir_comandos(sql: &str) -> Vec<String>;
 pub fn coagir(entrada: &Entrada, afinidade: Afinidade) -> Resultado<Coagido>;  // Coagido = Valor | Padrao | Manter
 ```
 
+Toda conexão aberta pelo `banco` (a principal e as de leitura) liga `PRAGMA trusted_schema = OFF` antes de ler o
+esquema: o arquivo pode vir de qualquer lugar, e visões, gatilhos e padrões gravados nele só usam funções
+marcadas como inofensivas.
+
 `leitura: Some("grade:<tabela>")` / `Some("contagem:<tabela>")` liga a **leitura substituída**: a
 mais nova de um grupo abandona a mais velha (interrupt do SQLite só nela), que devolve `Codigo::Substituido`.
 `Pagina.linhas[i].chave: Option<Chave>`, `valores: Vec<Celula>`; `LinhaCompleta.valores` traz o texto inteiro

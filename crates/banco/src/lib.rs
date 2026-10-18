@@ -10,7 +10,8 @@
 //!   abrir(caminho: &Path, somente_leitura: bool, criar: bool) -> Resultado<Banco>
 //!       caminho resolvido (absoluto, links e nomes 8.3 resolvidos). Inexistente sem `criar` → 404; pasta → 400;
 //!       não é banco → 400. Arquivo protegido contra gravação aberto para edição → fica só leitura, com o motivo.
-//!       Só leitura com -journal quente → 409. foreign_keys ON; temp_store MEMORY até 1 GB.
+//!       Só leitura com -journal quente → 409. foreign_keys ON; temp_store MEMORY até 1 GB; trusted_schema OFF
+//!       (também nas conexões de leitura).
 //!   caminho() -> &Path · nome() -> &str · id() -> &str (16 hex, desta abertura)
 //!   somente_leitura() -> bool · motivo_somente_leitura() -> Option<&str>
 //!   transacao_aberta() -> bool · exigir_sem_transacao(acao: &str) -> Resultado<()>   409 Codigo::TransacaoAberta

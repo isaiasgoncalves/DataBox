@@ -290,3 +290,13 @@ fn fechar_com_transacao_aberta_avisa_no_registro() {
         mensagens_registradas()
     );
 }
+
+#[test]
+fn esquema_do_arquivo_nao_e_confiavel() {
+    let ex = exemplo("trusted-schema");
+    let ligado = |c: &Connection| c.query_row("PRAGMA trusted_schema", [], |r| r.get::<_, i64>(0)).unwrap();
+    assert_eq!(ex.banco.com_conexao(|c| Ok(ligado(c))).unwrap(), 0);
+    assert_eq!(ligado(&ex.banco.conexao_leitura().unwrap()), 0);
+    let ro = exemplo_ro("trusted-schema-ro");
+    assert_eq!(ro.banco.com_conexao(|c| Ok(ligado(c))).unwrap(), 0);
+}

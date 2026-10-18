@@ -5,6 +5,11 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Segurança
+
+- Bancos abertos com `trusted_schema` desligado: visões, gatilhos e padrões gravados no arquivo só usam funções
+  inofensivas do SQLite.
+
 ## [0.1.0] - 2026-10-18
 
 Primeira versão pública.

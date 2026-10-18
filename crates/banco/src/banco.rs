@@ -119,12 +119,15 @@ fn novo_id() -> String {
     format!("{:016x}", h.finish())
 }
 
-/// Conexão nova pela URI (`mode=ro` ou `mode=rw`), com a espera de gravação.
+/// Conexão nova pela URI (`mode=ro` ou `mode=rw`), com a espera de gravação e `trusted_schema` desligado.
 pub(crate) fn conectar(caminho: &Path, modo: &str) -> Resultado<Connection> {
     let base = if modo == "ro" { OpenFlags::SQLITE_OPEN_READ_ONLY } else { OpenFlags::SQLITE_OPEN_READ_WRITE };
     let flags = base | OpenFlags::SQLITE_OPEN_URI | OpenFlags::SQLITE_OPEN_NO_MUTEX;
     let conn = Connection::open_with_flags(uri_de(caminho, modo), flags).ctx("Não foi possível abrir o banco.")?;
     conn.busy_timeout(ms(ESPERA_GRAVACAO_MS)).ctx("Não foi possível abrir o banco.")?;
+    // O arquivo vem de qualquer lugar: visões, gatilhos e padrões gravados nele só usam funções inofensivas
+    // (SQLITE_INNOCUOUS), nunca as que mexem fora do banco. Antes de ler o esquema.
+    conn.execute_batch("PRAGMA trusted_schema = OFF").ctx("Não foi possível abrir o banco.")?;
     Ok(conn)
 }
 
