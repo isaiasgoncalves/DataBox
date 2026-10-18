@@ -1,0 +1,12 @@
+[package]
+name = "ddl"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+comum = { workspace = true }
+
+[dev-dependencies]
+rusqlite = { workspace = true }
+amostras = { workspace = true }
