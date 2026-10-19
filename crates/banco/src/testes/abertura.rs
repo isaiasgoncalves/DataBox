@@ -57,7 +57,16 @@ fn relativo(de: &Path, para: &Path) -> PathBuf {
 
 #[test]
 fn caminho_relativo_e_resolvido() {
-    let tmp = Pasta::nova("relativo");
+    // Na pasta do crate (no disco da pasta atual) e não no temporário do sistema: no Windows os dois podem estar
+    // em discos diferentes (no runner do CI, C: e D:), e entre discos não há caminho relativo.
+    let caminho = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("target")
+        .join("tmp-testes")
+        .join(format!("banco-relativo-{}", std::process::id()));
+    fs::create_dir_all(&caminho).unwrap();
+    let tmp = Pasta { caminho };
     let caminho = caminho_exemplo(&tmp);
     let atual = canonico(&std::env::current_dir().unwrap());
     let rel = relativo(&atual, &canonico(&caminho));

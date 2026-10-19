@@ -4,6 +4,7 @@
 //! Arquivo sem programa associado: pelo Explorador de Arquivos o Windows mostra a janela "Abrir com" em vez de um
 //! erro.
 
+#[cfg(windows)]
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;

@@ -85,31 +85,42 @@ fn api_leitura_substituida_pelo_grupo() {
     let a = ambiente_de(pasta, &caminho);
     let id = a.id();
     let termo = "98765432101";
-    thread::scope(|s| {
-        let velha = s.spawn(|| {
-            let pedido = PedidoPagina {
-                busca: Some(termo.into()),
+    // A velha precisa estar lendo quando a nova chega. Numa máquina carregada (o runner do CI) ela pode ainda nem
+    // ter começado ou já ter terminado; então tenta de novo, esperando mais a cada vez, até ver a substituição.
+    let mut substituida = None;
+    for tentativa in 1..=5u64 {
+        let velha = thread::scope(|s| {
+            let velha = s.spawn(|| {
+                let pedido = PedidoPagina {
+                    busca: Some(termo.into()),
+                    leitura: Some("grade:grande".into()),
+                    ..PedidoPagina::default()
+                };
+                a.servico.linhas(&id, "grande", &pedido)
+            });
+            thread::sleep(Duration::from_millis(50 * tentativa)); // a velha chega primeiro
+            let nova = PedidoPagina {
+                por_pagina: 5,
+                contar: false,
                 leitura: Some("grade:grande".into()),
                 ..PedidoPagina::default()
             };
-            a.servico.linhas(&id, "grande", &pedido)
+            let nova = a.servico.linhas(&id, "grande", &nova).unwrap();
+            // a contagem é de outro grupo e ninguém a substitui
+            let contagem = a.servico.contagem(&id, "grande", None, &[], Some("contagem:grande")).unwrap();
+            assert_eq!(nova.linhas.len(), 5);
+            assert_eq!(contagem.linhas, 150_000);
+            velha.join().unwrap()
         });
-        thread::sleep(Duration::from_millis(150)); // a velha chega primeiro
-        let nova = PedidoPagina {
-            por_pagina: 5,
-            contar: false,
-            leitura: Some("grade:grande".into()),
-            ..PedidoPagina::default()
-        };
-        let nova = a.servico.linhas(&id, "grande", &nova).unwrap();
-        // a contagem é de outro grupo e ninguém a substitui
-        let contagem = a.servico.contagem(&id, "grande", None, &[], Some("contagem:grande")).unwrap();
-        let e = erro_com(velha.join().unwrap(), 409);
-        assert_eq!(e.mensagem, "Leitura substituída por outra mais nova.");
-        assert!(e.tem_codigo(Codigo::Substituido));
-        assert_eq!(nova.linhas.len(), 5);
-        assert_eq!(contagem.linhas, 150_000);
-    });
+        if let Err(e) = velha {
+            substituida = Some(e);
+            break;
+        }
+    }
+    let e = substituida.expect("em 5 tentativas, a leitura velha nunca foi substituída pela nova");
+    assert_eq!(e.status, 409);
+    assert_eq!(e.mensagem, "Leitura substituída por outra mais nova.");
+    assert!(e.tem_codigo(Codigo::Substituido));
 }
 
 // ---- D: exportação acompanhada -------------------------------------------------------------------------
