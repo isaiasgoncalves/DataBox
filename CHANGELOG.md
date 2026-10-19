@@ -15,6 +15,12 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   `.AppImage`. O `ferramentas/appimage.sh` monta o pacote na máquina de quem compila, e rodar o CI à mão (Run
   workflow) também gera um, para testar antes de publicar.
 
+### Corrigido
+
+- Linux: os caminhos absolutos (`/home/…`) não viram mais relativos à pasta do programa (o `/` era trocado por
+  `\`), então bancos, pastas e arquivos abrem pelo caminho; o `~` usa o `HOME`, e a caixa das letras diferencia
+  arquivos, como no sistema.
+
 ### Alterado
 
 - Fora do Windows, o tema "Seguir o Windows" se chama "Seguir o sistema", e as frases falam no "programa padrão do

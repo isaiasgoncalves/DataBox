@@ -1,6 +1,7 @@
 //! Caminhos no estilo do Windows (`abspath`, `normcase`, `normpath`, `basename`, `dirname`), aparar espaços e
 //! citar textos, para calcular sempre a mesma chave de um
-//! caminho e mostrarem o mesmo nome e a mesma pasta.
+//! caminho e mostrarem o mesmo nome e a mesma pasta. Fora do Windows, as regras são as do `posixpath`: só `/`
+//! separa, `\` é um caractere do nome e a caixa diferencia arquivos.
 //!
 //! - `abspath(p)` é `GetFullPathNameW(normpath(p))`: aqui, [`std::path::absolute`] (que no Windows chama o
 //!   `GetFullPathNameW`) sobre o `normpath`.
@@ -108,8 +109,51 @@ pub fn chave_caminho(caminho: impl AsRef<Path>) -> String {
     normcase(&caminho_exibido(caminho))
 }
 
-/// Absoluto e normalizado, no estilo do Windows.
+/// Absoluto e normalizado: no Windows, o `ntpath.abspath`; nos outros sistemas, o `posixpath.abspath` (só `/`
+/// separa; `\` é um caractere do nome).
 pub(crate) fn abspath(texto: &str) -> String {
+    if cfg!(windows) { abspath_windows(texto) } else { abspath_posix(texto) }
+}
+
+/// O `posixpath.abspath`: a pasta atual na frente do relativo e o [`normpath_posix`], sem tocar no disco.
+fn abspath_posix(texto: &str) -> String {
+    if texto.starts_with('/') {
+        return normpath_posix(texto);
+    }
+    match std::env::current_dir() {
+        Ok(atual) => normpath_posix(&format!("{}/{texto}", atual.to_string_lossy())),
+        Err(_) => normpath_posix(texto),
+    }
+}
+
+/// O `posixpath.normpath`: sem `.`, com `..` resolvido e sem barras repetidas ou no fim.
+pub(crate) fn normpath_posix(caminho: &str) -> String {
+    let raiz = caminho.starts_with('/');
+    let mut partes: Vec<&str> = Vec::new();
+    for parte in caminho.split('/') {
+        match parte {
+            "" | "." => {}
+            ".." => {
+                if partes.last().is_some_and(|p| *p != "..") {
+                    partes.pop();
+                } else if !raiz {
+                    // ".." logo depois da raiz não sobe além dela
+                    partes.push("..");
+                }
+            }
+            outra => partes.push(outra),
+        }
+    }
+    let corpo = partes.join("/");
+    match (raiz, corpo.is_empty()) {
+        (true, _) => format!("/{corpo}"),
+        (false, true) => ".".to_string(),
+        (false, false) => corpo,
+    }
+}
+
+/// O `ntpath.abspath`.
+fn abspath_windows(texto: &str) -> String {
     let normal = normpath(texto);
     match std::path::absolute(Path::new(&normal)) {
         Ok(absoluto) => absoluto.to_string_lossy().into_owned(),
@@ -249,13 +293,28 @@ pub(crate) fn minuscula_windows(c: char) -> char {
     }
 }
 
-/// Minúsculas (tabela do Windows) e `/` → `\`.
+/// No Windows, minúsculas (tabela do Windows) e `/` → `\`; nos outros sistemas, como veio (o `posixpath.normcase`:
+/// lá a caixa diferencia arquivos).
 pub(crate) fn normcase(texto: &str) -> String {
-    texto.chars().map(minuscula_windows).collect()
+    if cfg!(windows) { texto.chars().map(minuscula_windows).collect() } else { texto.to_string() }
+}
+
+/// (cabeça, cauda): o `ntpath.split` no Windows e o `posixpath.split` nos outros sistemas.
+fn dividir(p: &str) -> (String, &str) {
+    if cfg!(windows) { dividir_windows(p) } else { dividir_posix(p) }
+}
+
+/// O `posixpath.split`: a cauda é o que vem depois da última `/`; a cabeça perde as `/` do fim, menos a raiz.
+fn dividir_posix(p: &str) -> (String, &str) {
+    let i = p.rfind('/').map_or(0, |i| i + 1);
+    let cabeca = p.get(..i).unwrap_or("");
+    let cauda = p.get(i..).unwrap_or("");
+    let cabeca = if cabeca.chars().all(|c| c == '/') { cabeca } else { cabeca.trim_end_matches('/') };
+    (cabeca.to_string(), cauda)
 }
 
 /// `ntpath.split`: (cabeça, cauda).
-fn dividir(p: &str) -> (String, &str) {
+fn dividir_windows(p: &str) -> (String, &str) {
     let (drive, root, resto) = splitroot(p);
     let b = resto.as_bytes();
     let mut i = b.len();
@@ -364,6 +423,7 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn nome_e_pasta() {
         assert_eq!(nome_base("C:\\dados\\vendas.db"), "vendas.db");
         assert_eq!(pasta_de("C:\\dados\\vendas.db"), "C:\\dados");
@@ -375,6 +435,7 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn normcase_com_a_tabela_do_windows() {
         assert_eq!(normcase("C:/Dados/AÇÃO.DB"), "c:\\dados\\ação.db");
         assert_eq!(normcase("İ"), "İ");
@@ -386,11 +447,33 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn caminho_relativo_fica_absoluto() {
         let cwd = std::env::current_dir().unwrap();
         assert_eq!(caminho_exibido("x.db"), cwd.join("x.db").to_string_lossy());
         assert_eq!(caminho_exibido("C:/A/../B/c.db"), "C:\\B\\c.db");
         assert_eq!(chave_caminho("C:/A/../B/C.db"), "c:\\b\\c.db");
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn fora_do_windows_e_o_posixpath() {
+        assert_eq!(normpath_posix("/a/./b/../c//d.db"), "/a/c/d.db");
+        assert_eq!(normpath_posix("/../x"), "/x");
+        assert_eq!(normpath_posix("../../x"), "../../x");
+        assert_eq!(normpath_posix("a/.."), ".");
+        assert_eq!(normpath_posix(r"/tmp/a\b.db"), r"/tmp/a\b.db");
+        assert_eq!(caminho_exibido("/tmp/dados/../x.db"), "/tmp/x.db");
+        let atual = std::env::current_dir().unwrap();
+        assert_eq!(caminho_exibido("x.db"), atual.join("x.db").to_string_lossy());
+        // a caixa diferencia arquivos e "\" é parte do nome
+        assert_eq!(chave_caminho("/Dados/X.db"), "/Dados/X.db");
+        assert_eq!(nome_base("/dados/vendas.db"), "vendas.db");
+        assert_eq!(pasta_de("/dados/vendas.db"), "/dados");
+        assert_eq!(pasta_de("/vendas.db"), "/");
+        assert_eq!(pasta_de("/a//ação.db"), "/a");
+        assert_eq!(nome_base("/a/"), "");
+        assert_eq!(nome_base(r"C:\dados\x.db"), r"C:\dados\x.db");
     }
 
     #[test]

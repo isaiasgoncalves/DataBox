@@ -43,9 +43,24 @@ fn sem_aspas(texto: &str) -> Option<&str> {
     texto.get(1..texto.len() - 1)
 }
 
-/// Expande o `~` do começo do caminho (como no Windows), com as variáveis do processo.
+/// Expande o `~` do começo do caminho com as variáveis do processo: como no Windows ([`expandir_usuario_com`]) ou,
+/// nos outros sistemas, pelo HOME ([`expandir_usuario_posix`]).
 fn expandir_usuario(texto: &str) -> String {
-    expandir_usuario_com(texto, |nome| std::env::var_os(nome).map(|v| v.to_string_lossy().into_owned()))
+    let var = |nome: &str| std::env::var_os(nome).map(|v| v.to_string_lossy().into_owned());
+    if cfg!(windows) { expandir_usuario_com(texto, var) } else { expandir_usuario_posix(texto, var("HOME")) }
+}
+
+/// O `posixpath.expanduser` de "~" e "~/…": a pasta pessoal (`casa`, o HOME) sem as `/` do fim, no lugar do `~`.
+/// Sem HOME, ou com "~fulano/…" (que pediria o banco de usuários do sistema), o texto fica como veio.
+pub(crate) fn expandir_usuario_posix(texto: &str, casa: Option<String>) -> String {
+    match (texto.strip_prefix('~'), casa) {
+        (Some(depois), Some(casa)) if depois.is_empty() || depois.starts_with('/') => {
+            let casa = casa.trim_end_matches('/');
+            let junto = format!("{casa}{depois}");
+            if junto.is_empty() { "/".to_string() } else { junto }
+        }
+        _ => texto.to_string(),
+    }
 }
 
 const SEPARADORES: [char; 2] = ['\\', '/'];

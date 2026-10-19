@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use super::erro_com;
-use crate::caminhos::{arquivo_log_de, expandir_usuario_com, limpar_caminho};
+use crate::caminhos::{arquivo_log_de, expandir_usuario_com, expandir_usuario_posix, limpar_caminho};
 
 type Variaveis<'a> = &'a [(&'a str, &'a str)];
 
@@ -53,6 +53,28 @@ fn expandir_usuario_como_o_ntpath() {
 }
 
 #[test]
+fn til_fora_do_windows_e_o_home() {
+    let casa = || Some("/home/eu/".to_string());
+    assert_eq!(expandir_usuario_posix("~", casa()), "/home/eu");
+    assert_eq!(expandir_usuario_posix("~/dados/x.db", casa()), "/home/eu/dados/x.db");
+    assert_eq!(expandir_usuario_posix("~fulano/x.db", casa()), "~fulano/x.db");
+    assert_eq!(expandir_usuario_posix("~/x.db", None), "~/x.db");
+    assert_eq!(expandir_usuario_posix("~", Some("/".to_string())), "/");
+    assert_eq!(expandir_usuario_posix("/tmp/~/x", casa()), "/tmp/~/x");
+}
+
+#[test]
+#[cfg(not(windows))]
+fn limpar_caminho_fora_do_windows() {
+    // o caminho absoluto continua absoluto (sem virar "\tmp\…" relativo à pasta atual)
+    assert_eq!(limpar_caminho(Path::new(r#"  "/tmp/a/../x.db" "#), "o caminho").unwrap(), Path::new("/tmp/x.db"));
+    let atual = std::env::current_dir().unwrap();
+    assert_eq!(limpar_caminho(Path::new("x.db"), "o caminho").unwrap(), atual.join("x.db"));
+    assert_eq!(erro_com(limpar_caminho(Path::new(" '' "), "o caminho"), 400).mensagem, "Informe o caminho.");
+}
+
+#[test]
+#[cfg(windows)]
 fn limpar_caminho_expande_o_usuario() {
     let perfil = std::env::var("USERPROFILE").unwrap();
     let pessoal = Path::new(&perfil);
