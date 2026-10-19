@@ -1,26 +1,78 @@
-# DataBox
+<p align="center">
+  <img src="docs/imagens/logo.png" alt="DataBox logo: an open cardboard box holding a database, a magnifying glass and a chart" width="160">
+</p>
 
-**English** · [Português](README.pt-BR.md)
+<h1 align="center">DataBox</h1>
 
-**DataBox** is a free, open-source data toolbox for developers, data scientists and data engineers. It is a Windows
+<p align="center">
+  <strong>Open, explore, clean and export your data from a single <code>.exe</code>.</strong><br>
+  SQLite, CSV, JSON, Excel and whole folders. Nothing to install, no server, nothing sent to the cloud.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/isaiasgoncalves/DataBox" alt="Latest release"></a>
+  <a href="../../actions/workflows/ci.yml"><img src="https://github.com/isaiasgoncalves/DataBox/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6" alt="Platform: Windows 10 and 11">
+  <img src="https://img.shields.io/badge/Linux-AppImage%20(experimental)-FCC624" alt="Linux: AppImage (experimental)">
+</p>
+
+<p align="center">
+  <strong>English</strong> · <a href="README.pt-BR.md">Português</a>
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><strong>⬇ Download DataBox.exe</strong></a> ·
+  <a href="#quick-guides">Quick guides</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#roadmap">Roadmap</a>
+</p>
+
+<p align="center">
+  <img src="docs/imagens/dados-sqlite-escuro.png" alt="The Data tab of a SQLite table in DataBox, dark theme: filter, grid, Explorer and Properties" width="900">
+</p>
+
+**DataBox** is a free, open-source data toolbox for data scientists, data engineers and developers. It is a Windows
 desktop app that opens, shows and edits everyday data files: **SQLite** databases, whole folders with their data
-files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). It ships as a single executable,
-`DataBox.exe`: no installer, no runtime, no browser and no server. The UI is drawn straight on the GPU with
-[egui](https://github.com/emilk/egui), in Rust.
+files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). The UI is drawn straight on the GPU with
+[egui](https://github.com/emilk/egui), in Rust. Current version: **0.1.1**.
 
-It started as a SQLite viewer and editor and is growing into a toolbox with many tools for people who work with
-data. Current version: **0.1.1**.
+> The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now (the full guide is
+> [README.pt-BR.md](README.pt-BR.md)). An English UI is on the roadmap; contributions are welcome.
 
-> The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now. English UI and docs are on
-> the roadmap; contributions are welcome.
+---
 
-| Type | Extensions | How it opens |
-|---|---|---|
-| SQLite database | `.db`, `.sqlite` (and any file that is SQLite inside) | full editing, or read-only on request |
-| Folder | any folder | the Explorer lists its databases and data files |
-| CSV | `.csv`, `.tsv` | table editor |
-| JSON and text | `.json`, `.txt`, `.md`, `.log` | text editor (read-only above 0.5 MiB) |
-| Excel workbook | `.xlsx`, `.xlsm` | read-only |
+## Why DataBox
+
+- 📦 **One `.exe`, no installer.** No runtime, no browser, no server, no Java or Python. Download, double-click,
+  done; it even runs from a USB stick.
+- 🔒 **Local and private.** Your data never leaves your machine: no account, no cloud, no telemetry.
+- ⚡ **Fast on big files.** A one-million-row CSV opens instantly (the grid reads pages, never the whole file); a large
+  workbook shows its first page right away; one million rows export to Excel in about 7 s.
+- 🛡️ **Safe with your data.** Every structure change shows the SQL it will run first; databases can open read-only;
+  CSV saves keep the file's format and leave unchanged lines alone, and never overwrite a file another program changed.
+- 🧰 **A toolbox, not just an editor.** Open a folder and work with its databases, CSV, workbooks and JSON side by side
+  in tabs, and join one file with another.
+- 🎨 **Pleasant to use.** Light and dark themes, frosted glass, its own icon set, keyboard shortcuts for everything.
+
+---
+
+## Gallery
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/inicio-pasta-claro.png"><img src="docs/imagens/inicio-pasta-claro.png" alt="Home with a folder open: databases, CSV, JSON, text and workbooks in the Explorer"></a><br><sub><b>Home</b> with a folder open: databases, CSV, JSON, text and workbooks in the Explorer</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/consulta-sql-escuro.png"><img src="docs/imagens/consulta-sql-escuro.png" alt="SQL Query with several statements: a result for each, and the error shows where it stopped"></a><br><sub><b>SQL Query</b> with several statements: a result for each, and the error shows where it stopped</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/csv-filtro-escuro.png"><img src="docs/imagens/csv-filtro-escuro.png" alt="A 1,180-row CSV filtered by region and sorted by quantity"></a><br><sub>A 1,180-row <b>CSV</b> filtered by region and sorted by quantity</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/csv-trazer-colunas-escuro.png"><img src="docs/imagens/csv-trazer-colunas-escuro.png" alt="Bring columns: join two files on a common column, with preview"></a><br><sub><b>Bring columns</b>: join two files on a common column, with preview</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/json-estrutura-claro.png"><img src="docs/imagens/json-estrutura-claro.png" alt="JSON validated, with colors, a Format button and the document outline"></a><br><sub><b>JSON</b> validated, with colors, a Format button and the document outline</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/excel-planilha-claro.png"><img src="docs/imagens/excel-planilha-claro.png" alt="Excel (read-only): sheet tabs, frozen panes, filter and cell details"></a><br><sub><b>Excel</b> (read-only): sheet tabs, frozen panes, filter and cell details</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -35,6 +87,59 @@ Windows 10 or 11, 64-bit.
 **Linux (experimental):** grab `DataBox-…-x86_64.AppImage`, make it executable and run it (double-click, or
 `chmod +x DataBox-*.AppImage && ./DataBox-*.AppImage`). Nothing to install; `--criar-atalho` adds it to the
 applications menu, pointing at the AppImage. Without FUSE, run it with `--appimage-extract-and-run`.
+
+| Type | Extensions | How it opens |
+|---|---|---|
+| SQLite database | `.db`, `.sqlite` (and any file that is SQLite inside) | full editing, or read-only on request |
+| Folder | any folder | the Explorer lists its databases and data files |
+| CSV | `.csv`, `.tsv` | table editor |
+| JSON and text | `.json`, `.txt`, `.md`, `.log` | text editor (read-only above 0.5 MiB) |
+| Excel workbook | `.xlsx`, `.xlsm` | read-only |
+
+---
+
+## Quick guides
+
+The labels below are translated; the app shows them in Portuguese (the main ones are given in parentheses).
+
+### Explore a SQLite database
+
+1. **File › Open folder** (Ctrl+Shift+O) and pick the database's folder, or drag the `.db` onto the window. To look
+   without risk, tick **Open databases read-only** on the Home screen.
+2. The **Overview** shows how many tables, views, indexes and triggers the database has. Click a table in the Explorer.
+3. In the **Data** tab (*Dados*), use search, **filters** and the header arrow to sort. Double-click a cell to edit
+   it; the row form shows BLOB, NULL and generated columns.
+4. The **Structure**, **Indexes and triggers** and **SQL definition** tabs show how the table is built. Altering a
+   column or creating an index always shows the SQL that will run first.
+
+### Clean a CSV and join it with a spreadsheet
+
+1. Open the CSV (Ctrl+O). The whole file shows up at once, with each column's detected type in the header.
+2. **Filter** rows with conditions and **sort** by the header arrow. Fix cells with double-click, F2 or Enter; delete
+   rows and columns; Ctrl+Z undoes.
+3. Open the Excel workbook too. Right-click its column header and choose **Bring columns from this sheet** (*Trazer
+   colunas desta planilha*), or use **Bring columns** (*Trazer colunas*) in the CSV, which also accepts another CSV,
+   the clipboard or a file on disk.
+4. Pick the common key and the columns to bring, check the **preview** and confirm. It is a single change: one Ctrl+Z
+   undoes all of it.
+5. **Save** (Ctrl+S) writes the file in its original format (encoding, delimiter, line endings).
+
+### Export a query to Excel
+
+1. With a database open, open a **SQL Query** (*Consulta SQL*) and write your `SELECT`. The code is colored and the
+   query goes to the **History**.
+2. Run it; if it takes too long, **Stop** (*Interromper*, Esc) halts it.
+3. Click **Export** (*Exportar*) and choose **Excel** (or CSV, or JSON). A progress bar follows along; one million rows
+   take about 7 s.
+4. You can also export a whole table, only what search and filters show, the marked rows or the whole database.
+
+### Validate and format a JSON file
+
+1. Open the `.json` (Ctrl+O, or click it in the folder Explorer).
+2. The **valid** or **error** sign shows right away; on an error it tells the line, column and reason, and a click
+   jumps there.
+3. **Format** (*Formatar*) fixes indentation without changing key order or numbers.
+4. The document **outline** shows in Properties (Ctrl+Alt+B shows or hides the panel).
 
 ---
 
@@ -82,6 +187,8 @@ applications menu, pointing at the AppImage. Without FUSE, run it with `--appima
 - Large sheets show the first page immediately and keep indexing in the background.
 - Copy a cell or a column, or bring a sheet's columns into the open CSV.
 
+The full feature list, keyboard shortcuts and details are in the [Portuguese guide](README.pt-BR.md#recursos).
+
 ---
 
 ## Command line
@@ -93,6 +200,26 @@ DataBox.exe [path] [--somente-leitura] [--renderizador glow|wgpu] [--criar-atalh
 - `DataBox.exe C:\data` opens the folder; add `--somente-leitura` to open a database read-only.
 - `--criar-atalho` creates Desktop and Start menu shortcuts and exits.
 - Settings live in `%APPDATA%\DataBox\preferencias.json`; the log is `%LOCALAPPDATA%\DataBox\databox.log`.
+
+---
+
+## Roadmap
+
+DataBox aims to be a data toolbox, not only a SQLite editor. What's coming, roughly in this order (suggestions welcome
+in [issues](../../issues)):
+
+| | Improvement | What it means for you |
+|---|---|---|
+| 📊 | **Column profiling** | Nulls, distinct values, mean, most frequent values and a histogram for each column: "what's in here" at a glance. |
+| 🧾 | **More formats** | JSON Lines (`.jsonl`, `.ndjson`) as a table, `.sql` scripts opened in the SQL Query, and large logs (above 32 MiB) with search. |
+| 🔁 | **Format conversion** (Save as) | CSV to Excel or SQLite and back, with the right types; plus **Save all**. |
+| 🔎 | **Search in CSV and text** | Find a value anywhere in the file; edit text above 0.5 MiB. |
+| 🧮 | **SQL over CSV** | Run `SELECT … GROUP BY` straight on a CSV or a spreadsheet. |
+| 📈 | **Charts** | Bars, lines, histograms and scatter plots drawn by DataBox itself from a table, query or CSV; and **Open in Python**, which writes the Seaborn/Matplotlib script and runs it with the Python you already have. |
+| 🗄️ | **More databases** | A single data-source contract, starting with **PostgreSQL** (read-only by default); then **MySQL/MariaDB**, **SQL Server** (via ODBC) and, as an optional build, **DuckDB and Parquet**. Passwords stay in the system's credential store. |
+
+Also queued: a database table as the target of Bring columns; Excel's `.xls` and `.xlsb` formats; an English UI; macOS.
+Linux already ships as an AppImage (experimental, see [Download](#download)); reports from real desktops are welcome.
 
 ---
 
@@ -141,21 +268,19 @@ At run time it uses the desktop's file dialogs (`xdg-desktop-portal`), `xdg-open
 Sans or DejaVu fonts. The Linux build is checked by CI but has not been tried on many desktops yet: reports are
 welcome.
 
+The screenshots in this README ([`docs/imagens/`](docs/imagens)) come from the screen tests, which render each screen
+headlessly with `egui_kittest` and save PNGs to `capturas\rust\`.
+
 More: [`README.pt-BR.md`](README.pt-BR.md) (full guide), [`ARQUITETURA.md`](ARQUITETURA.md) (architecture and crate
 contracts), [`design/README.md`](design/README.md) (visual guide), [`RELEASE.md`](RELEASE.md) (how to publish a
 release).
 
 ---
 
-## Roadmap
-
-DataBox aims to be a data toolbox, not only a SQLite editor. Ideas in the queue (suggestions welcome in
-[issues](../../issues)): DuckDB, PostgreSQL, MySQL/MariaDB and MongoDB; charts; Parquet; search inside CSV and text;
-Save as with format conversion; `.xls`/`.xlsb`; English UI; Linux and macOS builds.
-
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Ideas and bugs go to [issues](../../issues); if DataBox helped you, a ⭐ on
+the repository helps other people find it.
 
 ## License
 
