@@ -649,7 +649,7 @@ impl Editor {
             erro_inicial: None,
             titulo: titulo_da_janela(None, None),
             titulo_enviado: None,
-            barra_propria: cfg!(windows),
+            barra_propria: true,
             pode_fechar: false,
             fechar_pendente: false,
             pendentes: Vec::new(),
@@ -722,7 +722,8 @@ impl Editor {
 
     /// Com a barra de título própria (a janela sem a decoração do sistema, como o main.rs a abre no Windows) ou sem
     /// ela (a barra do sistema em cima: a faixa fica só com o logo, os menus e o título, sem os botões, o arrasto e
-    /// as bordas). O padrão é `cfg!(windows)`.
+    /// as bordas). O padrão é com ela, o desenho das pranchetas, para os testes de tela serem os mesmos em todo
+    /// sistema; o main.rs escolhe pelo sistema (`BARRA_PROPRIA`: só no Windows).
     pub fn com_barra_propria(mut self, sim: bool) -> Editor {
         self.barra_propria = sim;
         self

@@ -176,6 +176,18 @@ pub struct Palco<S> {
     desenhar: Desenho<S>,
 }
 
+/// Um caminho absoluto do sistema para os testes que não tocam no disco: a raiz de um disco (`C:\` no Windows, `/`
+/// nos outros) mais o `relativo`, separado por `/` (`abs("dados/x.db")` → `C:\dados\x.db` ou `/dados/x.db`).
+pub fn abs(relativo: &str) -> PathBuf {
+    let raiz = PathBuf::from(if cfg!(windows) { r"C:\" } else { "/" });
+    relativo.split('/').filter(|p| !p.is_empty()).fold(raiz, |p, parte| p.join(parte))
+}
+
+/// O [`abs`] como texto.
+pub fn abs_texto(relativo: &str) -> String {
+    abs(relativo).to_string_lossy().into_owned()
+}
+
 /// Monta um harness (wgpu, 1px = 1 ponto, sem animações) que desenha `tela` sobre o fundo do tema, como a
 /// casca desenha o conteúdo principal, com toasts.
 pub fn palco<S: 'static>(
@@ -513,8 +525,8 @@ mod testes {
             "dados.json",
             "notas.txt",
             "relatorio.pdf",
-            r"sub\interno.csv",
-            r"extra\fundo\a.csv",
+            "sub/interno.csv",
+            "extra/fundo/a.csv",
         ] {
             assert!(dados.join(nome).is_file(), "falta {nome}");
         }

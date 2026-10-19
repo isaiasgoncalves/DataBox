@@ -43,7 +43,11 @@ fn vendas_sem_titulo() -> FontePlanilha {
 
 /// Grava os bytes numa pasta temporária do teste (fora de um palco).
 fn gravar_temporario(nome: &str, bytes: &[u8]) -> std::path::PathBuf {
-    let pasta = std::env::temp_dir().join(format!("tela_planilha_fonte_{}_{nome}", std::process::id()));
+    // uma pasta por chamada: os testes rodam em paralelo e dois deles gravam o mesmo nome (um lia o arquivo enquanto
+    // o outro o regravava, e achava o arquivo vazio)
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let pasta = std::env::temp_dir().join(format!("tela_planilha_fonte_{}_{n}_{nome}", std::process::id()));
     std::fs::create_dir_all(&pasta).expect("a pasta");
     let c = pasta.join(nome);
     std::fs::write(&c, bytes).expect("gravar");

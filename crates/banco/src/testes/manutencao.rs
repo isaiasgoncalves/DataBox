@@ -131,9 +131,11 @@ fn arquivos_do_banco_journal_wal_shm() {
     let ex = exemplo("journal-wal-shm");
     let b = &ex.banco;
     assert!(b.e_arquivo_do_banco(&ex.caminho));
-    for sufixo in ["-journal", "-wal", "-shm", "-JOURNAL"] {
+    for sufixo in ["-journal", "-wal", "-shm"] {
         assert!(b.e_arquivo_do_banco(&com_sufixo(&ex.caminho, sufixo)), "{sufixo}");
     }
+    // a caixa só não conta no Windows; nos outros sistemas, "-JOURNAL" é outro arquivo
+    assert_eq!(b.e_arquivo_do_banco(&com_sufixo(&ex.caminho, "-JOURNAL")), cfg!(windows));
     assert!(!b.e_arquivo_do_banco(&ex.pasta.join("outro.db")));
     assert_eq!(erro(b.copia_de_seguranca(&com_sufixo(&ex.caminho, "-journal"))).status, 400);
 }

@@ -114,7 +114,8 @@
 //!     um sem extensão e um `.dat`, um `.db` que não é SQLite, CSV, XLSX, JSON, TXT, um PDF e subpastas) ·
 //!     palco_documento(amb, doc, tema, tamanho) e palco_parte(amb, tabela, parte, tema, tamanho), que
 //!     desenham como a casca (a barra com os verbos ligados e a busca, o .doc, as Propriedades à direita ou, com
-//!     NoPalco::sem_painel, no fim da página)
+//!     NoPalco::sem_painel, no fim da página) · abs(relativo) / abs_texto(relativo) (um caminho absoluto do
+//!     sistema, `C:\…` ou `/…`, para os testes que não tocam no disco)
 //! ```
 //!
 //! # Regras para as telas

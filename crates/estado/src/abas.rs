@@ -762,6 +762,7 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn mesmo_arquivo_com_outra_grafia_cai_na_mesma_aba() {
         let mut abas = Abas::nova(Rota::Banco, criar);
         let a = abas.abrir(arquivo(r"C:\Dados\vendas.csv"), criar);
@@ -807,6 +808,7 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn reiniciar_menos_foca_a_mantida_de_mesma_chave_sem_refazer() {
         let mut abas = Abas::nova(Rota::Banco, criar);
         let a = abas.abrir(arquivo(r"C:\p\a.csv"), criar).id();

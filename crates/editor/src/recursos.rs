@@ -136,7 +136,7 @@ impl Dialogador {
 /// banco aberto, ou só o nome.
 pub(crate) fn caminho_sugerido(pasta: Option<&Path>, nome: &str) -> String {
     match pasta.map(|p| p.display().to_string()).filter(|p| !p.is_empty()) {
-        Some(p) => format!("{}\\{nome}", p.trim_end_matches(['\\', '/'])),
+        Some(p) => format!("{}{}{nome}", p.trim_end_matches(['\\', '/']), std::path::MAIN_SEPARATOR),
         None => nome.to_string(),
     }
 }
@@ -188,8 +188,13 @@ mod testes {
 
     #[test]
     fn caminho_sugerido_como_o_javascript() {
-        assert_eq!(caminho_sugerido(Some(Path::new(r"C:\dados")), "novo.db"), r"C:\dados\novo.db");
-        assert_eq!(caminho_sugerido(Some(Path::new(r"C:\dados\\")), "novo.db"), r"C:\dados\novo.db");
+        if cfg!(windows) {
+            assert_eq!(caminho_sugerido(Some(Path::new(r"C:\dados")), "novo.db"), r"C:\dados\novo.db");
+            assert_eq!(caminho_sugerido(Some(Path::new(r"C:\dados\\")), "novo.db"), r"C:\dados\novo.db");
+        } else {
+            assert_eq!(caminho_sugerido(Some(Path::new("/dados")), "novo.db"), "/dados/novo.db");
+            assert_eq!(caminho_sugerido(Some(Path::new("/dados//")), "novo.db"), "/dados/novo.db");
+        }
         assert_eq!(caminho_sugerido(None, "novo.db"), "novo.db");
     }
 

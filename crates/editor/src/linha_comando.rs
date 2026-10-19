@@ -194,8 +194,9 @@ mod testes {
 
     #[test]
     fn argumentos_todos() {
-        let args = executar(&[r"C:\dados\vendas.db", "--somente-leitura", "--renderizador", "wgpu", "--criar-atalho"]);
-        assert_eq!(args.caminho, Some(PathBuf::from(r"C:\dados\vendas.db")));
+        let vendas = estado::apoio_testes::abs_texto("dados/vendas.db");
+        let args = executar(&[&vendas, "--somente-leitura", "--renderizador", "wgpu", "--criar-atalho"]);
+        assert_eq!(args.caminho, Some(PathBuf::from(&vendas)));
         assert!(args.somente_leitura && args.criar_atalho);
         assert_eq!(args.renderizador, Renderizador::Wgpu);
         assert_eq!(executar(&["--renderizador=GLOW"]).renderizador, Renderizador::Glow);
@@ -246,9 +247,10 @@ mod testes {
 
     #[test]
     fn relancar_repete_os_argumentos_com_o_outro_renderizador() {
-        let args = executar(&[r"C:\dados\vendas.db", "--somente-leitura"]);
+        let vendas = estado::apoio_testes::abs_texto("dados/vendas.db");
+        let args = executar(&[&vendas, "--somente-leitura"]);
         let novos = argumentos_para_relancar(&args, Renderizador::Wgpu);
-        assert_eq!(novos, a(&["--somente-leitura", "--renderizador", "wgpu", "--", r"C:\dados\vendas.db"]));
+        assert_eq!(novos, a(&["--somente-leitura", "--renderizador", "wgpu", "--", &vendas]));
         match analisar(&novos) {
             Ok(Comando::Executar(de_novo)) => {
                 assert_eq!(de_novo.caminho, args.caminho);

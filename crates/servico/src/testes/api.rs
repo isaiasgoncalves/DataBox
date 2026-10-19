@@ -192,9 +192,15 @@ fn revelar_e_abrir_arquivo() {
     let a = ambiente("revelar");
     let com_aspas = PathBuf::from(format!("\"{}\"", a.exemplo.display()));
     let revelar = a.servico.preparar_revelar(&com_aspas).unwrap();
-    assert_eq!(revelar.argumentos.to_string_lossy(), format!("/select,\"{}\"", a.exemplo.display()));
     let abrir = a.servico.preparar_abrir(&a.exemplo).unwrap();
-    assert_eq!(abrir.argumentos.to_string_lossy(), format!("\"{}\"", a.exemplo.display()));
+    if cfg!(windows) {
+        assert_eq!(revelar.argumentos.to_string_lossy(), format!("/select,\"{}\"", a.exemplo.display()));
+        assert_eq!(abrir.argumentos.to_string_lossy(), format!("\"{}\"", a.exemplo.display()));
+    } else {
+        // o xdg-open abre a pasta (sem selecionar o arquivo) e o arquivo como veio, sem aspas
+        assert_eq!(revelar.argumentos, a.exemplo.parent().unwrap().as_os_str());
+        assert_eq!(abrir.argumentos, a.exemplo.as_os_str());
+    }
     // recusados antes de qualquer programa ser iniciado
     erro_com(a.servico.revelar(Path::new("  ")), 400);
     erro_com(a.servico.abrir_arquivo(Path::new("")), 400);
@@ -1004,11 +1010,13 @@ fn destinos_que_estragariam_o_banco_ou_o_app_sao_recusados() {
     let id = a.id();
     a.servico.gravar_prefs(Some(Tema::Escuro), None).unwrap(); // o arquivo de preferências existe
     let exemplo = a.exemplo.display().to_string();
+    // no Windows a caixa não conta: o "-SHM" do caminho em maiúsculas é o mesmo arquivo
+    let shm = if cfg!(windows) { format!("{}-SHM", exemplo.to_uppercase()) } else { format!("{exemplo}-shm") };
     let destinos = [
         a.exemplo.clone(),
         PathBuf::from(format!("{exemplo}-journal")),
         PathBuf::from(format!("{exemplo}-wal")),
-        PathBuf::from(format!("{}-SHM", exemplo.to_uppercase())),
+        PathBuf::from(shm),
         a.servico.prefs().arquivo().to_path_buf(),
         a.servico.prefs().arquivo_trava(),
     ];

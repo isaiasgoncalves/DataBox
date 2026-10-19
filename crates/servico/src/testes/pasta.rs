@@ -223,9 +223,9 @@ fn listar_ordena_pastas_bancos_e_dados() {
         assert_eq!(e.modificado.is_some(), e.natureza != Natureza::Pasta, "só arquivo tem data: {}", e.nome);
         assert_eq!(e.tamanho.is_some(), e.natureza != Natureza::Pasta, "só arquivo tem tamanho: {}", e.nome);
     }
-    let csv = l.entrada(&chave_caminho(c.caminho("clientes.csv"))).unwrap();
+    let csv = l.entrada(&chave_caminho(c.caminho("Clientes.csv"))).unwrap();
     assert_eq!((csv.natureza, csv.tamanho), (Natureza::Dados(TipoDeArquivo::Csv), Some(1)));
-    let banco = l.entrada(&chave_caminho(c.caminho("ab.db"))).unwrap();
+    let banco = l.entrada(&chave_caminho(c.caminho("Ab.db"))).unwrap();
     assert_eq!(banco.natureza, Natureza::Banco);
     assert_eq!(banco.tamanho, Some(fs::metadata(c.caminho("Ab.db")).unwrap().len()));
 }

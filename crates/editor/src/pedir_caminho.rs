@@ -205,14 +205,15 @@ mod testes {
     fn titulos_botoes_e_valores_como_o_javascript() {
         let a = PedirCaminho::abrir(false);
         assert_eq!((a.titulo, a.botao, a.caminho.as_str(), a.selecionar), ("Abrir arquivo", "Abrir", "", false));
-        let n = PedirCaminho::novo(Some(Path::new(r"C:\dados\")));
-        assert_eq!((n.titulo, n.botao, n.caminho.as_str()), ("Novo banco", "Criar", r"C:\dados\novo.db"));
+        use estado::apoio_testes::{abs, abs_texto};
+        let n = PedirCaminho::novo(Some(&abs("dados")));
+        assert_eq!((n.titulo, n.botao, n.caminho), ("Novo banco", "Criar", abs_texto("dados/novo.db")));
         assert!(n.selecionar);
         let n = PedirCaminho::novo(None);
         assert_eq!(n.caminho, "novo.db");
-        let c = PedirCaminho::copia(Path::new(r"C:\dados"), "vendas (cópia).db");
+        let c = PedirCaminho::copia(&abs("dados"), "vendas (cópia).db");
         assert_eq!((c.titulo, c.botao, c.dica), ("Salvar como", "Salvar", "C:\\pasta\\arquivo"));
-        assert_eq!(c.caminho, r"C:\dados\vendas (cópia).db");
+        assert_eq!(c.caminho, abs_texto("dados/vendas (cópia).db"));
         let p = PedirCaminho::pasta();
         assert_eq!((p.titulo, p.botao, p.dica, p.caminho.as_str()), ("Abrir pasta", "Abrir", "C:\\pasta", ""));
         assert_eq!(

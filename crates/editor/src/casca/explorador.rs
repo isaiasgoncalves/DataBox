@@ -1133,36 +1133,39 @@ mod testes {
 
     #[test]
     fn outra_pasta_volta_ao_comeco_e_o_aberto_de_dentro_abre_os_pais() {
-        let mut p = PastaAberta::nova(r"C:\Dados\Projeto");
+        use estado::apoio_testes::abs;
+        let mut p = PastaAberta::nova(abs("Dados/Projeto"));
         let mut x = Explorador::default();
         x.acompanhar_pasta(&p, None, &Rota::Inicio);
         assert!(x.pasta_aberta(&p.chave), "a raiz abre sozinha");
         // a ficha de um arquivo fundo abre os pais (a raiz já estava), e só uma vez por arquivo
-        let ficha = Rota::arquivo(r"C:\Dados\Projeto\a\b\vendas.csv");
+        let ficha = Rota::arquivo(abs("Dados/Projeto/a/b/vendas.csv"));
         x.acompanhar_pasta(&p, None, &ficha);
-        let a = prefs::chave_caminho(r"C:\Dados\Projeto\a");
-        let ab = prefs::chave_caminho(r"C:\Dados\Projeto\a\b");
+        let a = prefs::chave_caminho(abs("Dados/Projeto/a"));
+        let ab = prefs::chave_caminho(abs("Dados/Projeto/a/b"));
         assert!(x.pasta_aberta(&a) && x.pasta_aberta(&ab));
         x.alternar_pasta(&ab);
         x.acompanhar_pasta(&p, None, &ficha);
         assert!(!x.pasta_aberta(&ab), "fechada pela pessoa, fica fechada");
         // de fora da pasta: nada abre
-        x.acompanhar_pasta(&p, None, &Rota::arquivo(r"C:\Outro\x.csv"));
+        x.acompanhar_pasta(&p, None, &Rota::arquivo(abs("Outro/x.csv")));
         assert_eq!(x.pastas_abertas.len(), 2);
         // outra pasta: só a raiz dela
-        p = PastaAberta::nova(r"C:\Dados\Outra");
+        p = PastaAberta::nova(abs("Dados/Outra"));
         x.acompanhar_pasta(&p, None, &Rota::Inicio);
         assert_eq!(x.pastas_abertas, HashSet::from([p.chave.clone()]));
     }
 
     #[test]
     fn lugar_do_banco_na_arvore_esperando_ou_fora() {
-        let mut p = PastaAberta::nova(r"C:\Dados");
+        use estado::apoio_testes::abs;
+        let mut p = PastaAberta::nova(abs("Dados"));
         let raiz = p.chave.clone();
-        let banco = Path::new(r"C:\Dados\sub\fundo.db");
+        let banco = abs("Dados/sub/fundo.db");
+        let banco = banco.as_path();
         let chave = prefs::chave_caminho(banco);
         // fora da pasta
-        assert_eq!(lugar_do_banco(&p, Path::new(r"C:\Outro\x.db"), "x"), Lugar::Fora);
+        assert_eq!(lugar_do_banco(&p, &abs("Outro/x.db"), "x"), Lugar::Fora);
         // a raiz ainda lendo
         assert_eq!(lugar_do_banco(&p, banco, &chave), Lugar::Esperando);
         let sub = entrada(&p.caminho, "sub", Natureza::Pasta);

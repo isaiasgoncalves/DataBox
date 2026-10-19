@@ -381,7 +381,10 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
     );
     assert_eq!(interface::pecas::toast::rotulo_da_acao_do_toast(&h.ctx).as_deref(), Some("Mostrar na pasta"));
     let dica = interface::pecas::toast::dica_do_toast(&h.ctx).expect("a dica");
-    assert!(dica.ends_with(&format!(r"\copias\{nome}")), "o caminho inteiro na dica: {dica}");
+    assert!(
+        std::path::Path::new(&dica).ends_with(std::path::Path::new("copias").join(nome)),
+        "o caminho inteiro na dica: {dica}"
+    );
     assert!(h.query(by().role(Role::Button).label("Mostrar na pasta")).is_some());
     assert!(!tem_texto(&h, "Cópia salva em"), "sem a caixa de antes");
     capturar(&mut h, "banco-copia-claro.png");
@@ -834,6 +837,21 @@ fn fechar_aba_e_fechar_banco_pelo_menu_arquivo() {
     assert_eq!(h.state().rota(), &Rota::Inicio);
 }
 
+/// O link das preferências no Sobre: `%APPDATA%\DataBox` no Windows; nos outros sistemas, a pasta de verdade.
+fn rotulo_preferencias(amb: &Ambiente) -> String {
+    let pasta = amb.servico.prefs().arquivo().parent().map(|p| p.display().to_string()).unwrap_or_default();
+    if cfg!(windows) { r"%APPDATA%\DataBox".to_string() } else { pasta }
+}
+
+/// O link do arquivo de log no Sobre: `%LOCALAPPDATA%\DataBox\databox.log` no Windows; nos outros, o caminho real.
+fn rotulo_log() -> String {
+    if cfg!(windows) {
+        r"%LOCALAPPDATA%\DataBox\databox.log".to_string()
+    } else {
+        servico::arquivo_log().display().to_string()
+    }
+}
+
 #[test]
 fn ajuda_sobre_o_databox() {
     let amb = Ambiente::exemplo("sobre");
@@ -848,6 +866,7 @@ fn ajuda_sobre_o_databox() {
     let versao = format!("Versão {}", app.versao);
     assert_eq!(versao, "Versão 0.1.1", "a versão do aplicativo");
     let sqlite = format!("{}, embutido", app.sqlite_versao);
+    let (preferencias, log) = (rotulo_preferencias(&amb), rotulo_log());
     for texto in [
         "DataBox",
         versao.as_str(),
@@ -861,9 +880,9 @@ fn ajuda_sobre_o_databox() {
         "Licença",
         "MIT",
         "Preferências",
-        r"%APPDATA%\DataBox",
+        preferencias.as_str(),
         "Arquivo de log",
-        r"%LOCALAPPDATA%\DataBox\databox.log",
+        log.as_str(),
         "Desenvolvido por Isaías Gonçalves. Feito em Rust, com egui e SQLite.",
     ] {
         assert!(tem_texto_exato(&h, texto), "{texto} na janela Sobre: {:?}", textos(&h));
@@ -877,7 +896,7 @@ fn ajuda_sobre_o_databox() {
     for botao in ["Licenças de terceiros", "Copiar informações", "Fechar"] {
         assert!(existe(&h, Role::Button, botao), "{botao}");
     }
-    assert!(existe(&h, Role::Link, "MIT") && existe(&h, Role::Link, r"%APPDATA%\DataBox"));
+    assert!(existe(&h, Role::Link, "MIT") && existe(&h, Role::Link, &preferencias));
     capturar(&mut h, "janela-sobre-claro.png");
     h.key_press(Key::Escape);
     h.run_steps(3);
@@ -1126,8 +1145,8 @@ fn links_das_pastas_revelam() {
         .com_abrir_de_teste(move |p| anotados.borrow_mut().push(p.to_path_buf()));
     let mut h = harness_editor(editor, Tema::Claro, TAMANHO);
     abrir_o_sobre(&mut h);
-    clicar_link(&mut h, r"%APPDATA%\DataBox");
-    clicar_link(&mut h, r"%LOCALAPPDATA%\DataBox\databox.log");
+    clicar_link(&mut h, &rotulo_preferencias(&amb));
+    clicar_link(&mut h, &rotulo_log());
     let pasta = amb.servico.prefs().arquivo().parent().map(std::path::Path::to_path_buf).expect("a pasta");
     assert_eq!(abertos.borrow().as_slice(), [pasta, servico::arquivo_log()]);
 }
@@ -1139,7 +1158,7 @@ fn arquivo_de_log_no_rotulo() {
     abrir_o_sobre(&mut h);
     // o rótulo é "Arquivo de log" (não "Registro"), e a dica do link leva o caminho de verdade
     assert!(tem_texto_exato(&h, "Arquivo de log") && !tem_texto_exato(&h, "Registro"));
-    h.get(by().role(Role::Link).label(r"%LOCALAPPDATA%\DataBox\databox.log")).hover();
+    h.get(by().role(Role::Link).label(&rotulo_log())).hover();
     h.run_steps(4);
     let log = servico::arquivo_log().display().to_string();
     assert!(tem_texto(&h, &format!("Abrir o arquivo: {log}")), "{:?}", textos(&h));
@@ -3001,10 +3020,9 @@ fn copia_de_seguranca_vira_toast_com_a_acao_e_o_caminho_na_dica() {
     assert!(!texto.contains("CopiasDeSeguranca"), "só o nome do arquivo no toast: {texto}");
     // (o serviço devolve o caminho por extenso, e o do teste pode estar na forma curta 8.3 da pasta temporária)
     let dica = interface::pecas::toast::dica_do_toast(&h.ctx).expect("a dica");
+    let fim = ["CopiasDeSegurancaDoFinanceiro2026", "subpasta_com_nome_comprido", "copia_de_seguranca_do_exemplo.db"];
     assert!(
-        dica.ends_with(
-            r"\CopiasDeSegurancaDoFinanceiro2026\subpasta_com_nome_comprido\copia_de_seguranca_do_exemplo.db"
-        ),
+        std::path::Path::new(&dica).ends_with(fim.iter().collect::<PathBuf>()),
         "o caminho inteiro na dica: {dica}"
     );
     // nada de caixa no painel: nem o caminho, nem o botão dentro do painel de Propriedades

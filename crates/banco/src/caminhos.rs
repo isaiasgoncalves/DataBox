@@ -95,7 +95,9 @@ pub(crate) fn formatar_data(quando: SystemTime) -> String {
 /// %XX (espaço, "#", "?", "%" e acentos). Caminho de rede (`\\servidor\pasta`) vira `file:////servidor/pasta`:
 /// o SQLite só aceita autoridade vazia.
 pub(crate) fn uri_de(caminho: &Path, modo: &str) -> String {
-    let texto = caminho.as_os_str().to_string_lossy().replace('\\', "/");
+    // fora do Windows, `\` é um caractere do nome e vai em %5C
+    let texto = caminho.as_os_str().to_string_lossy();
+    let texto = if cfg!(windows) { texto.replace('\\', "/") } else { texto.into_owned() };
     let mut uri = String::with_capacity(texto.len() * 3 + 20);
     uri.push_str("file:");
     uri.push_str(if texto.starts_with('/') { "//" } else { "///" });

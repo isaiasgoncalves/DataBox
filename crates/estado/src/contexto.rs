@@ -84,12 +84,15 @@ impl PastaAberta {
     }
 
     /// O caminho está na pasta aberta, em qualquer profundidade (a própria raiz também conta)? Compara pela chave
-    /// do caminho, sem diferença de caixa nem de barra, e por pastas inteiras: `C:\dados2` não está em `C:\dados`.
+    /// do caminho (no Windows, sem diferença de caixa nem de barra) e por pastas inteiras: `C:\dados2` não está em
+    /// `C:\dados`.
     pub fn contem(&self, caminho: &Path) -> bool {
-        let raiz = self.chave.trim_end_matches('\\');
+        // a chave usa o separador do sistema: `\` no Windows (a `/` vira `\`), `/` nos outros
+        let separador = if cfg!(windows) { '\\' } else { '/' };
+        let raiz = self.chave.trim_end_matches(separador);
         let outro = prefs::chave_caminho(caminho);
         match outro.strip_prefix(raiz) {
-            Some(resto) => resto.is_empty() || resto.starts_with('\\'),
+            Some(resto) => resto.is_empty() || resto.starts_with(separador),
             None => false,
         }
     }
@@ -231,8 +234,10 @@ impl<'a> Contexto<'a> {
 #[cfg(test)]
 mod testes {
     use super::*;
+    #[cfg(windows)]
     use comum::arquivos::{Entrada, Natureza, TipoDeArquivo};
 
+    #[cfg(windows)]
     fn entrada(pasta: &Path, nome: &str, natureza: Natureza) -> Entrada {
         let caminho = pasta.join(nome);
         Entrada {
@@ -266,6 +271,25 @@ mod testes {
     }
 
     #[test]
+    #[cfg(not(windows))]
+    fn pasta_aberta_contem_o_caminho_dentro_dela_fora_do_windows() {
+        let pasta = PastaAberta::nova("/dados/Projeto");
+        assert_eq!((pasta.nome.as_str(), pasta.chave.as_str()), ("Projeto", "/dados/Projeto"));
+        assert!(pasta.contem(Path::new("/dados/Projeto/vendas.db")));
+        assert!(pasta.contem(Path::new("/dados/Projeto/sub/fundo/a.csv")), "em qualquer profundidade");
+        assert!(pasta.contem(Path::new("/dados/Projeto/sub/../a.csv")), "o caminho é normalizado");
+        assert!(pasta.contem(Path::new("/dados/Projeto")), "a própria raiz conta");
+        assert!(pasta.contem(Path::new("/dados/Projeto/")));
+        assert!(!pasta.contem(Path::new("/dados/projeto/a.csv")), "a caixa diferencia");
+        assert!(!pasta.contem(Path::new("/dados/Projeto2/a.csv")));
+        assert!(!pasta.contem(Path::new("/dados/Projeto/../a.csv")));
+        assert!(!pasta.contem(Path::new("/dados")));
+        let raiz = PastaAberta::nova("/");
+        assert!(raiz.contem(Path::new("/a.csv")) && raiz.contem(Path::new("/x/y.db")));
+    }
+
+    #[test]
+    #[cfg(windows)]
     fn pasta_aberta_contem_o_caminho_dentro_dela() {
         let pasta = PastaAberta::nova(r"C:\Dados\Projeto");
         assert_eq!((pasta.nome.as_str(), pasta.chave.as_str()), ("Projeto", r"c:\dados\projeto"));
@@ -290,6 +314,7 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn pasta_aberta_guarda_cada_no_pela_chave() {
         let mut pasta = PastaAberta::nova(r"C:\Dados\Projeto");
         let raiz = pasta.chave.clone();

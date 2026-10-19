@@ -174,6 +174,16 @@ fn com_extensao(caminho: PathBuf, extensao: Option<&str>) -> PathBuf {
 mod testes {
     use super::*;
 
+    /// A raiz de um disco: `C:\` no Windows, `/` nos outros sistemas.
+    fn raiz() -> PathBuf {
+        PathBuf::from(if cfg!(windows) { r"C:\" } else { "/" })
+    }
+
+    /// Um caminho absoluto do sistema a partir da [`raiz`] (`"dados/x.db"` → `C:\dados\x.db` ou `/dados/x.db`).
+    fn abs(relativo: &str) -> PathBuf {
+        relativo.split('/').fold(raiz(), |p, parte| p.join(parte))
+    }
+
     #[test]
     fn extensao_padrao_so_quando_falta() {
         assert_eq!(com_extensao(PathBuf::from(r"C:\x\planilha"), Some("xlsx")), PathBuf::from(r"C:\x\planilha.xlsx"));
@@ -185,8 +195,8 @@ mod testes {
 
     #[test]
     fn escolha_guarda_a_pasta() {
-        let e = Escolha::de(PathBuf::from(r"C:\dados\vendas.db"));
-        assert_eq!(e.pasta, Some(PathBuf::from(r"C:\dados")));
+        let e = Escolha::de(abs("dados/vendas.db"));
+        assert_eq!(e.pasta, Some(abs("dados")));
     }
 
     #[test]
@@ -222,9 +232,9 @@ mod testes {
         // o "Salvar banco" usa a mesma lista
         assert_eq!(FormatoArquivo::Db.descricao().1, &EXTENSOES_BANCO);
         // a pasta escolhida guarda a de cima para o próximo diálogo
-        let e = Escolha::de(PathBuf::from(r"C:\dados\projeto"));
-        assert_eq!(e.pasta, Some(PathBuf::from(r"C:\dados")));
-        assert_eq!(Escolha::de(PathBuf::from(r"C:\")).pasta, None, "a raiz de um disco não tem pasta de cima");
+        let e = Escolha::de(abs("dados/projeto"));
+        assert_eq!(e.pasta, Some(abs("dados")));
+        assert_eq!(Escolha::de(raiz()).pasta, None, "a raiz de um disco não tem pasta de cima");
     }
 
     #[test]

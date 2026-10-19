@@ -19,7 +19,8 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 - Linux: os caminhos absolutos (`/home/…`) não viram mais relativos à pasta do programa (o `/` era trocado por
   `\`), então bancos, pastas e arquivos abrem pelo caminho; o `~` usa o `HOME`, e a caixa das letras diferencia
-  arquivos, como no sistema.
+  arquivos, como no sistema. Fechar a pasta fecha as abas dos arquivos de dentro, o Explorador acha o banco aberto
+  na árvore, e o caminho sugerido em "Novo banco" e "Salvar como" usa `/`.
 
 ### Alterado
 

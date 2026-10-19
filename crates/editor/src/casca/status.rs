@@ -229,9 +229,10 @@ mod testes {
         assert!(!t.tem_banco && t.modo.is_none() && t.codificacao.is_none() && t.dica.is_none());
         // com a pasta e sem banco, o nome dela e o caminho na dica; com banco, o banco
         let mut com_pasta = sem_banco.clone();
-        com_pasta.pasta = Some(estado::PastaAberta::nova(r"C:\Dados\Projeto"));
+        let projeto = estado::apoio_testes::abs_texto("Dados/Projeto");
+        com_pasta.pasta = Some(estado::PastaAberta::nova(&projeto));
         let t = TextosStatus::de(&com_pasta);
-        assert_eq!((t.banco.as_str(), t.dica.as_deref()), ("Projeto", Some(r"C:\Dados\Projeto")));
+        assert_eq!((t.banco.as_str(), t.dica.as_deref()), ("Projeto", Some(projeto.as_str())));
         assert!(!t.tem_banco && t.modo.is_none());
         let mut os_dois = amb.estado.clone();
         os_dois.pasta = com_pasta.pasta.clone();

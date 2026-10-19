@@ -41,7 +41,8 @@
 //!   Editor::novo(servico: Arc<Servico>, tema: interface::tema::Tema, partida: Partida) -> Editor
 //!       não toca no disco: o estado (e o banco da partida) chegam numa tarefa no primeiro quadro
 //!   com_barra_propria(bool) -> Editor   a janela sem a decoração do sistema: os botões minimizar, maximizar e fechar,
-//!       o arrasto e as bordas de redimensionar na barra de título (padrão: cfg!(windows))
+//!       o arrasto e as bordas de redimensionar na barra de título (padrão: sim; o main.rs passa `BARRA_PROPRIA`,
+//!       que é só do Windows)
 //!   com_larguras(prefs::LarguraPaineis) -> Editor   as larguras do Explorador e das Propriedades da sessão de antes
 //!       (`prefs.paineis()`, lidas antes da janela); as divisórias as mudam e a casca as guarda ao fim do gesto
 //!   desenhar(&mut self, ui: &mut egui::Ui, frame: Option<&eframe::Frame>)

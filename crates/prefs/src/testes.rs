@@ -3,6 +3,7 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -310,7 +311,10 @@ fn existe_da_pasta_e_ser_pasta() {
     assert!(!p.recentes()[1].existe);
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn recente_repetido_sobe_sem_duplicar_mesmo_com_caixa_e_barras_diferentes() {
     let tmp = PastaTemp::nova("repetido");
     let p = abrir(&tmp.arquivo());
@@ -353,7 +357,10 @@ fn no_maximo_15_recentes() {
     assert_eq!(itens[14].nome, "banco05.db");
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn remover_recente_normalizado() {
     let tmp = PastaTemp::nova("remover");
     let p = abrir(&tmp.arquivo());
@@ -397,7 +404,10 @@ fn recentes_nao_esperam_arquivo_lento() {
 
 // ---- persistência e várias instâncias ---------------------------------------------------------------
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn grava_e_outra_instancia_le() {
     let tmp = PastaTemp::nova("outra-le");
     let arquivo = tmp.arquivo();
@@ -488,7 +498,10 @@ fn historico_no_maximo_30_por_banco() {
     assert_eq!(itens[29].sql, "SELECT 7");
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn historico_separado_por_banco_e_normalizado() {
     let tmp = PastaTemp::nova("separado");
     let p = abrir(&tmp.arquivo());
@@ -684,7 +697,10 @@ fn outros_conteudos_ilegiveis_tambem_recomecam() {
     }
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn arquivo_tolerado_nao_vira_corrompido() {
     // 200 níveis de aninhamento (até numa chave desconhecida), NaN, Infinity, número fora da faixa e surrogate solto
     // são lidos. Separar como corrompido apagaria tema, recentes e histórico.
@@ -728,7 +744,10 @@ fn arquivo_tolerado_nao_vira_corrompido() {
     assert_eq!(gravado.campo("z"), Some(&texto_json("\u{fffd}\u{1f600}")));
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn campos_estranhos_voltam_ao_padrao_sem_perder_o_resto() {
     let tmp = PastaTemp::nova("estranhos");
     let arquivo = tmp.arquivo();
@@ -912,6 +931,7 @@ fn filho_prefs() {
 }
 
 /// Inicia o [`filho_prefs`] num processo à parte.
+#[cfg(windows)]
 pub(crate) fn processo_filho(arquivo: &Path, quem: &str, largada_ms: u128) -> std::process::Child {
     Command::new(std::env::current_exe().unwrap())
         .args(["testes::filho_prefs", "--exact", "--ignored", "--test-threads=1", "--quiet"])
@@ -923,7 +943,10 @@ pub(crate) fn processo_filho(arquivo: &Path, quem: &str, largada_ms: u128) -> st
         .unwrap()
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn duas_instancias_gravando_juntas_nao_perdem_mudancas() {
     // Antes, a gravação de uma instância entre a leitura e a gravação da outra sumia (sem trava entre processos).
     // E, com a trava, uma instância às vezes fazia as 40 mudanças antes de a outra conseguir a primeira (sem a vez de
@@ -950,6 +973,7 @@ fn duas_instancias_gravando_juntas_nao_perdem_mudancas() {
 ///
 /// `exigir_o_19_de_todos`: o 19 de cada instância está lá. Vale para instâncias que andam no mesmo passo; com
 /// false, basta um 19 (uma pode terminar bem antes e as gravações da outra ocupam os 15).
+#[cfg(windows)]
 pub(crate) fn conferir_recentes_intercalados(recentes: &[&str], quem: &[&str], exigir_o_19_de_todos: bool) {
     assert_eq!(recentes.len(), MAX_RECENTES, "{recentes:?}");
     let mut algum_19 = false;
@@ -972,11 +996,13 @@ pub(crate) fn conferir_recentes_intercalados(recentes: &[&str], quem: &[&str], e
 }
 
 /// Disco cuja leitura do arquivo de preferências falha (em uso) quando ligado.
+#[cfg(windows)]
 struct LeituraOcupada {
     ocupado: AtomicBool,
     alvo: PathBuf,
 }
 
+#[cfg(windows)]
 impl Disco for LeituraOcupada {
     fn ler(&self, caminho: &Path) -> io::Result<Vec<u8>> {
         if self.ocupado.load(Ordering::SeqCst) && caminho == self.alvo {
@@ -986,7 +1012,10 @@ impl Disco for LeituraOcupada {
     }
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn arquivo_ilegivel_na_hora_de_mudar_nao_grava_por_cima() {
     // Arquivo ocupado ao reler: gravar agora apagaria o que a outra instância gravou; a mudança fica em memória.
     let tmp = PastaTemp::nova("ilegivel-na-hora");
@@ -1128,7 +1157,10 @@ fn quem_espera_a_trava_bate_e_quem_solta_cede_a_vez() {
     assert!(primeira.soltar(), "a outra bateu enquanto a trava estava presa");
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn mudanca_espera_a_trava_de_outra_instancia() {
     let tmp = PastaTemp::nova("espera-trava");
     let arquivo = tmp.arquivo();
@@ -1190,6 +1222,7 @@ const GRAVADO_POR_UMA_VERSAO_NOVA: &str = r#"{
 
 /// O [`GRAVADO_POR_UMA_VERSAO_NOVA`] regravado por esta versão com o tema claro: as chaves desconhecidas depois
 /// das conhecidas, na ordem lida.
+#[cfg(windows)]
 const REGRAVADO_COM_O_TEMA_CLARO: &str = r#"{
   "versao": 1,
   "tema": "light",
@@ -1230,11 +1263,15 @@ const REGRAVADO_COM_O_TEMA_CLARO: &str = r#"{
 }"#;
 
 /// `[[[…]]]` com `n` níveis.
+#[cfg(windows)]
 fn listas(n: usize) -> String {
     format!("{}{}", "[".repeat(n), "]".repeat(n))
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn chaves_desconhecidas_sobrevivem_a_gravar() {
     let tmp = PastaTemp::nova("desconhecidas");
     let arquivo = tmp.arquivo();
@@ -1268,7 +1305,10 @@ fn chaves_desconhecidas_sobrevivem_a_gravar() {
     assert_eq!(dados.recentes[0].extras, [("raso".to_string(), json::ler(listas(60).as_bytes()).unwrap())]);
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn adicionar_recente_leva_os_extras() {
     let tmp = PastaTemp::nova("leva-extras");
     let arquivo = tmp.arquivo();
@@ -1305,7 +1345,10 @@ fn adicionar_recente_leva_os_extras() {
     assert_eq!(vendas.campo("cor"), Some(&texto_json("azul")));
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn recentes_mostram_os_tres_tipos_e_escondem_os_desconhecidos() {
     let tmp = PastaTemp::nova("tipos");
     let arquivo = tmp.arquivo();
@@ -1376,7 +1419,10 @@ fn recentes_mostram_os_tres_tipos_e_escondem_os_desconhecidos() {
     assert!(!gravados(&arquivo).contains(&r"C:\Projetos".to_string()));
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn recente_de_pasta_e_de_arquivo_gravam_o_tipo() {
     let tmp = PastaTemp::nova("grava-tipo");
     let arquivo = tmp.arquivo();
@@ -1597,7 +1643,10 @@ fn pasta_aberta_grava_e_volta() {
     assert_eq!((p.tema(), p.pasta_aberta()), (Tema::Claro, Some(texto(&pasta))));
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn fechar_pasta_apaga_a_chave_e_o_arquivo_volta_ao_de_antes() {
     let tmp = PastaTemp::nova("fechar-pasta");
     let arquivo = tmp.arquivo();
@@ -1651,7 +1700,10 @@ fn pasta_aberta_estranha_e_ignorada() {
     assert!(sanear(&gravado, MAX_BANCOS_NO_HISTORICO).unwrap().extras.iter().all(|(k, _)| k != "pasta_aberta"));
 }
 
+// Regra do Windows (caminhos `C:\…`, a mesma chave com outra caixa ou barra, o JSON gravado com `\\`):
+// fora dele, os caminhos seguem o posixpath (`caminhos::testes::fora_do_windows_e_o_posixpath`).
 #[test]
+#[cfg(windows)]
 fn pasta_aberta_vazia_recusa() {
     let tmp = PastaTemp::nova("pasta-aberta-vazia");
     let arquivo = tmp.arquivo();

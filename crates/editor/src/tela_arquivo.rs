@@ -622,7 +622,7 @@ mod testes {
         );
         assert!(frase_da_ficha(TipoDeArquivo::Xlsx).starts_with("O editor de Excel "));
         assert!(frase_da_ficha(TipoDeArquivo::Texto).starts_with("O editor de texto "));
-        let t = Ficha::nova(Path::new(r"C:\dados\Vendas.CSV"));
+        let t = Ficha::nova(&estado::apoio_testes::abs("dados/Vendas.CSV"));
         assert_eq!((t.nome(), t.tipo), ("Vendas.CSV", Some(TipoDeArquivo::Csv)));
         assert_eq!(t.icone(), icone_do_arquivo(TipoDeArquivo::Csv));
         assert_eq!(Ficha::nova(Path::new(r"C:\x\sem")).icone(), Icone::Arquivo);
@@ -657,12 +657,13 @@ mod testes {
         }
         // um editor no lugar da tela do tipo: o de CSV para o CSV, o de texto para o resto; o nome e a folha da aba
         // vêm do caminho, o resto da tela
-        let csv = TelaArquivo::com_editor(Path::new(r"C:\dados\vendas_2025.csv"), Box::new(Editor));
+        let vendas = estado::apoio_testes::abs("dados/vendas_2025.csv");
+        let csv = TelaArquivo::com_editor(&vendas, Box::new(Editor));
         assert_eq!((csv.tela(), csv.nome()), (Tela::Csv, "vendas_2025.csv"));
         assert_eq!(csv.icone(), icone_do_arquivo(TipoDeArquivo::Csv));
         assert!(csv.doc_ref().alterado(), "o trait é o da tela");
-        assert_eq!(csv.caminho(), Path::new(r"C:\dados\vendas_2025.csv"));
-        let mut json = TelaArquivo::com_editor(Path::new(r"C:\dados\config.json"), Box::new(Editor));
+        assert_eq!(csv.caminho(), vendas.as_path());
+        let mut json = TelaArquivo::com_editor(&estado::apoio_testes::abs("dados/config.json"), Box::new(Editor));
         assert_eq!((json.tela(), json.icone()), (Tela::Texto, icone_do_arquivo(TipoDeArquivo::Json)));
         assert!(json.tomar_pedido().is_none() && !json.pergunta_aberta(), "o documento só pelo trait não pede nada");
         assert!(TelaArquivo::texto(Path::new("notas.txt"), Editor).doc().alterado());

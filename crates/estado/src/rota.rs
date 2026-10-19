@@ -404,6 +404,7 @@ mod testes {
     }
 
     #[test]
+    #[cfg(windows)]
     fn rota_arquivo_nao_exige_banco_e_tem_chave_pelo_caminho() {
         let rota = Rota::arquivo(r"C:\Dados\vendas.csv");
         assert!(!rota.exige_banco());

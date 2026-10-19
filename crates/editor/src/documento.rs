@@ -301,13 +301,11 @@ mod testes {
         let inicio = Documento::novo(IdAba(1), &Rota::Inicio, None);
         assert!(inicio.serve_para(&Rota::Inicio) && !inicio.serve_para(&Rota::Banco));
         // a ficha não é do banco: fica como está quando ele é reaberto
-        let ficha = Documento::novo(IdAba(5), &Rota::arquivo(r"C:\dados\a.csv"), None);
-        assert!(ficha.serve_para(&Rota::arquivo(r"C:\dados\a.csv")) && !ficha.serve_para(&Rota::Inicio));
-        assert!(ficha.refeito(IdAba(5), &Rota::arquivo(r"C:\dados\a.csv")).is_none());
-        assert_eq!(
-            ficha.titulo(&Rota::arquivo(r"C:\dados\a.csv"), None, &Ambiente::vazio("titulo_ficha").estado).0,
-            "a.csv"
-        );
+        let a_csv = estado::apoio_testes::abs("dados/a.csv");
+        let ficha = Documento::novo(IdAba(5), &Rota::arquivo(&a_csv), None);
+        assert!(ficha.serve_para(&Rota::arquivo(&a_csv)) && !ficha.serve_para(&Rota::Inicio));
+        assert!(ficha.refeito(IdAba(5), &Rota::arquivo(&a_csv)).is_none());
+        assert_eq!(ficha.titulo(&Rota::arquivo(&a_csv), None, &Ambiente::vazio("titulo_ficha").estado).0, "a.csv");
         let c = Documento::novo(IdAba(4), &Rota::consulta_com("SELECT 42"), None);
         assert!(c.serve_para(&Rota::Consulta { sql: None }) && !c.serve_para(&tabela));
         // o banco reaberto por fora: o Início fica; a Consulta volta com o texto; a tabela, pela rota
