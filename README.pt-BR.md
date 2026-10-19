@@ -36,7 +36,7 @@ O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto
 de dados e desenvolvedores. É um programa de mesa para Windows que abre, mostra e edita os arquivos do dia a dia:
 bancos **SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e **planilhas do
 Excel** (só leitura). A interface é desenhada direto na placa de vídeo com [egui](https://github.com/emilk/egui), em
-Rust. Versão atual: **0.1.1**.
+Rust. Versão atual: **0.1.2**.
 
 **Sumário:** [Por que o DataBox](#por-que-o-databox) · [Galeria](#galeria) · [Baixar](#baixar) ·
 [Guias rápidos](#guias-rápidos) · [Recursos](#recursos) · [Primeiro uso](#primeiro-uso) ·

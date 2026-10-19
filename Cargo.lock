@@ -167,7 +167,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "amostras"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "rusqlite",
 ]
@@ -441,7 +441,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "banco"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "chrono",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "comum"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "rusqlite",
 ]
@@ -801,7 +801,7 @@ checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
 name = "ddl"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "comum",
@@ -892,7 +892,7 @@ dependencies = [
 
 [[package]]
 name = "editor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -1186,7 +1186,7 @@ checksum = "0b5343afd4a8365a643ac588dab4cf234a190c7f6c88c9f6dd6ffe00837661b7"
 
 [[package]]
 name = "esquema"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "comum",
@@ -1197,7 +1197,7 @@ dependencies = [
 
 [[package]]
 name = "estado"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -1245,7 +1245,7 @@ dependencies = [
 
 [[package]]
 name = "exportar"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64",
  "chrono",
@@ -1805,7 +1805,7 @@ dependencies = [
 
 [[package]]
 name = "interface"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "comum",
@@ -2792,7 +2792,7 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "planilha"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "comum",
  "exportar",
@@ -2873,7 +2873,7 @@ dependencies = [
 
 [[package]]
 name = "prefs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "comum",
@@ -3301,7 +3301,7 @@ dependencies = [
 
 [[package]]
 name = "servico"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -3536,7 +3536,7 @@ dependencies = [
 
 [[package]]
 name = "tabular"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "comum",
  "exportar",
@@ -3544,7 +3544,7 @@ dependencies = [
 
 [[package]]
 name = "tela_consulta"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -3563,7 +3563,7 @@ dependencies = [
 
 [[package]]
 name = "tela_csv"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "comum",
  "egui",
@@ -3576,7 +3576,7 @@ dependencies = [
 
 [[package]]
 name = "tela_dados"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -3595,7 +3595,7 @@ dependencies = [
 
 [[package]]
 name = "tela_esquema"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -3614,7 +3614,7 @@ dependencies = [
 
 [[package]]
 name = "tela_exportar"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "amostras",
  "banco",
@@ -3633,7 +3633,7 @@ dependencies = [
 
 [[package]]
 name = "tela_planilha"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "comum",
  "egui",
@@ -3647,7 +3647,7 @@ dependencies = [
 
 [[package]]
 name = "tela_texto"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "comum",
  "egui",
@@ -3681,7 +3681,7 @@ dependencies = [
 
 [[package]]
 name = "texto"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "comum",
  "tabular",

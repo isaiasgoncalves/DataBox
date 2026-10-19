@@ -5,6 +5,8 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+## [0.1.2] - 2026-10-19
+
 ### Adicionado
 
 - Versão para Linux (experimental): o `.tar.gz` de cada versão traz o binário `DataBox`. "Abrir no programa padrão"
@@ -69,6 +71,7 @@ Primeira versão pública.
   painéis redimensionáveis, Preferências, atalhos do teclado e acessibilidade (AccessKit).
 - Executável único, `DataBox.exe`, sem instalação; `--criar-atalho` para os atalhos do Windows.
 
-[Não lançado]: ../../compare/v0.1.1...HEAD
+[Não lançado]: ../../compare/v0.1.2...HEAD
+[0.1.2]: ../../compare/v0.1.1...v0.1.2
 [0.1.1]: ../../compare/v0.1.0...v0.1.1
 [0.1.0]: ../../releases/tag/v0.1.0
