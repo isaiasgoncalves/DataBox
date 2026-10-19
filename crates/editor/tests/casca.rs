@@ -3100,7 +3100,7 @@ fn pedir_o_caminho_sem_dialogo_nativo() {
     h.run_steps(2);
     assert!(tem_texto(&h, "Novo banco"));
     let pasta = h.state().estado().banco.as_ref().map(|b| b.pasta.display().to_string()).unwrap_or_default();
-    let sugerido = format!("{pasta}\\novo.db");
+    let sugerido = format!("{pasta}{}novo.db", std::path::MAIN_SEPARATOR);
     assert_eq!(campo_caminho(&h).value().as_deref(), Some(sugerido.as_str()));
     clicar_botao(&mut h, "Criar");
     esperar(&mut h, "criar o novo", |h| h.state().estado().banco.as_ref().is_some_and(|b| b.nome == "novo.db"));

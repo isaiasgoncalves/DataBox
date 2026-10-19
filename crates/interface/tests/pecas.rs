@@ -3597,8 +3597,8 @@ fn item_desligado_nao_clica() {
     h.run_steps(3);
     assert_eq!(h.state().desligado, 0);
     assert!(h.query_by_label("Abrir").is_some(), "o desligado não fecha o menu");
-    // um clique fora fecha
-    h.get_by_label("dono").click();
+    // um clique fora fecha (num canto vazio: o menu abre onde o dono foi clicado e, com outras fontes, cobre o ponto)
+    clicar_em(&h, egui::pos2(990.0, 690.0));
     h.run_steps(3);
     assert!(h.query_by_label("Abrir").is_none());
 }

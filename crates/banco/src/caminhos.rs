@@ -121,6 +121,18 @@ mod testes {
     use super::*;
 
     #[test]
+    #[cfg(not(windows))]
+    fn uri_do_sqlite_fora_do_windows() {
+        assert_eq!(
+            uri_de(Path::new("/Pasta com espaço/vendas #1.db"), "ro"),
+            "file:///Pasta%20com%20espa%C3%A7o/vendas%20%231.db?mode=ro"
+        );
+        // "\" é um caractere do nome
+        assert_eq!(uri_de(Path::new(r"/tmp/a\b.db"), "rw"), "file:///tmp/a%5Cb.db?mode=rw");
+    }
+
+    #[test]
+    #[cfg(windows)]
     fn uri_do_sqlite() {
         assert_eq!(
             uri_de(Path::new(r"C:\Pasta com espaço\vendas #1.db"), "ro"),

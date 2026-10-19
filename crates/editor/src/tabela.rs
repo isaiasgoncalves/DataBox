@@ -485,13 +485,21 @@ mod testes {
             t.ui(ui, ctx);
         });
         let inicio = std::time::Instant::now();
+        let mut passadas = 0;
         while h.state().tela.tabela_aberta().is_none() {
             assert!(inicio.elapsed() < std::time::Duration::from_secs(15), "a tabela não chegou");
             std::thread::sleep(std::time::Duration::from_millis(10));
+            let antes = h.ctx.cumulative_pass_nr();
             h.step();
+            passadas = h.ctx.cumulative_pass_nr() - antes;
         }
-        assert!(h.query_by_label("Lendo a tabela…").is_some(), "no quadro da chegada, ainda o carregando");
-        assert!(h.ctx.has_requested_repaint(), "e o quadro seguinte pedido");
+        // Com uma passada no quadro da chegada, ela ainda mostra o carregando e pede o quadro seguinte. Se o egui
+        // repetiu a passada no mesmo quadro (um descarte de layout, que depende das fontes do sistema), a segunda já
+        // não é a da chegada e desenha a parte, com a anatomia lida de novo pela casca.
+        if passadas == 1 {
+            assert!(h.query_by_label("Lendo a tabela…").is_some(), "no quadro da chegada, ainda o carregando");
+            assert!(h.ctx.has_requested_repaint(), "e o quadro seguinte pedido");
+        }
         h.run_steps(3);
         assert!(h.query_by_label("Lendo a tabela…").is_none(), "depois, a parte");
     }
