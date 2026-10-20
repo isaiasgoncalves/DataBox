@@ -1,7 +1,8 @@
 //! O editor de JSON no `egui_kittest` (pranchetas 8 e 15, estado N1): o círculo de estado, a frase do
-//! erro e o clique que leva a ele, a linha do erro, o Formatar (que preserva a ordem das chaves e é um passo do desfazer),
-//! a estrutura do documento com páginas de 200, a migalha e o rodapé que acompanham o cursor, e o leitor com a validação
-//! feita uma vez. As capturas `json-*` e `json-invalido-*` vão para `capturas/rust/`, para comparar com as pranchetas 8 e 15.
+//! erro e o clique que leva a ele, a faixa de erro com "Ir para o erro", a linha do erro, o Formatar (que preserva a
+//! ordem das chaves e é um passo do desfazer), a estrutura do documento com páginas de 200, a migalha e o rodapé que
+//! acompanham o cursor, e o leitor com a validação feita uma vez. As capturas `json-*` e `json-invalido-*` vão para
+//! `capturas/rust/`, para comparar com as pranchetas 8 e 15.
 
 // teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -101,6 +102,41 @@ fn json_invalido_mostra_a_frase_e_o_clique_leva_ao_erro() {
         texto[..byte].chars().count()
     };
     assert_eq!(cursor(&t), esperado);
+}
+
+/// A frase da faixa de erro da prancheta 15 (o lugar em `--perigo` e o motivo).
+const FAIXA_DA_PRANCHETA: &str = "Linha 14, coluna 7: falta uma vírgula ou um } antes de \"arquivo\".";
+
+#[test]
+fn json_invalido_mostra_a_faixa_de_erro_e_ir_para_o_erro() {
+    let mut t = abrir("json_faixa_erro", "config.json", json_invalido_da_prancheta().as_bytes());
+    // a faixa de erro (`role="alert"`) com o lugar e o motivo, e o botão "Ir para o erro"
+    assert!(t.query_by_label(FAIXA_DA_PRANCHETA).is_some());
+    assert!(t.query_all_by_role(egui::accesskit::Role::Alert).count() == 1);
+    let faixa = t.get_by_label(FAIXA_DA_PRANCHETA).rect();
+    let botao = t.get_by_label(tela_texto::IR_PARA_O_ERRO).rect();
+    assert!(botao.left() > faixa.right(), "o botão fica na ponta direita, depois da frase");
+    assert!((botao.center().y - faixa.center().y).abs() < 1.5, "centrados na altura da linha: {botao:?} {faixa:?}");
+    // o editor começa embaixo da faixa
+    let editor = t.get_by_label("Texto de config.json").rect();
+    assert!(editor.top() >= botao.bottom(), "{editor:?} {botao:?}");
+    // "Ir para o erro" leva o cursor ao erro, como o círculo
+    t.get_by_label(tela_texto::IR_PARA_O_ERRO).click();
+    t.run_steps(3);
+    assert!(t.query_by_label("Linha 14, coluna 7").is_some(), "o cursor foi ao erro");
+    let esperado = {
+        let texto = texto(&t);
+        let byte = texto.find("\"arquivo\": \"D:").expect("o símbolo do erro");
+        texto[..byte].chars().count()
+    };
+    assert_eq!(cursor(&t), esperado);
+    // consertado o JSON, a faixa sai e o editor sobe
+    digitar_no_cursor(&mut t, ", ");
+    esperar_ate(&mut t, |h| h.state().tela.doc.erro_de_json().is_none());
+    t.run_steps(2);
+    assert!(t.query_by_label(tela_texto::IR_PARA_O_ERRO).is_none());
+    assert_eq!(t.query_all_by_role(egui::accesskit::Role::Alert).count(), 0);
+    assert!(t.get_by_label("Texto de config.json").rect().top() < editor.top());
 }
 
 #[test]
@@ -378,6 +414,13 @@ fn leitor_mostra_o_estado_do_json_uma_vez_ao_abrir() {
     let mut t = t;
     assert!(!t.state().tela.doc.linhas_desenhadas().contains(&14_002));
     t.get_by_label(&erro).click();
+    t.run_steps(4);
+    assert!(t.state().tela.doc.linhas_desenhadas().contains(&14_002), "{:?}", t.state().tela.doc.linhas_desenhadas());
+    // o leitor também tem a faixa de erro, e o "Ir para o erro" rola até a linha
+    let mut t = abrir("leitor_json_faixa", "quebrado.json", quebrado.as_bytes());
+    assert!(t.query_by_label("Linha 14003, coluna 10: faltam os dois pontos depois de \"fim\".").is_some());
+    assert!(!t.state().tela.doc.linhas_desenhadas().contains(&14_002));
+    t.get_by_label(tela_texto::IR_PARA_O_ERRO).click();
     t.run_steps(4);
     assert!(t.state().tela.doc.linhas_desenhadas().contains(&14_002), "{:?}", t.state().tela.doc.linhas_desenhadas());
 }
