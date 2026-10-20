@@ -11,8 +11,8 @@ use egui::{
     WidgetInfo, WidgetType, pos2, vec2,
 };
 use interface::grade::{
-    ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, Th, pintar_cabecalho_coluna, pintar_celula_alterada,
-    pintar_numero_linha, pintar_texto_de_celula,
+    ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, LADO_SETA_ORDEM, Ordem, Th, pintar_cabecalho_coluna,
+    pintar_celula_alterada, pintar_numero_linha, pintar_seta_ordem, pintar_texto_de_celula,
 };
 use interface::icones::Icone;
 use interface::pecas::botao::{Botao, LADO_PEQUENO};
@@ -373,8 +373,9 @@ impl Pintor<'_> {
         }
     }
 
-    /// A seta da ordem no `th` (o clique ordena: crescente → decrescente → sem ordem): no lado oposto ao do texto (à
-    /// direita nas colunas de texto, à esquerda nas de números), em `--acct` com a ordem e em `--t3` no hover. Devolve
+    /// A seta da ordem no `th` (o clique ordena: crescente → decrescente → sem ordem): a `.seta-ord` desenhada de 9px
+    /// (`pintar_seta_ordem`) no meio de um alvo de 16, no lado oposto ao do texto (à direita nas colunas de texto, à
+    /// esquerda nas de números), em `--acct` com a ordem e em `--t3` no hover. Devolve
     /// o conteúdo que sobra para a pastilha e o nome.
     fn seta_da_ordem(&mut self, ui: &mut Ui, h: &CabecalhoVisivel, d: usize, nome: &str, numerica: bool) -> Rect {
         let ordenada = self.ordem.filter(|(c, _)| *c == d).map(|(_, desc)| desc);
@@ -394,13 +395,9 @@ impl Pintor<'_> {
         } else {
             p.estudio.t3
         };
-        let glifo = if ordenada == Some(true) { "▼" } else { "▲" };
-        let g = ui.painter().layout_no_wrap(
-            glifo.to_string(),
-            interface::fontes::fonte(9.0, interface::fontes::Peso::Normal),
-            cor,
-        );
-        ui.painter().with_clip_rect(h.recorte).galley(r.center() - g.size() / 2.0, g, cor);
+        let ordem = if ordenada == Some(true) { Ordem::Decrescente } else { Ordem::Crescente };
+        let seta = Rect::from_center_size(r.center(), vec2(LADO_SETA_ORDEM, LADO_SETA_ORDEM));
+        pintar_seta_ordem(&ui.painter().with_clip_rect(h.recorte), seta, ordem, cor);
         let proxima = match ordenada {
             None => "crescente",
             Some(false) => "decrescente",

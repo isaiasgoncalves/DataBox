@@ -6,7 +6,8 @@
 //!
 //! ```text
 //! TelaCsv::nova(caminho) -> TelaCsv          o arquivo é lido numa tarefa no primeiro quadro (nada de disco aqui)
-//! impl estado::Documento for TelaCsv         anatomia (rodapé, rolagem própria) · avisos · conteudo · rodape ·
+//! impl estado::Documento for TelaCsv         anatomia (faixa, rodapé, rolagem própria) · avisos · faixa · conteudo ·
+//!                                            rodape ·
 //!                                            ofertas/executar · tem_propriedades/propriedades · status ·
 //!                                            status_do_arquivo · ocupada · em_segundo_plano · alterado · alteracoes ·
 //!                                            salvando · tomar_erro_de_gravacao · fonte_de_colunas
@@ -46,7 +47,11 @@
 //!   "número inteiro (detectado)"), o `th.nova-col` com o "+" no fim. Números à direita, vazias em branco, alteradas
 //!   com o `td.alt`. A rolagem é de todas as linhas: só a página à vista (240 linhas) fica em mãos, e a que falta é
 //!   pedida quando a grade rola.
-//! - **Rodapé:** "1.204 linhas · 6 colunas" e, em `--acct`, "· 1 alteração não salva".
+//! - **Faixa e rodapé** (revisão de UI de 19/10/2026, como os Dados): na faixa, o nome do arquivo e o formato em
+//!   pílulas ("Ponto e vírgula", "UTF-8", "CRLF"); embaixo dela, sempre, a barra dos filtros; a seta da ordem é a
+//!   `.seta-ord` desenhada (`interface::grade::pintar_seta_ordem`). Rodapé: "Linhas 1–26 de 1.204" (as linhas à vista
+//!   de quantas a vista tem, o `interface::formato::contagem_linhas` dos Dados) e, em `--acct`, "· 1 alteração não
+//!   salva".
 //! - **Propriedades:** Formato (os quatro seletores e a caixa do cabeçalho; mudar um relê o arquivo com ele fixo;
 //!   desligados com alteração pendente, com a dica), Arquivo (`estado::secao_arquivo`) e Coluna {nome} da célula ativa
 //!   (Tipo detectado, Vazias e, nas numéricas, Mínimo, Máximo e Soma; nas de texto, Maior texto).
@@ -92,9 +97,9 @@
 //!   ("Desfazer Trazer 3 colunas") e dá o toast "3 colunas trazidas · 188 linhas sem par" com "Marcar as linhas sem
 //!   par" (a carga começa com [`PREFIXO_ACAO_TOAST`]). `Documento::fonte_de_colunas` devolve a fonte deste CSV (a
 //!   mesma `Arc`, com as alterações pendentes).
-//! - **Filtrar e ordenar** (o passo a mais; prancheta 16 b): a faixa aparece com condição (a da aba Dados:
-//!   "Filtros", uma etiqueta por condição com o popover de Coluna, Operador e Valor, "+ Condição", "236 de 1.180
-//!   linhas" e "Limpar filtros"; o verbo Filtrar abre o popover) e a seta do cabeçalho ordena (crescente →
+//! - **Filtrar e ordenar** (o passo a mais; prancheta 16 b): a barra dos filtros (as peças da aba Dados,
+//!   `interface::pecas::filtros`: "Filtros", uma etiqueta por condição com o popover de Coluna, Operador e Valor, "+
+//!   Condição" e, filtrando, "236 de 1.180 linhas" e "Limpar filtros"; o verbo Filtrar abre o popover) e a seta do cabeçalho ordena (crescente →
 //!   decrescente → sem ordem; números pelo valor, texto sem diferença de caixa, vazias no fim). A **vista** (as
 //!   posições que passam, na ordem) é calculada numa tarefa com um instantâneo e uma passada pelo arquivo
 //!   (`Leitor::varrer`) e refeita a cada alteração; o número da linha continua a posição no arquivo, e os Colar por

@@ -644,7 +644,7 @@ fn ficha_do_arquivo_e_inicio_com_a_pasta_parados_nao_repintam() {
     #[cfg(feature = "telas")]
     {
         clicar(&mut h, Role::Link, "clientes.csv");
-        let pronto = |h: &H| h.query_by_label("2 linhas · 2 colunas").is_some() && !h.state().ocupado();
+        let pronto = |h: &H| h.query_by_label("Linhas 1–2 de 2").is_some() && !h.state().ocupado();
         esperar(&mut h, "o CSV na grade", pronto);
         conferir_parado(&mut h, "a tela de CSV");
     }
@@ -806,9 +806,9 @@ fn editores_de_csv_e_de_texto_parados_nao_repintam() {
 
     // a origem do Trazer colunas numa outra aba
     h.state_mut().ir(Rota::arquivo(&precos));
-    esperar(&mut h, "o precos.csv", |h| h.query_by_label("2 linhas · 2 colunas").is_some() && !h.state().ocupado());
+    esperar(&mut h, "o precos.csv", |h| h.query_by_label("Linhas 1–2 de 2").is_some() && !h.state().ocupado());
     h.state_mut().ir(Rota::arquivo(&estoque));
-    esperar(&mut h, "o CSV na grade", |h| h.query_by_label("3 linhas · 3 colunas").is_some() && !h.state().ocupado());
+    esperar(&mut h, "o CSV na grade", |h| h.query_by_label("Linhas 1–3 de 3").is_some() && !h.state().ocupado());
     conferir_parado(&mut h, "o editor de CSV");
 
     // uma célula em edição (F2 na ativa)

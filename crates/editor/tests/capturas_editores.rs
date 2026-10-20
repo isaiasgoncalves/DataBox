@@ -104,8 +104,8 @@ fn capturas_do_csv_e_do_trazer_colunas() {
         );
         let csv = gravar(&amb, "vendas_2025.csv", &vendas(1204));
         let mut h = editor(&amb, tema);
-        abrir(&mut h, &precos, "5 linhas · 3 colunas");
-        abrir(&mut h, &csv, "1.204 linhas · 6 colunas");
+        abrir(&mut h, &precos, "Linhas 1–5 de 5");
+        abrir(&mut h, &csv, " de 1.204");
         capturar(&mut h, &format!("etapa56-csv-{sufixo}.png"));
         if tema == Tema::Escuro {
             clicar_botao(&mut h, "Trazer colunas");
@@ -161,7 +161,7 @@ fn captura_da_pergunta_ao_fechar() {
         let amb = Ambiente::vazio(&format!("capturas_fechar_{sufixo}"));
         let csv = gravar(&amb, "vendas_2025.csv", &vendas(40));
         let mut h = editor(&amb, tema);
-        abrir(&mut h, &csv, "40 linhas · 6 colunas");
+        abrir(&mut h, &csv, " de 40");
         // a primeira célula de dados (abaixo do cabeçalho, depois da caixa de marcar e do número da linha)
         let grade = {
             use egui_kittest::kittest::{Queryable, by};

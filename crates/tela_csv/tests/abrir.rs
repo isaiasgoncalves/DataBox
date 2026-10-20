@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use apoio::*;
 use egui::Modifiers;
 use egui::accesskit::Role;
-use egui_kittest::kittest::{Queryable, by};
+use egui_kittest::kittest::{NodeT, Queryable, by};
 use estado::apoio_testes::Ambiente;
 use estado::{Acao, Documento, Situacao};
 use interface::tema::Tema;
@@ -34,10 +34,48 @@ fn abre_o_csv_da_prancheta_7_e_mostra_a_grade() {
     );
     assert_eq!(p.posicao(0), Some(0));
     assert!(h.query_by_label("Grade").is_some());
-    assert!(h.query_by_label("1.204 linhas · 6 colunas").is_some(), "o rodapé");
+    let rodape = h.query_by_label_contains("de 1.204").expect("o rodapé").accesskit_node().value().unwrap_or_default();
+    assert!(rodape.starts_with("Linhas 1–"), "o rodapé dos Dados: {rodape}");
     // sem alteração: nem o ponto de alterado nem a contagem no rodapé
     assert!(!doc(&h).alterado());
     assert!(h.query_by_label_contains("não salva").is_none());
+}
+
+/// A revisão de UI de 19/10/2026 (prancheta 7): a faixa com o nome e o formato em pílulas, a barra dos filtros (a
+/// dos Dados) e o rodapé "Linhas a–b de n" com as linhas à vista.
+#[test]
+fn faixa_com_o_formato_barra_de_filtros_e_rodape_como_os_dados() {
+    let amb = Ambiente::vazio("csv_faixa");
+    let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(1204)));
+    assert!(doc(&h).anatomia().faixa, "a faixa sempre, sem filtro");
+    assert!(h.query_by_label("vendas_2025.csv").is_some(), "o nome na faixa");
+    for pilula in ["Ponto e vírgula", "UTF-8", "CRLF"] {
+        assert!(h.query_by_label(pilula).is_some(), "a pílula {pilula}");
+    }
+    assert!(h.query_by_label("Filtros").is_some(), "a barra dos filtros");
+    assert!(h.query_by_label("Nova condição").is_some());
+    assert!(h.query_by_label("Limpar filtros").is_none(), "sem condição, sem o Limpar");
+    // a coluna de marcar: a caixa do cabeçalho e a de cada linha
+    assert!(h.query(by().role(Role::CheckBox).label("Marcar todas as linhas")).is_some());
+    let rodape = |h: &H| h.query_by_label_contains("de 1.204").map(|n| n.accesskit_node().value().unwrap_or_default());
+    let antes = rodape(&h).expect("o rodapé");
+    assert!(antes.starts_with("Linhas 1–"), "{antes}");
+    // rolar até a linha 1101: o intervalo segue a grade
+    doc_mut(&mut h).selecionar(Some((1100, 0)));
+    esperar_ociosa(&mut h);
+    let depois = rodape(&h).expect("o rodapé");
+    let (a, b) = depois
+        .trim_start_matches("Linhas ")
+        .trim_end_matches(" de 1.204")
+        .split_once('–')
+        .map(|(a, b)| (a.replace('.', "").parse::<u64>().unwrap(), b.replace('.', "").parse::<u64>().unwrap()))
+        .expect("Linhas a–b");
+    assert!((2..=1101).contains(&a) && (1101..=1204).contains(&b), "{depois}");
+    // filtrando, o total é o da vista
+    doc_mut(&mut h).filtrar("regiao", tela_csv::OperadorCsv::Igual, "Sul");
+    esperar_ociosa(&mut h);
+    assert!(h.query_by_label("241 de 1.204 linhas").is_some(), "a contagem na barra dos filtros");
+    assert!(h.query_by_label_contains("de 241").is_some(), "o rodapé conta a vista");
 }
 
 #[test]

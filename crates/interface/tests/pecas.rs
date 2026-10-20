@@ -274,6 +274,156 @@ fn cabecalho_com_a_pastilha_antes_do_nome() {
     assert_eq!(LARGURA_PASTILHA_TH, 22.0, "16px e os 6px até o nome");
 }
 
+/// Os triângulos cheios pintados no último quadro (as setas da ordem: o `PathShape` fechado de 3 pontos), com a cor.
+fn triangulos<S>(h: &Harness<'_, S>) -> Vec<(Vec<egui::Pos2>, egui::Color32)> {
+    fn juntar(forma: &egui::Shape, v: &mut Vec<(Vec<egui::Pos2>, egui::Color32)>) {
+        match forma {
+            egui::Shape::Vec(formas) => formas.iter().for_each(|f| juntar(f, v)),
+            egui::Shape::Path(p) if p.closed && p.points.len() == 3 => v.push((p.points.clone(), p.fill)),
+            _ => {}
+        }
+    }
+    let mut v = Vec::new();
+    for c in &h.output().shapes {
+        juntar(&c.shape, &mut v);
+    }
+    v
+}
+
+#[test]
+fn cabecalho_com_a_seta_da_ordem_desenhada() {
+    use interface::grade::{ESPACO_SETA_ORDEM, LADO_SETA_ORDEM, Ordem, Th, largura_cabecalho, pintar_cabecalho_coluna};
+    let mut h = harness((0.0_f32, egui::Color32::TRANSPARENT), |ui, s| {
+        let conteudo = egui::Rect::from_min_size(egui::pos2(100.0, 100.0), egui::vec2(200.0, 30.0));
+        let p = interface::tema::paleta(ui);
+        s.0 = largura_cabecalho(ui.painter(), "id", None);
+        s.1 = p.estudio.acct;
+        let th = Th { ordem: Some(Ordem::Crescente), ..Th::new("id") };
+        pintar_cabecalho_coluna(ui.painter(), p, conteudo, &th);
+        let th = Th { ordem: Some(Ordem::Decrescente), ..Th::new("id") };
+        pintar_cabecalho_coluna(ui.painter(), p, conteudo.translate(egui::vec2(0.0, 40.0)), &th);
+    });
+    h.run_steps(1);
+    let (nome, acct) = *h.state();
+    let setas = triangulos(&h);
+    assert_eq!(setas.len(), 2, "a `.seta-ord` é um triângulo desenhado, não o glifo ▲ da fonte: {setas:?}");
+    for (i, (pontos, cor)) in setas.iter().enumerate() {
+        assert_eq!(*cor, acct, "em `--acct`");
+        let (x0, x1) = pontos.iter().fold((f32::MAX, f32::MIN), |(a, b), p| (a.min(p.x), b.max(p.x)));
+        let (y0, y1) = pontos.iter().fold((f32::MAX, f32::MIN), |(a, b), p| (a.min(p.y), b.max(p.y)));
+        // `margin-left:5px` depois do nome, 9px de lado (o triângulo ocupa 8,4 × 6,3 da caixa)
+        let esquerda = 100.0 + nome + ESPACO_SETA_ORDEM;
+        assert!((x0 - (esquerda + 0.72)).abs() < 0.5 && (x1 - x0 - 0.84 * LADO_SETA_ORDEM).abs() < 0.1, "{pontos:?}");
+        assert!((y1 - y0 - 0.7 * LADO_SETA_ORDEM).abs() < 0.1, "{pontos:?}");
+        let ponta = pontos.iter().find(|p| (p.x - (x0 + x1) / 2.0).abs() < 0.01).expect("a ponta no meio");
+        if i == 0 {
+            assert_eq!(ponta.y, y0, "crescente: a ponta para cima");
+        } else {
+            assert_eq!(ponta.y, y1, "decrescente: a ponta para baixo");
+        }
+    }
+}
+
+#[derive(Default)]
+struct EstadoFiltros {
+    etiquetas: Vec<(u64, &'static str)>,
+    abrir: Vec<Option<u64>>,
+    tirar: Vec<u64>,
+    limpar: u32,
+    barra: Option<egui::Rect>,
+}
+
+#[test]
+fn filtros_da_grade_abrem_tiram_e_limpam() {
+    use interface::pecas::filtros::{ALTURA_BARRA_FILTROS, ContagemFiltros, EtiquetaFiltro, barra_filtros, filtros};
+    let mut h = harness(EstadoFiltros { etiquetas: vec![(7, "Sul")], ..Default::default() }, |ui, s| {
+        let etiquetas: Vec<EtiquetaFiltro<'_>> = s
+            .etiquetas
+            .iter()
+            .map(|&(id, v)| EtiquetaFiltro { id, coluna: "regiao", operador: "igual a", valor: Some(v) })
+            .collect();
+        let contagem =
+            if etiquetas.is_empty() { ContagemFiltros::Nada } else { ContagemFiltros::Texto("4 de 20 linhas".into()) };
+        ui.spacing_mut().item_spacing.y = 0.0;
+        let topo = ui.cursor().top();
+        let r = barra_filtros(ui, |ui| filtros(ui, &etiquetas, &contagem));
+        s.barra = Some(egui::Rect::from_x_y_ranges(ui.max_rect().x_range(), topo..=ui.cursor().top()));
+        if let Some((alvo, _)) = r.abrir {
+            s.abrir.push(alvo);
+        }
+        if let Some(id) = r.tirar {
+            s.tirar.push(id);
+            s.etiquetas.retain(|e| e.0 != id);
+        }
+        if r.limpar {
+            s.limpar += 1;
+            s.etiquetas.clear();
+        }
+    });
+    assert!(h.query_by_label("Filtros").is_some());
+    assert!(h.query_by_label("4 de 20 linhas").is_some(), "a contagem à direita");
+    let barra = h.state().barra.unwrap();
+    assert_eq!(barra.height(), ALTURA_BARRA_FILTROS, "`.barra-filtros{{height:38px}}`");
+    h.get_by_label("Nova condição").click();
+    h.run_steps(2);
+    h.get_by_role_and_label(Role::Button, "Editar o filtro regiao igual a Sul").click();
+    h.run_steps(2);
+    assert_eq!(h.state().abrir, [None, Some(7)], "o + abre uma nova; a etiqueta, a dela");
+    h.get_by_label("Limpar filtros").click();
+    h.run_steps(2);
+    assert_eq!(h.state().limpar, 1);
+    assert!(h.query_by_label("Limpar filtros").is_none(), "sem condição, sem o Limpar");
+    assert!(h.query_by_label("4 de 20 linhas").is_none());
+    h.state_mut().etiquetas = vec![(8, "Norte")];
+    h.run_steps(2);
+    h.get_by_label("Tirar o filtro regiao igual a Norte").click();
+    h.run_steps(2);
+    assert_eq!(h.state().tirar, [8]);
+}
+
+#[test]
+fn popover_da_condicao_aplica_com_valor_e_desiste_com_esc() {
+    use interface::pecas::filtros::{CondicaoEmEdicao, FimCondicao, popover_condicao};
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    enum Op {
+        Igual,
+        Nulo,
+    }
+    let ops = [(Op::Igual, "igual a"), (Op::Nulo, "é nulo")];
+    let c = CondicaoEmEdicao {
+        alvo: None,
+        coluna: 0,
+        op: Op::Igual,
+        valor: String::new(),
+        ancora: egui::Rect::from_min_size(egui::pos2(20.0, 20.0), egui::vec2(80.0, 26.0)),
+        focar: true,
+    };
+    let mut h = harness((Some(c), Vec::<FimCondicao>::new()), move |ui, s| {
+        let Some(c) = s.0.as_mut() else { return };
+        let ctx = ui.ctx().clone();
+        if let Some(fim) = popover_condicao(&ctx, "teste", c, &[(0, "regiao"), (1, "valor")], &ops, |o| *o == Op::Nulo)
+        {
+            s.1.push(fim);
+        }
+    });
+    assert!(h.query_by_label("Condição de filtro").is_some());
+    assert!(h.get_by_label("Aplicar").accesskit_node().is_disabled(), "sem valor, Aplicar desligado");
+    h.get(by().role(Role::TextInput).label("Valor da condição")).type_text("Sul");
+    h.run_steps(2);
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert_eq!(h.state().1, [FimCondicao::Aplicar], "Enter no valor aplica");
+    assert_eq!(h.state().0.as_ref().unwrap().valor, "Sul");
+    // um operador sem valor tira o campo e liga o Aplicar
+    h.state_mut().0.as_mut().unwrap().op = Op::Nulo;
+    h.run_steps(2);
+    assert!(h.query_by_label("Valor da condição").is_none());
+    assert!(!h.get_by_label("Aplicar").accesskit_node().is_disabled());
+    h.key_press(Key::Escape);
+    h.run_steps(2);
+    assert_eq!(h.state().1.last(), Some(&FimCondicao::Desistir), "Esc desiste");
+}
+
 #[derive(Default)]
 struct EstadoJanela {
     aberta: bool,

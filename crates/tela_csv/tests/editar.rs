@@ -519,7 +519,7 @@ fn rodape_conta_alteracoes_e_marcadas() {
     editar(&mut h, 2, 1, "C", Key::Enter);
     doc_mut(&mut h).marcar_linhas([4, 5]);
     h.run_steps(2);
-    assert!(h.query_by_label("10 linhas · 6 colunas").is_some());
+    assert!(h.query_by_label("Linhas 1–10 de 10").is_some());
     assert!(h.query_by_label("· 3 alterações não salvas").is_some());
     assert!(h.query_by_label("· 2 marcadas").is_some());
 }

@@ -169,7 +169,7 @@ fn outro_arquivo_usa_o_dialogo() {
     h.get_by_label("Outro arquivo").click();
     esperar_ociosa(&mut h);
     assert_eq!(doc(&h).trazer_origem().map(|o| o.0).as_deref(), Some("catalogo_2025.csv"));
-    assert!(h.query_by_label("10 linhas · 6 colunas").is_some());
+    assert!(h.query_by_label("Linhas 1–10 de 10").is_some());
 }
 
 #[test]

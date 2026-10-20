@@ -34,8 +34,8 @@
 //!
 //! # O que a aba faz (TELAS.md › Aba Dados)
 //!
-//! - Formato de documento (etapa 3, prancheta 2; `ParteTabela::anatomia`: faixa, rodapé e rolagem própria). Faixa:
-//!   "Filtros", uma etiqueta `chip_filtro` por condição ("ativo igual a 1": o clique abre a condição no popover, o ×
+//! - Formato de documento (etapa 3, prancheta 2; `ParteTabela::anatomia`: faixa, rodapé e rolagem própria). Faixa
+//!   (as peças de `interface::pecas::filtros`, que o CSV também usa): "Filtros", uma etiqueta `chip_filtro` por condição ("ativo igual a 1": o clique abre a condição no popover, o ×
 //!   a tira), "+ Condição" e, à direita, a contagem ("41 de 60 linhas", "60 linhas"; "contando…" e "linhas não
 //!   contadas", com o motivo na dica, na tabela grande) e "Limpar filtros" (só com condição). O popover de vidro
 //!   (`interface::pecas::popover`) tem Coluna, Operador (os 14 rótulos), Valor (fora nos operadores sem valor),

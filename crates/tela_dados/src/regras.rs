@@ -40,8 +40,7 @@ pub const BUSCA_LENTA_MS: f64 = 3000.0;
 pub const AVISO_SEM_CHAVE: &str = "Esta linha não tem chave: a chave primária dela está vazia (NULL), então não há \
                                    como apontar para ela ao gravar. Aqui ela é só leitura; para mudá-la, use a \
                                    Consulta SQL.";
-pub const LINHAS_NAO_CONTADAS: &str = "linhas não contadas";
-pub const CONTANDO: &str = "contando…";
+pub use interface::pecas::filtros::{CONTANDO, LINHAS_NAO_CONTADAS};
 pub const LENDO: &str = "Lendo as linhas…";
 pub const VAZIO_FILTRANDO: &str = "Nenhuma linha corresponde à busca ou aos filtros.";
 /// O "+ Nova linha" do card saiu (etapa 3): a linha nova é o Nova linha da barra de ferramentas.
@@ -204,14 +203,9 @@ pub fn texto_edicao(c: &Celula) -> String {
     texto_celula(c)
 }
 
-/// A contagem da faixa dos Dados: com busca ou filtro, as linhas que correspondem de quantas a tabela tem ("41 de
-/// 60 linhas"; sem o total da tabela, só as que correspondem); sem nada, as linhas da tabela ("60 linhas").
-pub fn texto_contagem_faixa(linhas: u64, total_tabela: Option<u64>, filtrando: bool) -> String {
-    match total_tabela {
-        Some(t) if filtrando => format!("{} de {}", formatar_numero(linhas), plural(t, "linha", "linhas")),
-        _ => plural(linhas, "linha", "linhas"),
-    }
-}
+/// A contagem da faixa dos Dados ("41 de 60 linhas", "60 linhas") e a do rodapé ("Linhas 1–100 de 5.000"): as
+/// das grades, iguais no CSV.
+pub use interface::formato::{contagem_filtrada as texto_contagem_faixa, contagem_linhas as texto_contagem_linhas};
 
 /// O rótulo do operador ("igual a"), o da etiqueta e do select.
 pub fn rotulo_operador(op: Operador) -> &'static str {
@@ -287,15 +281,6 @@ pub fn intervalo(pagina: u64, por_pagina: u64, n_linhas: usize, total: Option<u6
         Some(t) => t.min(pagina.saturating_mul(por_pagina)),
     };
     (inicio, fim)
-}
-
-/// "Linhas 1–100 de 5.000" / "Nenhuma linha" (com o total conhecido).
-pub fn texto_contagem_linhas(inicio: u64, fim: u64, total: u64) -> String {
-    if total > 0 {
-        format!("Linhas {}–{} de {}", formatar_numero(inicio), formatar_numero(fim), formatar_numero(total))
-    } else {
-        "Nenhuma linha".to_string()
-    }
 }
 
 /// O começo do texto do rodapé antes do "contando…" (total ainda não conhecido).

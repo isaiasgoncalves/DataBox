@@ -571,7 +571,7 @@ fn tela_de_csv_salva_ao_fechar() {
     std::fs::write(&caminho, "regiao;qtd\nSul;1\nNorte;2\n").expect("o arquivo");
     let mut h = harness(&amb);
     abrir(&mut h, &caminho);
-    editar_a_primeira_celula(&mut h, "2 linhas · 2 colunas", "Oeste");
+    editar_a_primeira_celula(&mut h, "Linhas 1–2 de 2", "Oeste");
     h.key_press(Key::Enter);
     esperar(&mut h, "a alteração", |h| existe(h, Role::Tab, "vendas.csv, alterada"));
     h.key_press_modifiers(CTRL, Key::W);
@@ -592,7 +592,7 @@ fn ctrl_s_no_csv_grava_a_celula_em_edicao() {
     std::fs::write(&caminho, "codigo;qtd\r\nA1;5\r\nB2;7\r\n").expect("o arquivo");
     let mut h = harness(&amb);
     abrir(&mut h, &caminho);
-    editar_a_primeira_celula(&mut h, "2 linhas · 2 colunas", "Z9");
+    editar_a_primeira_celula(&mut h, "Linhas 1–2 de 2", "Z9");
     h.key_press_modifiers(CTRL, Key::S);
     esperar(&mut h, "o arquivo gravado", |_| {
         std::fs::read_to_string(&caminho).is_ok_and(|t| t.starts_with("codigo;qtd\r\nZ9;5"))
