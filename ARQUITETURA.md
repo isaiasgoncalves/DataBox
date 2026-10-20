@@ -219,6 +219,9 @@ impl Banco {
     pub fn linha(&self, nome: &str, chave: &Chave) -> Resultado<LinhaCompleta>;
     pub fn inserir(&self, nome: &str, valores: &[(String, Entrada)]) -> Resultado<LinhaGravada>;
     pub fn atualizar(&self, nome: &str, chave: &Chave, valores: &[(String, Entrada)]) -> Resultado<LinhaGravada>;
+    // o Desfazer da grade: grava `antigo` só se a célula ainda tem `gravado` (senão 409 MSG_CELULA_MUDOU)
+    pub fn desfazer_celula(&self, nome: &str, chave: &Chave, coluna: &str, gravado: &Celula, antigo: &Celula)
+        -> Resultado<LinhaGravada>;
     pub fn excluir(&self, nome: &str, chaves: &[Chave]) -> Resultado<usize>;
     pub fn ler_blob(&self, nome: &str, chave: &Chave, coluna: &str) -> Resultado<Option<Vec<u8>>>;
     pub fn consultar(&self, sql: &str, limite: usize) -> Resultado<ResultadoConsulta>;

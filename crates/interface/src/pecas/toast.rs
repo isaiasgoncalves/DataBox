@@ -9,7 +9,7 @@
 //! "i"); a casca chama [`desenhar_toast`] uma vez por quadro, depois de tudo. [`toast_concluido_com_acao`] põe um botão
 //! pequeno dentro da pílula (`.toast.com-acao`: "Cópia salva: x.db · 119 MB" com "Mostrar na pasta"; o toast fica
 //! [`DURACAO_TOAST_COM_ACAO`] e traz o texto da dica, o caminho inteiro): o clique sai em [`acao_do_toast`], que a casca
-//! consulta a cada quadro, e o toast some.
+//! consulta a cada quadro, e o toast some; [`toast_concluido_com_acao_por`] dá à ação outro prazo.
 
 use std::time::Duration;
 
@@ -73,11 +73,13 @@ struct EstadoToast {
     acao: Option<AcaoToast>,
     /// O texto da dica da pílula (o caminho inteiro de um arquivo, por exemplo).
     dica: Option<String>,
+    /// Quanto tempo fica na tela (sem contar a saída).
+    duracao: f64,
 }
 
 impl EstadoToast {
     fn duracao(&self) -> f64 {
-        if self.acao.is_some() { DURACAO_TOAST_COM_ACAO } else { DURACAO_TOAST }
+        self.duracao
     }
 }
 
@@ -90,12 +92,19 @@ fn id_acao_clicada() -> Id {
 }
 
 fn mostrar(ctx: &Context, mensagem: String, icone: IconeEstado) {
-    mostrar_com(ctx, mensagem, icone, None, None);
+    mostrar_com(ctx, mensagem, icone, None, None, DURACAO_TOAST);
 }
 
-fn mostrar_com(ctx: &Context, mensagem: String, icone: IconeEstado, acao: Option<AcaoToast>, dica: Option<String>) {
+fn mostrar_com(
+    ctx: &Context,
+    mensagem: String,
+    icone: IconeEstado,
+    acao: Option<AcaoToast>,
+    dica: Option<String>,
+    duracao: f64,
+) {
     let desde = ctx.input(|i| i.time);
-    ctx.data_mut(|d| d.insert_temp(id_toast(), EstadoToast { mensagem, icone, desde, acao, dica }));
+    ctx.data_mut(|d| d.insert_temp(id_toast(), EstadoToast { mensagem, icone, desde, acao, dica, duracao }));
     ctx.request_repaint();
 }
 
@@ -103,7 +112,13 @@ fn mostrar_com(ctx: &Context, mensagem: String, icone: IconeEstado, acao: Option
 /// pasta"); `dica` é o texto que aparece ao pôr o ponteiro na pílula (o caminho inteiro). O clique na ação sai em
 /// [`acao_do_toast`], e o toast some.
 pub fn toast_concluido_com_acao(ctx: &Context, mensagem: impl Into<String>, dica: Option<String>, acao: AcaoToast) {
-    mostrar_com(ctx, mensagem.into(), IconeEstado::Concluido, Some(acao), dica);
+    mostrar_com(ctx, mensagem.into(), IconeEstado::Concluido, Some(acao), dica, DURACAO_TOAST_COM_ACAO);
+}
+
+/// O [`toast_concluido_com_acao`] por outro tempo: a ação que só vale por um prazo (o "Desfazer · Ctrl+Z" da
+/// gravação no banco fica 6 s, prancheta 15).
+pub fn toast_concluido_com_acao_por(ctx: &Context, mensagem: impl Into<String>, acao: AcaoToast, duracao: f64) {
+    mostrar_com(ctx, mensagem.into(), IconeEstado::Concluido, Some(acao), None, duracao);
 }
 
 /// A `carga` da ação do toast que a pessoa clicou desde a última chamada (e só ela: a chamada a consome). A casca

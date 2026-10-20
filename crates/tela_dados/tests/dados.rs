@@ -1528,3 +1528,119 @@ fn rotulos_das_caixas_dizem_a_coluna() {
     assert!(h.query_by_role_and_label(Role::CheckBox, "id é NULL").is_none());
     assert!(h.query_by_role_and_label(Role::CheckBox, "nome é NULL").is_none());
 }
+
+/// Edita a cidade do cliente 1 pela grade (com o valor novo) e espera a gravação.
+fn editar_cidade(h: &mut H, valor: &str) {
+    duplo_clique_celula(h, 0, 3);
+    preencher_edicao(h, valor);
+    tecla(h, Key::Enter);
+    esperar_que(h, |r| r.gravacoes_pendentes == 0 && r.editando.is_none());
+    h.run_steps(1);
+}
+
+fn cidade_do_1(h: &H) -> String {
+    texto(&ler_um(h, "SELECT cidade FROM clientes WHERE id = 1"))
+}
+
+/// Desfazer no banco (prancheta 15, revisão de UI de 19/10/2026): o toast da gravação diz onde gravou e oferece
+/// "Desfazer · Ctrl+Z"; o Desfazer da barra (o Ctrl+Z da casca) e o do toast gravam o valor de antes; a aba refeita
+/// continua podendo desfazer; a célula mudada depois, a transação aberta depois, a estrutura mudada e a exclusão
+/// desligam o Desfazer (com o porquê na dica).
+#[test]
+fn desfazer_a_ultima_edicao_de_celula() {
+    use estado::Verbo;
+    use interface::pecas::toast::rotulo_da_acao_do_toast;
+    let amb = Ambiente::exemplo("dados_desfazer");
+    let mut h = abrir(&amb, "clientes");
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer), "nada gravado, nada a desfazer");
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), "Desfazer (Ctrl+Z)");
+    let original = cidade_do_1(&h);
+
+    editar_cidade(&mut h, "Natal");
+    assert_eq!(toast(&h).as_deref(), Some("Gravado em clientes (linha 1, cidade)"));
+    assert_eq!(rotulo_da_acao_do_toast(&h.ctx).as_deref(), Some(tela_dados::ROTULO_ACAO));
+    assert!(ofertas(&h).ligado(Verbo::Desfazer));
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), "Desfazer cidade da linha 1 (Ctrl+Z)");
+
+    // o Desfazer da barra grava o valor de antes, a célula volta e pisca; não há Refazer
+    clicar_botao(&mut h, "Desfazer");
+    esperar_que(&mut h, |r| !r.desfazendo);
+    h.run_steps(1);
+    assert_eq!(cidade_do_1(&h), original);
+    assert_eq!(celula(&h, 0, 3), original);
+    assert!(h.state().tela.doc.parte.piscando(0, 3));
+    assert_eq!(toast(&h).as_deref(), Some("Edição desfeita em clientes (linha 1, cidade)"));
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer));
+
+    // o botão do toast faz o mesmo, também depois de a aba ser refeita (o F5)
+    editar_cidade(&mut h, "Recife");
+    clicar_botao(&mut h, tela_dados::ROTULO_ACAO);
+    esperar_que(&mut h, |r| !r.desfazendo);
+    assert_eq!(cidade_do_1(&h), original);
+    editar_cidade(&mut h, "Recife");
+    let mut h = recarregar(&amb, h);
+    assert!(ofertas(&h).ligado(Verbo::Desfazer), "a última edição atravessa a aba refeita");
+    clicar_botao(&mut h, "Desfazer");
+    esperar_que(&mut h, |r| !r.desfazendo);
+    assert_eq!(cidade_do_1(&h), original);
+
+    // a célula mudou depois da edição (a Consulta SQL, outro programa): nada volta
+    editar_cidade(&mut h, "Natal");
+    executar(&amb, "UPDATE clientes SET cidade = 'Manaus' WHERE id = 1");
+    clicar_botao(&mut h, "Desfazer");
+    esperar_que(&mut h, |r| !r.desfazendo);
+    h.run_steps(1);
+    assert_eq!(toast(&h).as_deref(), Some(banco::MSG_CELULA_MUDOU));
+    assert_eq!(cidade_do_1(&h), "Manaus");
+
+    // uma transação da Consulta SQL que começou depois da edição desliga o Desfazer
+    editar_cidade(&mut h, "Belém");
+    executar(&amb, "BEGIN");
+    let marcar_transacao = |h: &mut H, aberta: bool| {
+        h.state_mut().estado.banco.as_mut().expect("banco aberto").transacao_aberta = aberta;
+        h.run_steps(1);
+    };
+    marcar_transacao(&mut h, true);
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer));
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), tela_dados::DICA_TRANSACAO);
+    // dentro dela, a edição e o Desfazer entram na transação
+    editar_cidade(&mut h, "Recife");
+    assert!(ofertas(&h).ligado(Verbo::Desfazer));
+    clicar_botao(&mut h, "Desfazer");
+    esperar_que(&mut h, |r| !r.desfazendo);
+    assert_eq!(cidade_do_1(&h), "Belém");
+    executar(&amb, "ROLLBACK");
+    marcar_transacao(&mut h, false);
+
+    // mudar a estrutura não se desfaz: a tela relida desliga o Desfazer
+    let mut h = recarregar(&amb, h);
+    editar_cidade(&mut h, "Natal");
+    executar(&amb, "ALTER TABLE clientes ADD COLUMN apelido TEXT");
+    let mut h = recarregar(&amb, h);
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer));
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), tela_dados::DICA_ESTRUTURA);
+
+    // banco só leitura: sem Desfazer
+    editar_cidade(&mut h, "Recife");
+    assert!(ofertas(&h).ligado(Verbo::Desfazer));
+    h.state_mut().estado.banco.as_mut().expect("banco aberto").somente_leitura = true;
+    h.run_steps(1);
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer));
+    h.state_mut().estado.banco.as_mut().expect("banco aberto").somente_leitura = false;
+
+    // excluir linhas também não se desfaz: o Desfazer desliga e diz por quê
+    trocar_aba(&mut h, amb.tabela("eventos"));
+    esperar_grade(&mut h);
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer), "a última edição é de outra tabela");
+    duplo_clique_celula(&mut h, 0, 1);
+    preencher_edicao(&mut h, "teste");
+    tecla(&mut h, Key::Enter);
+    esperar_que(&mut h, |r| r.gravacoes_pendentes == 0 && r.editando.is_none());
+    assert!(ofertas(&h).ligado(Verbo::Desfazer));
+    clicar_marca(&mut h, Some(2));
+    clicar_botao(&mut h, "Excluir");
+    clicar_botao(&mut h, "Excluir");
+    esperar_que(&mut h, |r| r.marcadas == 0 && !r.carregando && r.linhas > 0);
+    assert!(!ofertas(&h).ligado(Verbo::Desfazer));
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), tela_dados::DICA_EXCLUIR);
+}
