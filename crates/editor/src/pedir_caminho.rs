@@ -19,6 +19,20 @@ use interface::pecas::janela::Janela;
 use crate::inicio::limpar_caminho_digitado;
 use crate::recursos::caminho_sugerido;
 
+/// As dicas dos campos de caminho, no jeito de escrever caminho de cada sistema.
+#[cfg(windows)]
+const DICA_PASTA: &str = "C:\\pasta";
+#[cfg(not(windows))]
+const DICA_PASTA: &str = "/home/você/pasta";
+#[cfg(windows)]
+const DICA_ARQUIVO: &str = "C:\\pasta\\arquivo";
+#[cfg(not(windows))]
+const DICA_ARQUIVO: &str = "/home/você/pasta/arquivo";
+#[cfg(windows)]
+const DICA_BANCO: &str = "C:\\pasta\\arquivo.db";
+#[cfg(not(windows))]
+const DICA_BANCO: &str = "/home/você/pasta/arquivo.db";
+
 /// O "i" do campo.
 pub(crate) const AJUDA: &str = "A janela de escolha de arquivo do Windows não está disponível. Digite o caminho \
                                 completo, com a pasta e o nome do arquivo.";
@@ -97,32 +111,26 @@ impl PedirCaminho {
 
     /// "Abrir arquivo", com o campo vazio.
     pub fn abrir(somente_leitura: bool) -> Self {
-        Self::nova(
-            Proposito::Abrir { somente_leitura },
-            "Abrir arquivo",
-            "Abrir",
-            "C:\\pasta\\arquivo.db",
-            String::new(),
-        )
+        Self::nova(Proposito::Abrir { somente_leitura }, "Abrir arquivo", "Abrir", DICA_BANCO, String::new())
     }
 
     /// "Novo banco", com "novo.db" na pasta do banco aberto.
     pub fn novo(pasta: Option<&Path>) -> Self {
-        Self::nova(Proposito::Novo, "Novo banco", "Criar", "C:\\pasta\\arquivo.db", caminho_sugerido(pasta, "novo.db"))
+        Self::nova(Proposito::Novo, "Novo banco", "Criar", DICA_BANCO, caminho_sugerido(pasta, "novo.db"))
     }
 
     /// "Salvar como" da cópia de segurança, com o nome sugerido na pasta do banco.
     pub fn copia(pasta: &Path, nome: &str) -> Self {
-        Self::nova(Proposito::Copia, "Salvar como", "Salvar", "C:\\pasta\\arquivo", caminho_sugerido(Some(pasta), nome))
+        Self::nova(Proposito::Copia, "Salvar como", "Salvar", DICA_ARQUIVO, caminho_sugerido(Some(pasta), nome))
     }
 
-    /// "Abrir pasta", com o campo vazio ("Caminho da pasta", dica `C:\pasta`).
+    /// "Abrir pasta", com o campo vazio ("Caminho da pasta", dica [`DICA_PASTA`]).
     pub fn pasta() -> Self {
         PedirCaminho {
             rotulo: "Caminho da pasta",
             ajuda: AJUDA_PASTA,
             vazio: MSG_VAZIO_PASTA,
-            ..Self::nova(Proposito::Pasta, "Abrir pasta", "Abrir", "C:\\pasta", String::new())
+            ..Self::nova(Proposito::Pasta, "Abrir pasta", "Abrir", DICA_PASTA, String::new())
         }
     }
 
@@ -212,10 +220,10 @@ mod testes {
         let n = PedirCaminho::novo(None);
         assert_eq!(n.caminho, "novo.db");
         let c = PedirCaminho::copia(&abs("dados"), "vendas (cópia).db");
-        assert_eq!((c.titulo, c.botao, c.dica), ("Salvar como", "Salvar", "C:\\pasta\\arquivo"));
+        assert_eq!((c.titulo, c.botao, c.dica), ("Salvar como", "Salvar", DICA_ARQUIVO));
         assert_eq!(c.caminho, abs_texto("dados/vendas (cópia).db"));
         let p = PedirCaminho::pasta();
-        assert_eq!((p.titulo, p.botao, p.dica, p.caminho.as_str()), ("Abrir pasta", "Abrir", "C:\\pasta", ""));
+        assert_eq!((p.titulo, p.botao, p.dica, p.caminho.as_str()), ("Abrir pasta", "Abrir", DICA_PASTA, ""));
         assert_eq!(
             (p.rotulo, p.vazio, p.proposito),
             ("Caminho da pasta", "Digite o caminho da pasta.", Proposito::Pasta)

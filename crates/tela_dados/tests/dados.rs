@@ -811,6 +811,21 @@ fn tab_na_ponta_da_grade_sai_dela() {
 }
 
 #[test]
+fn ctrl_home_e_ctrl_end_vao_a_primeira_e_a_ultima_linha() {
+    let amb = Ambiente::exemplo("dados_ctrl_home_end");
+    let mut tabela = amb.tabela("eventos");
+    tabela.rota = tabela.rota.com_dados(ConsultaDados { por_pagina: 50, ..Default::default() });
+    let mut h = abrir_com(&amb, tabela, Tema::Claro, Ganchos::default());
+    clicar_celula(&mut h, 3, 2);
+    tecla_com(&mut h, egui::Modifiers::COMMAND, Key::End);
+    assert_eq!(retrato(&h).ativa, Some((49, 2)), "Ctrl+End: a última linha da página, na mesma coluna");
+    tecla_com(&mut h, egui::Modifiers::COMMAND, Key::Home);
+    assert_eq!(retrato(&h).ativa, Some((0, 2)), "Ctrl+Home: a primeira linha, na mesma coluna");
+    tecla(&mut h, Key::End);
+    assert_eq!(retrato(&h).ativa.map(|(l, _)| l), Some(0), "End sozinho continua na linha");
+}
+
+#[test]
 fn hint_sem_linhas() {
     let amb = Ambiente::exemplo("dados_hint_vazio");
     let mut tabela = amb.tabela("clientes");

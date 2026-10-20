@@ -1191,6 +1191,8 @@ impl NucleoGrade {
                             }
                             Key::Home if !ctrl => nova = Some((l, c0)),
                             Key::End if !ctrl => nova = Some((l, c1)),
+                            Key::Home => nova = Some((0, c)),
+                            Key::End => nova = Some((n_lin.saturating_sub(1), c)),
                             Key::Tab if !ctrl => {
                                 if self.na_ponta(modifiers.shift) {
                                     // na ponta, o Tab deixa o foco sair da grade
