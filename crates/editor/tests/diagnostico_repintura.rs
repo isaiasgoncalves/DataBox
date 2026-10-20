@@ -392,11 +392,7 @@ fn paineis_parados_nao_repintam() {
     conferir_parado(&mut h, "o Explorador com a tabela à vista e as Visões abertas");
     passar_e_sair(
         &mut h,
-        &[
-            (Role::Link, "pedidos"),
-            (Role::Link, "v_pedidos_por_cliente"),
-            (Role::Button, "Recolher tudo"),
-        ],
+        &[(Role::Link, "pedidos"), (Role::Link, "v_pedidos_por_cliente"), (Role::Button, "Recolher tudo")],
     );
     conferir_parado(&mut h, "o Explorador depois do ponteiro");
     clicar(&mut h, Role::Button, "Recolher tudo");
