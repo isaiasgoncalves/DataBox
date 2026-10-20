@@ -13,7 +13,7 @@ use apoio::*;
 use editor::{Editor, Partida};
 use egui::accesskit::Role;
 use egui::{Modifiers, PointerButton, Pos2};
-use egui_kittest::kittest::{NodeT, Queryable, by};
+use egui_kittest::kittest::{Queryable, by};
 use estado::Rota;
 use estado::apoio_testes::Ambiente;
 use interface::tema::Tema;
