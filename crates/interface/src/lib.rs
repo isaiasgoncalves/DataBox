@@ -125,8 +125,9 @@
 //!     `corpo_com_margem`, `livre`, `rodape`, `rodape_dividido` — o `.rodape` de 34px no fundo `--p`, que no fim do
 //!     cartão leva os cantos de baixo dele), [`pecas::cartao::espaco_entre_cards`].
 //!   - [`pecas::rotulos`]: `pill(ui, texto, TipoPill::{Neutra, Ok, No, Wait, Acc, Mute})` (`.pill`: 10px / 700
-//!     em caixa alta, 16px), `pill_clicavel`, `tag`, `tag_clicavel(ui, texto, TipoTag::{Ouro, Tracejada})` (`Ouro`
-//!     = `--acct` sobre `--tint`), `chip(ui, texto, mute)` (`.chip` de 24px), `pintar_chip_em`,
+//!     em caixa alta, 16px), `pill_clicavel`, `pintar_pill`, `pintar_pill_contorno` (só o contorno, sobre a
+//!     seleção), `tag`, `tag_clicavel(ui, texto, TipoTag::{Ouro, Tracejada})` (`Ouro` = `--acct` sobre `--tint`),
+//!     `chip(ui, texto, mute)` (`.chip` de 24px), `pintar_chip_em`,
 //!     [`pecas::rotulos::chip_filtro`]`(ui, &[(texto, forte)], rótulo do ×) -> RespostaChip { resposta, fechar }`
 //!     (a etiqueta de filtro com o × de 18px), `etiqueta_mais(ui, n, dica)` (o "+N" com a lista na dica).
 //!   - [`pecas::avisos`]: `aviso(ui, &[Trecho], perigo) -> RespostaTexto` (o `.aviso` âmbar ou o `.erro`

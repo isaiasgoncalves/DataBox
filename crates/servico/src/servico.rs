@@ -12,7 +12,7 @@ use banco::{
     ObjetosInfo, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, ResultadoManutencao, TipoObjeto,
 };
 use comum::{Chave, Codigo, Entrada, ErroBanco, Resultado};
-use prefs::{ComandoSql, Mudanca, MudancaExportacao, Preferencias, PrefsInfo, Tema};
+use prefs::{ComandoSql, Mudanca, MudancaExportacao, Preferencias, PrefsInfo, ResultadoSql, Tema};
 
 use crate::arquivos::{ComandoArquivo, comando_abrir, comando_revelar};
 use crate::caminhos::{self, arquivos_do_app, chave_destino, limpar_caminho};
@@ -539,14 +539,20 @@ impl Servico {
 
     // ---- consulta livre (§4.5) ---------------------------------------------------------------------
 
-    /// `POST /api/sql`: roda o roteiro comando a comando (para no primeiro erro). Sem erro, o texto entra no
-    /// histórico do banco.
+    /// `POST /api/sql`: roda o roteiro comando a comando (para no primeiro erro). Com ao menos um comando, o texto
+    /// entra no histórico do banco com o que deu, inclusive quando falhou ou foi interrompido (a consulta que
+    /// falhou é a que a pessoa mais quer recuperar).
     pub fn sql(&self, banco_id: &str, sql: &str, limite: usize) -> Resultado<ResultadoConsulta> {
         let banco = self.banco_aberto(banco_id)?;
         let resultado = banco.consultar(sql, limite)?;
-        let teve_erro = resultado.resultados.iter().any(|r| matches!(r, ResultadoComando::Erro { .. }));
-        if !teve_erro && !resultado.resultados.is_empty() {
-            self.prefs.registrar_sql(banco.caminho(), sql);
+        if let Some(ultimo) = resultado.resultados.last() {
+            let comandos = u32::try_from(resultado.resultados.len()).unwrap_or(u32::MAX);
+            self.prefs.registrar_sql(
+                banco.caminho(),
+                sql,
+                Some(resultado_do_historico(ultimo, comandos)),
+                Some(comandos),
+            );
         }
         Ok(resultado)
     }
@@ -583,6 +589,22 @@ impl Servico {
     pub fn historico(&self, banco_id: &str) -> Resultado<Vec<ComandoSql>> {
         let banco = self.banco_aberto(banco_id)?;
         Ok(self.prefs.historico_sql(banco.caminho()))
+    }
+}
+
+/// A pílula do Histórico: o que o último comando do roteiro deu (`numero`: a posição dele, do 1; o roteiro para no
+/// primeiro erro, que é sempre o último).
+fn resultado_do_historico(ultimo: &ResultadoComando, numero: u32) -> ResultadoSql {
+    match ultimo {
+        ResultadoComando::Linhas { linhas, truncado, .. } => {
+            ResultadoSql::Linhas { quantidade: linhas.len() as u64, mais: *truncado }
+        }
+        ResultadoComando::Alteracao { linhas_afetadas: Some(n), .. } => ResultadoSql::Alteradas(*n),
+        ResultadoComando::Alteracao { linhas_afetadas: None, .. } => ResultadoSql::Executado,
+        ResultadoComando::Erro { mensagem, .. } if mensagem == banco::MSG_INTERROMPIDA => {
+            ResultadoSql::Interrompida { numero }
+        }
+        ResultadoComando::Erro { mensagem, .. } => ResultadoSql::erro(numero, mensagem),
     }
 }
 

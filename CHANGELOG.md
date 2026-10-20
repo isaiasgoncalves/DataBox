@@ -5,6 +5,14 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- O Histórico de consultas guarda também as execuções que falharam ou foram interrompidas: a consulta que falhou é
+  justamente a que se quer recuperar. Cada item mostra, embaixo do SQL, uma pílula com o resultado ("9 linhas",
+  "3 alteradas", "Parou no 3", "Erro", "Interrompida") e o horário ("10:42", "ontem · 18:20"), com quantos comandos
+  rodaram quando o roteiro tem mais de um; a dica traz a mensagem do erro. No item selecionado, a pílula de erro
+  fica só no contorno. O `preferencias.json` da 0.1.x continua abrindo (os itens antigos ficam sem pílula).
+
 ## [0.1.2] - 2026-10-19
 
 ### Adicionado

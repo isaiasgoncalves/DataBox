@@ -273,7 +273,7 @@ mesmo `Mutex`, antes de soltar a conexão. `interromper_consulta_detalhado` devo
 
 O comando cortado volta como `ResultadoComando::Erro` com `MSG_INTERROMPIDA` ("A consulta foi interrompida.";
 `detalhe` com o erro do SQLite quando cortado no meio, `None` quando a marca chegou antes de ele começar), os
-seguintes não rodam e o roteiro não entra no histórico (tem erro). Os anteriores ficam como estão; um
+seguintes não rodam e o roteiro entra no histórico como interrompido (`ResultadoSql::Interrompida`). Os anteriores ficam como estão; um
 INSERT/UPDATE/DELETE cortado dentro de um BEGIN pode levar o SQLite a desfazer a transação inteira
 (`transacao_aberta` diz como ficou). Na tela, o Interromper é o verbo `Verbo::Interromper` da barra (o `.ib.risco`
 logo depois do Executar, no mesmo lugar em toda aba, ligado só com a Consulta executando) e o Esc.
@@ -398,7 +398,7 @@ grava ao fim do gesto da divisória.
 aberta → `Codigo::TransacaoAberta` (a não ser com `descartar_transacao`); destinos de arquivo conferidos (o
 próprio banco e `-journal/-wal/-shm`, os arquivos do app, `Codigo::DestinoExiste` sem `substituir`);
 `tabela()` junta `TabelaInfo` com `definicoes`/`restricoes` do esquema; `esquema(operacao, previa)`; `sql()`
-registra o histórico; `interromper_sql()` corta o `sql()` em andamento sem esperar a conexão (§4.3); `exportar(pedido, progresso: Option<Arc<Progresso>>)` com as fases `contando →
+registra o histórico, com o resultado (`ResultadoSql`), inclusive quando falhou; `interromper_sql()` corta o `sql()` em andamento sem esperar a conexão (§4.3); `exportar(pedido, progresso: Option<Arc<Progresso>>)` com as fases `contando →
 gravando → finalizando → concluida | cancelada | erro`, `Progresso::cancelar()` e leitura do andamento sem
 nunca esperar a trava do banco.
 
