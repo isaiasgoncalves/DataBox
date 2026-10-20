@@ -278,6 +278,8 @@ pub(crate) struct Pintor<'a> {
     /// As larguras do núcleo neste quadro e a altura do cabeçalho (para achar o canto do conteúdo).
     pub larguras: &'a [f32],
     pub altura_cabecalho: f32,
+    /// A coluna escolhida nas Propriedades, acesa na grade (`th.selcol` e `td.selcol`).
+    pub destacada: Option<&'a str>,
     // ---- saídas
     pub ordenar: Option<usize>,
     pub abrir: Option<usize>,
@@ -505,6 +507,12 @@ pub(crate) fn preparar_edicao(ctx: &egui::Context, ed: &Edicao, selecionar_tudo:
 }
 
 impl DesenhoGrade for Pintor<'_> {
+    /// A coluna escolhida nas Propriedades acende (o fundo `--sel` no `th` e o `--tint` nas células).
+    fn th_selecionada(&mut self, coluna: usize) -> bool {
+        let Some(nome) = self.destacada else { return false };
+        coluna.checked_sub(self.primeira).and_then(|dc| self.dados.colunas.get(dc)).is_some_and(|c| c.nome == nome)
+    }
+
     fn celula(&mut self, ui: &mut Ui, c: &CelulaVisivel) {
         if self.origem.is_none() {
             // o canto do conteúdo, desfeita a rolagem: a primeira célula visível diz onde ele está
@@ -626,6 +634,7 @@ impl DesenhoGrade for Pintor<'_> {
             clicavel: true,
             realce: r.hovered(),
             pastilha: Some(col.pastilha),
+            selecionada: self.destacada == Some(col.nome.as_str()),
             ..Th::new(&col.nome)
         };
         if let Some(rect_pastilha) = pintar_cabecalho_coluna(&pintor, self.p, h.conteudo, &th) {

@@ -28,6 +28,9 @@
 //!     erros de tarefa passam antes por `ctx.reagir` (substituída e banco trocado não aparecem).
 //! - Fora de vista, a casca chama o `ParteTabela::em_segundo_plano`: as gravações, a exclusão e as tarefas da ficha
 //!   que terminam com a aba escondida dão o toast e notam a transação na hora, sem esperar a aba voltar.
+//! - O Ctrl+Z e o Editar › Desfazer são o `Verbo::Desfazer` da casca. O toast da gravação de uma célula traz a ação
+//!   "Desfazer · Ctrl+Z" com a carga [`PREFIXO_ACAO_TOAST`]`…`: a casca a devolve ao documento (como a do CSV), que
+//!   a toma com `acao_do_toast` no quadro dele.
 //!
 //! # O que a aba faz (TELAS.md › Aba Dados)
 //!
@@ -63,6 +66,17 @@
 //!   (editar a PK e logo outra célula da mesma linha; a chave segue a linha, não a chave antiga); a releitura da página espera a fila. A resposta de uma gravação feita com Enter só
 //!   devolve o foco à célula se a pessoa não seguiu adiante (outra célula, outra edição). Uma gravação que falha
 //!   depois de a aba sumir avisa no toast ("O valor de X em Y não foi salvo: …").
+//! - Desfazer no banco (prancheta 15, revisão de UI de 19/10/2026; `desfazer.rs`): a gravação de uma célula avisa
+//!   no toast onde gravou, "Gravado em clientes (linha 3, email)", com "Desfazer · Ctrl+Z" por 6 s
+//!   ([`PRAZO_TOAST`]; com a aba fora de vista, o toast sem a ação). O verbo Desfazer da barra (Ctrl+Z, Editar ›
+//!   Desfazer) faz o mesmo enquanto não houver outra mudança, com a dica "Desfazer email da linha 3 (Ctrl+Z)":
+//!   grava o valor antigo com um UPDATE (`Servico::desfazer_celula`), só se a célula ainda tem o que a edição
+//!   gravou (senão 409, nada muda), e avisa "Edição desfeita em clientes (linha 3, email)"; a célula volta e pisca.
+//!   A última edição é uma só para o aplicativo (outra edição a troca) e atravessa a aba refeita; não há Refazer.
+//!   Excluir e incluir linhas, mudar a estrutura e uma transação da Consulta SQL que começou ou terminou depois
+//!   da edição deixam o Desfazer desligado, com o porquê na dica ([`DICA_EXCLUIR`], [`DICA_INCLUIR`],
+//!   [`DICA_ESTRUTURA`], [`DICA_TRANSACAO`]); salvar a linha pela ficha só tira a última edição. Visão e banco só
+//!   leitura não oferecem o Desfazer; dentro de uma transação aberta, o UPDATE entra nela, como a edição.
 //! - Rodapé (34px): "Linhas a–b de N" e "· N marcadas" · "N por página" (50/100/250/500, mais o da rota, 26px) · ‹
 //!   "Página X de Y" › (`.ib.pq`); a dica de página lenta numa linha de informação acima dele (o ícone Informação e
 //!   "Criar índice").
@@ -104,6 +118,7 @@
 #![forbid(unsafe_code)]
 
 mod aba;
+mod desfazer;
 mod grade;
 mod janela;
 mod modelo;
@@ -115,6 +130,10 @@ use std::sync::Arc;
 use banco::{Pagina, PedidoPagina};
 
 pub use aba::{AbaDados, Retrato};
+pub use desfazer::{
+    DICA_ESTRUTURA, DICA_EXCLUIR, DICA_INCLUIR, DICA_TRANSACAO, PRAZO_TOAST, PREFIXO_ACAO_TOAST, ROTULO_ACAO,
+    frase_desfeito, frase_gravado,
+};
 
 /// Gancho de teste sobre cada página lida (e o pedido dela).
 #[doc(hidden)]

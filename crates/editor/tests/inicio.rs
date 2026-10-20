@@ -65,7 +65,11 @@ fn conferir_a_prancheta(h: &H) {
                 .unwrap_or_else(|| panic!("o cartão {r}: {:?}", textos(h)))
         })
         .collect();
-    assert_eq!(cartoes[0].left(), doc.left() + 1.0 + 36.0, "{cartoes:?} {doc:?}");
+    // o conteúdo tem no máximo 960px e fica no meio do documento: sem o trilho (revisão de UI de 19/10/2026), o
+    // documento passa disso a 1440, e o primeiro cartão fica um pouco depois do recuo de 36
+    assert!(cartoes[0].left() >= doc.left() + 1.0 + 36.0, "{cartoes:?} {doc:?}");
+    let sobra_esquerda = cartoes[0].left() - doc.left();
+    assert!(sobra_esquerda <= 1.0 + 36.0 + (doc.width() - 960.0).max(0.0) / 2.0 + 0.5, "{cartoes:?} {doc:?}");
     assert!(cartoes.windows(2).all(|p| p[0].top() == p[1].top() && p[1].left() - p[0].right() == 12.0));
     // o caminho e a caixa
     assert!(existe(h, Role::TextInput, "Caminho da pasta ou do arquivo"));

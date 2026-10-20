@@ -2,12 +2,12 @@
 
 use std::sync::atomic::Ordering;
 
-use comum::{Chave, Entrada, ErroBanco, Resultado, Valor, q};
+use comum::{Celula, Chave, Entrada, ErroBanco, Resultado, Valor, q};
 use rusqlite::{Connection, params_from_iter};
 
 use crate::banco::Banco;
 use crate::dados::ler_valores;
-use crate::erros::{MSG_EXPORTANDO, MSG_SALVAR, MSG_SOMENTE_LEITURA, e_trava_sqlite, traduzir};
+use crate::erros::{MSG_CELULA_MUDOU, MSG_EXPORTANDO, MSG_SALVAR, MSG_SOMENTE_LEITURA, e_trava_sqlite, traduzir};
 use crate::meta::{MODULOS_GRAVAVEIS, Meta, coluna_por_nome, expr_identidade, montar_chave, onde_chave};
 use crate::tipos::{LinhaGravada, TipoChave, TipoObjeto};
 use crate::valores::{Coagido, coagir};
@@ -267,6 +267,53 @@ impl Banco {
                 None => Some(chave.clone()),
             };
             self.resposta_gravacao(conn, &meta, nova)
+        })
+    }
+
+    /// Desfaz a edição de uma célula (o Desfazer da grade, prancheta 15): grava `antigo` de volta em `coluna` com
+    /// um UPDATE, só se a célula ainda tem `gravado` (o valor relido depois da edição, cortado como a grade o lê,
+    /// em [`comum::LIMITE_TEXTO`]). A conferência e o UPDATE correm no mesmo SAVEPOINT, com a conexão presa.
+    ///
+    /// A célula mudou depois (outro comando, outro programa, uma transação desfeita) → 409 [`MSG_CELULA_MUDOU`] e
+    /// nada é gravado. Texto cortado e BLOB não voltam (400): a grade não os edita no lugar. O resto é como no
+    /// [`Banco::atualizar`] (só leitura → 403, linha que sumiu → 404; a chave pode mudar).
+    pub fn desfazer_celula(
+        &self,
+        nome: &str,
+        chave: &Chave,
+        coluna: &str,
+        gravado: &Celula,
+        antigo: &Celula,
+    ) -> Resultado<LinhaGravada> {
+        let entrada = match antigo {
+            Celula::Nulo => Entrada::Nulo,
+            Celula::Inteiro(i) => Entrada::Inteiro(*i),
+            Celula::Real(r) => Entrada::Real(*r),
+            Celula::Texto(s) => Entrada::TextoLiteral(s.clone()),
+            Celula::TextoCortado { .. } | Celula::Blob { .. } => {
+                return Err(ErroBanco::com_status(
+                    format!("O valor de antes de {coluna} não cabe na grade; use a ficha da linha para mudá-lo."),
+                    400,
+                ));
+            }
+        };
+        self.com_conexao(|conn| {
+            let meta = self.meta(conn, nome)?;
+            self.exigir_gravacao(&meta)?;
+            let i = meta
+                .visiveis
+                .iter()
+                .position(|c| c.nome == coluna)
+                .ok_or_else(|| ErroBanco::novo(format!("A coluna não existe em {}: {coluna}.", meta.nome)))?;
+            let erro = |e: rusqlite::Error| self.erro_gravacao(e, Some(MSG_SALVAR));
+            savepoint(conn, "editor_desfazer", erro, || {
+                let (_, celulas) =
+                    self.ler_linha(conn, &meta, chave, Some(comum::LIMITE_TEXTO))?.ok_or_else(Banco::linha_sumiu)?;
+                if celulas.get(i) != Some(gravado) {
+                    return Err(ErroBanco::com_status(MSG_CELULA_MUDOU, 409));
+                }
+                self.atualizar(nome, chave, &[(coluna.to_string(), entrada)])
+            })
         })
     }
 

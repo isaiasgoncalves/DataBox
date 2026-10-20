@@ -50,6 +50,9 @@
 //!       -> Resultado<Gravado<LinhaGravada>>
 //!   pub fn atualizar(&self, banco_id: &str, nome: &str, chave: &Chave, valores: &[(String, Entrada)])
 //!       -> Resultado<Gravado<LinhaGravada>>
+//!   pub fn desfazer_celula(&self, banco_id: &str, nome: &str, chave: &Chave, coluna: &str, gravado: &Celula,
+//!                          antigo: &Celula) -> Resultado<Gravado<LinhaGravada>>   o Desfazer da grade (409 se a
+//!       célula mudou depois da edição)
 //!   pub fn excluir(&self, banco_id: &str, nome: &str, chaves: &[Chave]) -> Resultado<Gravado<usize>>
 //!   pub fn salvar_blob(&self, banco_id: &str, nome: &str, chave: &Chave, coluna: &str, caminho: &Path,
 //!                      substituir: bool) -> Resultado<BlobSalvo>

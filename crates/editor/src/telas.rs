@@ -5,14 +5,16 @@ pub(crate) use tela_consulta::{TelaConsulta, resumo_comando};
 #[cfg(feature = "telas")]
 pub(crate) use tela_dados::AbaDados;
 #[cfg(feature = "telas")]
-pub(crate) use tela_esquema::{AbaDefinicao, AbaEstrutura, AbaIndices, JanelaNovaTabela, JanelaNovoIndice};
+pub(crate) use tela_esquema::{
+    AbaDefinicao, AbaEstrutura, AbaIndices, JanelaNovaTabela, JanelaNovoIndice, pode_editar,
+};
 #[cfg(feature = "telas")]
 pub(crate) use tela_exportar::JanelaExportar;
 
 #[cfg(not(feature = "telas"))]
 pub(crate) use crate::substitutos::{
     AbaDados, AbaDefinicao, AbaEstrutura, AbaIndices, JanelaExportar, JanelaNovaTabela, JanelaNovoIndice, TelaConsulta,
-    resumo_comando,
+    pode_editar, resumo_comando,
 };
 
 // a dica do Executar da Consulta SQL, para os testes conferirem a oferta

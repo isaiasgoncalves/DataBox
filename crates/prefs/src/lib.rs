@@ -14,6 +14,7 @@
 //!     pub fn exportacao(&self) -> OpcoesExportacao
 //!     pub fn aparencia(&self) -> Aparencia      // o padrão enquanto a pessoa não escolher
 //!     pub fn paineis(&self) -> LarguraPaineis   // as larguras dos painéis laterais; None = a padrão da casca
+//!     pub fn lugares(&self) -> LugaresPaineis   // onde mora cada painel; None = o padrão da casca
 //!     pub fn pasta_aberta(&self) -> Option<String>   // a pasta que estava aberta; None = nenhuma
 //!     pub fn ultimo_diretorio(&self) -> Option<String>
 //!     pub fn atualizar(&self, mudanca: Mudanca) -> Resultado<()>   // ErroBanco 400 com a frase
@@ -45,12 +46,15 @@
 //! pub const TAMANHO_CODIGO_PADRAO = 12.5, TAMANHO_CODIGO_MINIMO = 8.0, TAMANHO_CODIGO_MAXIMO = 24.0
 //! pub struct LarguraPaineis { explorador: Option<f32>, propriedades: Option<f32> }   // pontos inteiros; Default = None, None
 //! pub struct MudancaLarguraPaineis { explorador, propriedades }   // todos Option (None = não mexe)
+//! pub enum LugarPainel { Esquerda, Direita, Janela }
+//! pub struct LugaresPaineis { explorador, historico, propriedades }   // Option<LugarPainel>; None = o padrão / não mexe
 //! pub const LARGURA_PAINEL_MINIMA = 120.0, LARGURA_PAINEL_MAXIMA = 2000.0   // a sanidade do arquivo, não o limite da casca
 //! pub struct Mudanca { tema: Option<Tema>, exportacao: Option<MudancaExportacao>,
 //!     ultimo_diretorio: Option<Option<PathBuf>>,    // None = não mexe; Some(None) = apaga
-//!     aparencia: Option<MudancaAparencia>, paineis: Option<MudancaLarguraPaineis>,
+//!     aparencia: Option<MudancaAparencia>, paineis: Option<MudancaLarguraPaineis>, lugares: Option<LugaresPaineis>,
 //!     pasta_aberta: Option<Option<PathBuf>> }       // None = não mexe; Some(None) = apaga a chave
-//!     Mudanca::tema(t) / ::exportacao(m) / ::ultimo_diretorio(p) / ::aparencia(m) / ::paineis(m) / ::pasta_aberta(p)
+//!     Mudanca::tema(t) / ::exportacao(m) / ::ultimo_diretorio(p) / ::aparencia(m) / ::paineis(m) / ::lugares(l)
+//!     / ::pasta_aberta(p)
 //!     e Default
 //! pub enum TipoRecente { Banco, Pasta, Arquivo }  // como_str()/Display: "banco" | "pasta" | "arquivo"; Default = Banco
 //!     TipoRecente::TODOS; TipoRecente::de_texto(&str) -> Resultado<TipoRecente> (e FromStr):
@@ -129,7 +133,7 @@
 //!   `"tipo"` é banco, **exceto** se o caminho é uma pasta no disco: aí vale como pasta (um `"tipo": "banco"`
 //!   escrito é respeitado). [`Preferencias::recentes`] não devolve o recente com `"tipo"` de texto desconhecido,
 //!   ou que não é texto (de um DataBox mais novo): ele continua no arquivo e conta nos 15.
-//! - **A pasta aberta** fica na chave `"pasta_aberta"`, depois de `"larguras_paineis"`: o caminho em texto
+//! - **A pasta aberta** fica na chave `"pasta_aberta"`, depois de `"lugares_paineis"`: o caminho em texto
 //!   (`"pasta_aberta": "C:\\Projetos"`). Só existe enquanto há pasta aberta: [`Mudanca::pasta_aberta`] a grava ao
 //!   abrir e a apaga ao fechar. Valor que não é texto, ou texto vazio, conta como nenhuma pasta (e some na próxima
 //!   gravação).
@@ -139,6 +143,12 @@
 //!   ela, a casca usa as larguras padrão. Lida com valor estranho (que não é número, ou fora de 120 a 2000), a
 //!   largura volta à padrão; um `"larguras_paineis"` que não é objeto conta como não escolhido. As chaves dele que
 //!   esta versão não conhece também são guardadas.
+//! - **Onde mora cada painel** (revisão de UI de 19/10/2026: a doca da esquerda, a da direita ou uma janela própria)
+//!   fica na chave `"lugares_paineis"`, depois da `"larguras_paineis"`: `{"explorador": "esquerda", "historico":
+//!   "esquerda", "propriedades": "janela"}`. Cada um só existe depois que a pessoa o muda de lugar; a chave só é
+//!   gravada na primeira mudança com `lugares`. Valor que não é `"esquerda"`, `"direita"` ou `"janela"` volta ao
+//!   padrão da casca; um `"lugares_paineis"` que não é objeto conta como não escolhido; as chaves desconhecidas dele
+//!   são guardadas.
 //! - [`Preferencias::adicionar_recente_de`] leva as chaves desconhecidas do item que já estava lá com a mesma chave
 //!   de caminho, menos um `"tipo"` que contradiz o novo (o banco só mantém um `"tipo": "banco"` que já estava).
 
@@ -389,6 +399,44 @@ pub struct LarguraPaineis {
     pub propriedades: Option<f32>,
 }
 
+/// Onde mora um painel da casca (revisão de UI de 19/10/2026): numa das duas docas ou numa janela própria.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LugarPainel {
+    Esquerda,
+    Direita,
+    Janela,
+}
+
+impl LugarPainel {
+    /// O texto no arquivo.
+    pub fn como_str(self) -> &'static str {
+        match self {
+            LugarPainel::Esquerda => "esquerda",
+            LugarPainel::Direita => "direita",
+            LugarPainel::Janela => "janela",
+        }
+    }
+
+    /// O texto do arquivo; outro valor não é lugar.
+    pub fn reconhecer(texto: &str) -> Option<LugarPainel> {
+        match texto {
+            "esquerda" => Some(LugarPainel::Esquerda),
+            "direita" => Some(LugarPainel::Direita),
+            "janela" => Some(LugarPainel::Janela),
+            _ => None,
+        }
+    }
+}
+
+/// Onde a pessoa pôs cada painel (arrastando a aba dele ou pelo "Destacar em janela"); None = nunca mexeu, a casca
+/// usa o padrão (o Explorador e o Histórico à esquerda, as Propriedades à direita). Na mudança, None = não mexe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LugaresPaineis {
+    pub explorador: Option<LugarPainel>,
+    pub historico: Option<LugarPainel>,
+    pub propriedades: Option<LugarPainel>,
+}
+
 /// As larguras a mesclar nas guardadas; None = não mexe.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct MudancaLarguraPaineis {
@@ -429,6 +477,8 @@ pub struct Mudanca {
     pub aparencia: Option<MudancaAparencia>,
     /// Some grava a chave `"larguras_paineis"` (ver [`Preferencias::atualizar`]).
     pub paineis: Option<MudancaLarguraPaineis>,
+    /// Some grava a chave `"lugares_paineis"`, mesclada à guardada (ver [`Preferencias::atualizar`]).
+    pub lugares: Option<LugaresPaineis>,
     /// Some(Some(p)) grava a chave `"pasta_aberta"` (a pasta que acabou de abrir); Some(None) a apaga (o Fechar
     /// pasta); None não mexe.
     pub pasta_aberta: Option<Option<PathBuf>>,
@@ -441,6 +491,10 @@ impl Mudanca {
 
     pub fn paineis(paineis: MudancaLarguraPaineis) -> Mudanca {
         Mudanca { paineis: Some(paineis), ..Mudanca::default() }
+    }
+
+    pub fn lugares(lugares: LugaresPaineis) -> Mudanca {
+        Mudanca { lugares: Some(lugares), ..Mudanca::default() }
     }
 
     pub fn tema(tema: Tema) -> Mudanca {
@@ -751,7 +805,7 @@ impl Exportacao {
 type Extras = Vec<(String, Json)>;
 
 /// As chaves do arquivo que esta versão conhece; as outras ficam em [`Dados::extras`].
-const CHAVES_DO_ARQUIVO: [&str; 9] = [
+const CHAVES_DO_ARQUIVO: [&str; 10] = [
     "versao",
     "tema",
     "exportacao",
@@ -760,6 +814,7 @@ const CHAVES_DO_ARQUIVO: [&str; 9] = [
     "historico_sql",
     "aparencia",
     "larguras_paineis",
+    "lugares_paineis",
     "pasta_aberta",
 ];
 /// As chaves de cada recente que esta versão conhece; as outras ficam em [`RecenteGuardado::extras`].
@@ -768,6 +823,8 @@ const CHAVES_DO_RECENTE: [&str; 2] = ["caminho", "aberto_em"];
 const CHAVES_DA_APARENCIA: [&str; 3] = ["cores_codigo", "fonte_codigo", "tamanho_codigo"];
 /// As chaves dos `"larguras_paineis"` que esta versão conhece; as outras ficam em [`PaineisGuardados::extras`].
 const CHAVES_DOS_PAINEIS: [&str; 2] = ["explorador", "propriedades"];
+/// As chaves dos `"lugares_paineis"` que esta versão conhece; as outras ficam em [`LugaresGuardados::extras`].
+const CHAVES_DOS_LUGARES: [&str; 3] = ["explorador", "historico", "propriedades"];
 /// A chave com que o DataBox diz o que é cada recente; sem ela, é um banco (ou uma pasta, se o caminho é uma pasta
 /// no disco). Fica entre as chaves desconhecidas do item, logo depois de `"aberto_em"`.
 const CHAVE_TIPO: &str = "tipo";
@@ -881,6 +938,50 @@ impl PaineisGuardados {
     }
 }
 
+/// Os lugares escolhidos, com as chaves dos `"lugares_paineis"` que esta versão não conhece.
+#[derive(Debug, Clone, PartialEq)]
+struct LugaresGuardados {
+    lugares: LugaresPaineis,
+    extras: Extras,
+}
+
+impl LugaresGuardados {
+    fn aplicar(&mut self, m: &LugaresPaineis) {
+        let l = &mut self.lugares;
+        l.explorador = m.explorador.or(l.explorador);
+        l.historico = m.historico.or(l.historico);
+        l.propriedades = m.propriedades.or(l.propriedades);
+    }
+
+    /// Aproveita o que der do objeto lido; lugar estranho (que não é texto, ou não é um dos três) volta ao padrão.
+    fn de_json(objeto: &Json) -> LugaresGuardados {
+        let lugar = |chave: &str| objeto.campo(chave).and_then(Json::como_texto).and_then(LugarPainel::reconhecer);
+        LugaresGuardados {
+            lugares: LugaresPaineis {
+                explorador: lugar("explorador"),
+                historico: lugar("historico"),
+                propriedades: lugar("propriedades"),
+            },
+            extras: extras_de(objeto, &CHAVES_DOS_LUGARES, NIVEL_DOS_PAINEIS),
+        }
+    }
+
+    /// Só os lugares escolhidos entram.
+    fn para_json(&self) -> Json {
+        let l = &self.lugares;
+        let mut pares = Vec::new();
+        for (chave, lugar) in
+            [("explorador", l.explorador), ("historico", l.historico), ("propriedades", l.propriedades)]
+        {
+            if let Some(v) = lugar {
+                pares.push((chave.to_string(), Json::Texto(v.como_str().to_string())));
+            }
+        }
+        pares.extend(self.extras.iter().cloned());
+        Json::Objeto(pares)
+    }
+}
+
 /// Os pares de `objeto` fora de `conhecidas`, na ordem lida. Um valor que chega ao fundo que o leitor guarda
 /// ([`json::PROFUNDIDADE_GUARDADA`]) fica de fora: regravado, sairia cortado.
 fn extras_de(objeto: &Json, conhecidas: &[&str], nivel: usize) -> Extras {
@@ -942,6 +1043,8 @@ struct Dados {
     aparencia: Option<AparenciaGuardada>,
     /// None enquanto a pessoa não arrastar uma divisória: sem a chave no arquivo.
     paineis: Option<PaineisGuardados>,
+    /// None enquanto a pessoa não mudar um painel de lugar: sem a chave no arquivo.
+    lugares: Option<LugaresGuardados>,
     /// O caminho da pasta aberta; None enquanto não há pasta aberta (sem a chave no arquivo).
     pasta_aberta: Option<String>,
     /// As chaves do arquivo que esta versão não conhece (gravadas por uma versão mais nova).
@@ -963,6 +1066,7 @@ impl Dados {
             historico_sql: Vec::new(),
             aparencia: None,
             paineis: None,
+            lugares: None,
             pasta_aberta: None,
             extras: Extras::new(),
         }
@@ -1018,6 +1122,9 @@ impl Dados {
         }
         if let Some(paineis) = &self.paineis {
             pares.push(("larguras_paineis".to_string(), paineis.para_json()));
+        }
+        if let Some(lugares) = &self.lugares {
+            pares.push(("lugares_paineis".to_string(), lugares.para_json()));
         }
         if let Some(pasta) = &self.pasta_aberta {
             pares.push(("pasta_aberta".to_string(), Json::Texto(pasta.clone())));
@@ -1110,6 +1217,10 @@ fn sanear(bruto: &Json, max_bancos: usize) -> Result<Dados, String> {
     // idem os "larguras_paineis"
     if let Some(objeto @ Json::Objeto(_)) = bruto.campo("larguras_paineis") {
         dados.paineis = Some(PaineisGuardados::de_json(objeto));
+    }
+    // idem os "lugares_paineis"
+    if let Some(objeto @ Json::Objeto(_)) = bruto.campo("lugares_paineis") {
+        dados.lugares = Some(LugaresGuardados::de_json(objeto));
     }
     // uma "pasta_aberta" que não é texto, ou é vazia, conta como nenhuma pasta aberta
     if let Some(pasta) = bruto.campo("pasta_aberta").and_then(Json::como_texto)
@@ -1550,6 +1661,12 @@ impl Preferencias {
         self.dados_atuais(&mut est).paineis.as_ref().map(|p| p.larguras).unwrap_or_default()
     }
 
+    /// Onde a pessoa pôs cada painel; sem nenhum mudado, tudo None (a casca usa o padrão).
+    pub fn lugares(&self) -> LugaresPaineis {
+        let mut est = self.travar_estado();
+        self.dados_atuais(&mut est).lugares.as_ref().map(|l| l.lugares).unwrap_or_default()
+    }
+
     /// A pasta que estava aberta (o caminho como foi gravado); None se nenhuma. Não confere o disco: a pasta pode
     /// ter sumido (disco de rede fora), e quem a reabre é quem mostra o erro.
     pub fn pasta_aberta(&self) -> Option<String> {
@@ -1571,7 +1688,7 @@ impl Preferencias {
     /// aberta: `pasta_aberta: Some(Some(p))` a grava (o caminho absoluto, sem conferir o disco) e `Some(None)` a
     /// apaga; caminho vazio → ErroBanco 400 ("A pasta aberta precisa ser um caminho."), sem gravar nada.
     pub fn atualizar(&self, mudanca: Mudanca) -> Resultado<()> {
-        let Mudanca { tema, exportacao, ultimo_diretorio, aparencia, paineis, pasta_aberta } = mudanca;
+        let Mudanca { tema, exportacao, ultimo_diretorio, aparencia, paineis, lugares, pasta_aberta } = mudanca;
         if let Some(t) = aparencia.as_ref().and_then(|m| m.tamanho_codigo)
             && !tamanho_codigo_valido(f64::from(t))
         {
@@ -1649,6 +1766,15 @@ impl Preferencias {
                     .paineis
                     .get_or_insert_with(|| PaineisGuardados {
                         larguras: LarguraPaineis::default(),
+                        extras: Extras::new(),
+                    })
+                    .aplicar(m);
+            }
+            if let Some(m) = &lugares {
+                dados
+                    .lugares
+                    .get_or_insert_with(|| LugaresGuardados {
+                        lugares: LugaresPaineis::default(),
                         extras: Extras::new(),
                     })
                     .aplicar(m);

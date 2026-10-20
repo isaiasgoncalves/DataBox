@@ -1,6 +1,6 @@
 //! As regras de texto da Consulta SQL: nome citado para o SQL, resumo do
-//! comando no Histórico, nome sugerido para exportar, inserção no cursor e o trecho selecionado. As posições
-//! são em caracteres (as do `TextEdit` do egui).
+//! comando no Histórico, nome sugerido para exportar, sugestões da Consulta vazia, inserção no cursor e o trecho
+//! selecionado. As posições são em caracteres (as do `TextEdit` do egui).
 
 /// O `\w` do JavaScript (sem a bandeira `u`): letra ASCII, algarismo ou sublinhado.
 fn palavra(c: char) -> bool {
@@ -122,6 +122,25 @@ pub fn inserir_no_cursor(texto: &str, inicio: usize, fim: usize, nome: &str) -> 
     let cursor = s + usize::from(espaco) + nome.chars().count();
     novo.extend(&chars[e..]);
     (novo, cursor)
+}
+
+/// As sugestões da Consulta vazia (prancheta 15, "Para começar"), com a primeira tabela do banco citada para o SQL:
+/// ler as primeiras linhas, contar e ver as colunas. Sem tabela, a versão do SQLite e a primeira tabela por criar.
+pub(crate) fn sugestoes(primeira_tabela: Option<&str>) -> Vec<String> {
+    match primeira_tabela {
+        Some(nome) => {
+            let nome = interface::codigo::citar(nome);
+            vec![
+                format!("SELECT * FROM {nome} LIMIT 100"),
+                format!("SELECT count(*) FROM {nome}"),
+                format!("PRAGMA table_info({nome})"),
+            ]
+        }
+        None => vec![
+            "SELECT sqlite_version()".to_string(),
+            "CREATE TABLE notas (id INTEGER PRIMARY KEY, texto TEXT)".to_string(),
+        ],
+    }
 }
 
 /// O trecho selecionado (`inicio..fim` em caracteres, em qualquer ordem).
@@ -305,6 +324,18 @@ mod testes {
         // posições em caracteres, com acento antes
         assert_eq!(inserir_no_cursor("ação", 4, 4, "t"), ("ação t".into(), 6));
         assert_eq!(inserir_no_cursor("(", 1, 1, "t"), ("(t".into(), 2));
+    }
+
+    #[test]
+    fn sugestoes_da_consulta_vazia() {
+        // as da prancheta 15, com a primeira tabela
+        assert_eq!(
+            sugestoes(Some("clientes")),
+            ["SELECT * FROM clientes LIMIT 100", "SELECT count(*) FROM clientes", "PRAGMA table_info(clientes)"]
+        );
+        // o nome que precisa de aspas vai citado
+        assert_eq!(sugestoes(Some("itens pedido"))[1], "SELECT count(*) FROM \"itens pedido\"");
+        assert_eq!(sugestoes(None)[0], "SELECT sqlite_version()");
     }
 
     #[test]

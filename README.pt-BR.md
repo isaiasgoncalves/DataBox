@@ -152,11 +152,15 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 
 ### Em todo o programa
 
-- **Abas de documento:** cada coisa aberta fica numa aba ("clientes · Dados", "Consulta 1", "vendas.csv"…), com
+- **Abas de documento:** cada coisa aberta fica numa aba ("clientes", "Consulta 1", "vendas.csv"…), com
   **Voltar e Avançar** num histórico só, que atravessa as abas (Alt+← e Alt+→, ou os botões laterais do mouse).
-- **Janela própria:** barra de título com os menus Arquivo, Editar, Exibir e Ajuda; barra de ferramentas que é
-  sempre a mesma (cada aba liga só os botões que fazem sentido nela); Explorador e Histórico de consultas à esquerda;
-  Propriedades à direita; barra de status embaixo.
+- **Janela própria:** barra de título com os menus Arquivo, Editar, Exibir, Banco, Tabela e Ajuda; barra de
+  ferramentas que é sempre a mesma (cada aba liga só os botões que fazem sentido nela); Explorador e Histórico de
+  consultas numa doca à esquerda; Propriedades numa doca à direita; barra de status embaixo.
+- **Painéis em docas:** arraste a aba de um painel para a outra doca, ou para fora da janela para abrir o painel numa
+  janela própria (ou use "Destacar em janela"). O lugar de cada painel fica guardado.
+- **Tabelas numa aba só:** a aba mostra os dados; as colunas, os índices e o SQL de criação ficam nas Propriedades
+  (Alt+1 a Alt+4), e a coluna escolhida acende na grade.
 - **Painéis redimensionáveis:** arraste a divisória entre o painel e o documento; duplo clique volta à largura padrão.
   A largura fica guardada para a próxima vez.
 - **Vidro fosco** nos menus, nas listas e nas janelas, que ficam por cima do resto.
@@ -234,6 +238,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 | Ctrl+F | Buscar |
 | Ctrl+, | Preferências |
 | Ctrl+B / Ctrl+Alt+B | Mostrar ou esconder o Explorador / as Propriedades |
+| Alt+Home | Início |
+| Alt+1 a Alt+4 | Resumo, Colunas, Índices e SQL nas Propriedades da tabela |
 | Alt+← / Alt+→ | Voltar / Avançar |
 
 ---

@@ -49,7 +49,8 @@
 //!
 //! Também públicas: as regras de texto ([`resumo_comando`],
 //! [`nome_para_exportar`], [`inserir_no_cursor`]) e as constantes [`LIMITE`], [`MAX_SQL_NO_ENDERECO`],
-//! [`ALTURA_EDITOR`], [`ALTURA_MIN_EDITOR`], [`DICA_BUSCA`], [`DICA_EXECUTAR`], [`DICA_EXECUTANDO`] e [`DICA_INTERROMPER`]. Para os testes (`#[doc(hidden)]`):
+//! [`ALTURA_EDITOR`], [`ALTURA_MIN_EDITOR`], [`DICA_BUSCA`], [`DICA_EDITOR`], [`PARA_COMECAR`], [`NADA_EXECUTADO`],
+//! [`DICA_EXECUTAR`], [`DICA_EXECUTANDO`] e [`DICA_INTERROMPER`]. Para os testes (`#[doc(hidden)]`):
 //! [`TelaConsulta::id_editor`] e [`TelaConsulta::id_do_editor`], [`TelaConsulta::texto`],
 //! [`TelaConsulta::execucoes`] (quantas respostas já foram mostradas), [`TelaConsulta::area_editor`],
 //! [`TelaConsulta::tipos_dos_cards`], [`TelaConsulta::escolhido`], [`TelaConsulta::grade`] e
@@ -67,6 +68,13 @@
 //!   linha do cursor em `--selh` e, depois de um erro, as linhas do comando que falhou em `--perigo` a 9% e o
 //!   sublinhado ondulado no nome que a frase cita ("A tabela não existe: X.") quando ele aparece no comando (o melhor
 //!   esforço). As marcas somem quando o texto muda. Tab recua, Shift+Tab tira o recuo, depois de um Esc o Tab sai.
+//! - **Consulta vazia** (prancheta 15, revisão de UI de 19/10/2026): com o editor sem texto, por cima dele, a dica
+//!   [`DICA_EDITOR`] em itálico, na fonte da interface e em `--t3` (para não ser confundida com código), e, 14px
+//!   abaixo, o `.tit` "Para começar" e as sugestões (o `a.atalho` com a largura do texto, numa fileira que quebra):
+//!   "SELECT * FROM clientes LIMIT 100", "SELECT count(*) FROM clientes" e "PRAGMA table_info(clientes)", com a
+//!   primeira tabela do banco citada (sem tabelas, "SELECT sqlite_version()" e um CREATE TABLE). O clique insere o SQL
+//!   no editor, com o cursor no fim e o foco nele. O Executar da barra fica desligado até haver texto, e o rodapé diz
+//!   [`NADA_EXECUTADO`].
 //! - **Executando** (N3, prancheta 15): o Executar da barra fica desligado, com o arco girando no lugar do triângulo e
 //!   a dica "Executando"; o Interromper ao lado dele (`.ib.risco`, [`DICA_INTERROMPER`]), que tem o lugar dele na
 //!   barra em toda aba, liga e fica vermelho; o rodapé diz
@@ -81,7 +89,8 @@
 //!   seguintes não rodam. Dentro de um BEGIN, a faixa da transação segue a resposta (`transacao_aberta`): interromper
 //!   um SELECT não desfaz a transação. Só o roteiro do editor é interrompível; o COMMIT e o ROLLBACK não.
 //! - **Ctrl+Enter** executa (também com o foco fora do editor, desde que nenhuma janela esteja aberta); com
-//!   seleção, só o trecho selecionado. Texto vazio: toast "Escreva um comando para executar.".
+//!   seleção, só o trecho selecionado. Texto vazio (o Executar da barra já fica desligado): toast "Escreva um comando
+//!   para executar.".
 //! - O texto do editor vai para o endereço (`Acao::Substituir(Rota::Consulta{sql})`) 400 ms depois de parar de
 //!   digitar e na hora de executar; acima de 50.000 caracteres, o endereço fica sem o texto.
 //! - A execução roda em tarefa de fundo (`servico.sql(id, trecho, 1000)`), com o Executar da barra desligado. A
@@ -155,18 +164,19 @@ use egui::{
 };
 use estado::{Acao, Contexto, Promessa, Reacao, Rota};
 use interface::codigo::citar as citar_nome;
+use interface::fontes::{self, Peso};
 use interface::formato::{formatar_numero, formatar_segundos};
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::arranjo::em_linha;
 use interface::pecas::arvore::No;
 use interface::pecas::avisos::TomAviso;
 use interface::pecas::botao::Botao;
-use interface::pecas::campos::AreaTexto;
+use interface::pecas::campos::{AreaTexto, LARGURA_CALHA};
 use interface::pecas::documento::{ALTURA_FAIXA, Documento as DocumentoPeca};
 use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::navegacao::{ParteSeletor, seletor};
 use interface::pecas::painel::{Secao, ficha};
-use interface::pecas::texto::{Trecho, paragrafo, texto, texto_rico};
+use interface::pecas::texto::{Trecho, atalho_justo, galley_tit_em, paragrafo, texto, texto_rico};
 use interface::pecas::toast::{toast, toast_atencao, toast_erro};
 use interface::pintura::{self, Preenchimento};
 use interface::tema::paleta;
@@ -180,6 +190,13 @@ pub const DICA_BUSCA: &str = "Buscar no editor";
 /// A dica do Executar da barra de ferramentas (a seleção fica no editor: com texto selecionado, o botão também
 /// executa só o trecho).
 pub const DICA_EXECUTAR: &str = "Executar (Ctrl+Enter); com texto selecionado, executa só o trecho";
+/// A dica do editor vazio (Consulta vazia, prancheta 15): em itálico, na fonte da interface, para não ser confundida
+/// com código.
+pub const DICA_EDITOR: &str = "Escreva SQL aqui. Ctrl+Enter executa; vários comandos separados por ponto e vírgula.";
+/// O rodapé antes da primeira execução (em `--t3`).
+pub const NADA_EXECUTADO: &str = "Nada executado ainda";
+/// O título das sugestões do editor vazio (o `.tit` em caixa alta).
+pub const PARA_COMECAR: &str = "Para começar";
 /// A dica do Executar enquanto executa (N3), e a do Interromper que aparece ao lado dele.
 pub const DICA_EXECUTANDO: &str = "Executando";
 pub const DICA_INTERROMPER: &str = "Interromper o comando em execução (Esc)";
@@ -300,8 +317,8 @@ pub struct TelaConsulta {
     /// A transação aberta segundo a última resposta (antes dela, vale o `BancoInfo` do estado).
     transacao: Option<bool>,
     confirmacao: Option<Confirmacao>,
-    /// (primeira tabela, placeholder do editor), refeito só quando a primeira tabela muda.
-    placeholder: (Option<String>, String),
+    /// (primeira tabela, sugestões do editor vazio), refeito só quando a primeira tabela muda.
+    sugestoes: (Option<String>, Vec<String>),
     /// A posição do cursor na faixa ("Linha 4, coluna 1"), com o cursor e a versão do texto de onde saiu.
     posicao: Option<((usize, u64), (usize, usize))>,
     /// Quantos caracteres tem o texto, com a versão e o tamanho em bytes de onde saiu (contar é O(n): só quando o
@@ -337,7 +354,7 @@ impl TelaConsulta {
             execucoes: 0,
             transacao: None,
             confirmacao: None,
-            placeholder: (None, "SELECT sqlite_version();".to_string()),
+            sugestoes: (None, texto::sugestoes(None)),
             posicao: None,
             chars_do_texto: None,
             linha_do_cursor: None,
@@ -608,7 +625,7 @@ impl TelaConsulta {
     /// O editor plano no alto do documento, com as marcas do erro, a linha do cursor e o trecho achado.
     fn editor(&mut self, ui: &mut Ui, rect: Rect, agora: f64, ctx: &Contexto) {
         self.area_editor = rect;
-        self.atualizar_placeholder(ctx);
+        self.atualizar_sugestoes(ctx);
         let p = paleta(ui);
         let id = self.id_do_editor();
         let n = self.tamanho_do_texto();
@@ -628,7 +645,6 @@ impl TelaConsulta {
             .altura(rect.height())
             .largura(rect.width())
             .id_salt(chave_editor)
-            .dica(&self.placeholder.1)
             .marcar_linhas(linha_cursor..linha_cursor + 1, p.estudio.selh);
         if let Some(m) = &self.marcas {
             editor = editor.marcar_linhas(m.linhas.clone(), p.estudio.perigo.gamma_multiply(0.09));
@@ -647,6 +663,14 @@ impl TelaConsulta {
             self.edicao += 1;
             self.marcas = None;
             self.achado = None;
+        }
+        // a Consulta vazia: a dica e as sugestões por cima do editor (depois dele, para o clique ser delas)
+        if self.sql.is_empty()
+            && let Some(i) = consulta_vazia(ui, rect, self.chave("consulta::vazia"), &self.sugestoes.1)
+        {
+            let sql = self.sugestoes.1[i].clone();
+            let egui = ui.ctx().clone();
+            self.inserir(&egui, &sql);
         }
     }
 
@@ -685,17 +709,15 @@ impl TelaConsulta {
         seletor(&mut filho, (self.chave("consulta::seletor"), self.execucoes), "Resultados", &partes, ativo)
     }
 
-    fn atualizar_placeholder(&mut self, ctx: &Contexto) {
+    /// As sugestões do editor vazio, da primeira tabela do banco (refeitas só quando ela muda).
+    fn atualizar_sugestoes(&mut self, ctx: &Contexto) {
         let primeira = ctx.estado.objetos.as_ref().and_then(|o| o.tabelas.first()).map(|t| t.nome.as_str());
-        if self.placeholder.0.as_deref() != primeira {
-            self.placeholder = match primeira {
-                Some(nome) => (Some(nome.to_string()), format!("SELECT * FROM {} LIMIT 100", citar_nome(nome))),
-                None => (None, "SELECT sqlite_version();".to_string()),
-            };
+        if self.sugestoes.0.as_deref() != primeira {
+            self.sugestoes = (primeira.map(str::to_string), texto::sugestoes(primeira));
         }
     }
 
-    /// Insere o nome (já citado) no cursor do editor, com o foco de volta nele.
+    /// Insere o nome (já citado) ou a sugestão no cursor do editor, com o foco de volta nele.
     fn inserir(&mut self, ctx: &egui::Context, nome: &str) {
         let id = self.id_do_editor();
         let (s, e) = selecao(ctx, id, self.sql.chars().count());
@@ -1011,6 +1033,45 @@ fn faixa_de_erro(ui: &mut Ui, faixa: &resultados::FaixaErro<'_>) -> Rect {
     ui.allocate_rect(rect, Sense::hover()).rect
 }
 
+/// A Consulta vazia (prancheta 15): por cima do editor sem texto, onde o texto começaria (depois da calha, a 14px
+/// dela e a 10px do alto), a dica [`DICA_EDITOR`] em itálico 12px `--t3`, centrada na altura da linha 1 do código
+/// (a do número "1" da calha), e, 14px abaixo, o `.tit` "Para começar" (10,5px) e as sugestões em [`atalho_justo`]
+/// numa fileira que quebra (`gap:8px`). Devolve a sugestão clicada.
+fn consulta_vazia(ui: &mut Ui, rect: Rect, chave: Chave, sugestoes: &[String]) -> Option<usize> {
+    const RECUO: Vec2 = vec2(14.0, 10.0);
+    let t3 = paleta(ui).estudio.t3;
+    let area = Rect::from_min_max(
+        pos2(rect.left() + LARGURA_CALHA + RECUO.x, rect.top() + RECUO.y),
+        pos2(rect.right() - RECUO.x, rect.bottom()),
+    );
+    let mut filho = ui.new_child(UiBuilder::new().id_salt(chave).max_rect(area).layout(Layout::top_down(Align::Min)));
+    filho.set_clip_rect(rect.intersect(ui.clip_rect()));
+    filho.spacing_mut().item_spacing = vec2(8.0, 8.0);
+    let linha = interface::codigo::altura_linha(interface::codigo::fonte(ui.ctx()).size);
+    let g = filho.fonts_mut(|f| {
+        f.layout(DICA_EDITOR.to_string(), fontes::fonte(12.0, Peso::Italico), t3, area.width().max(1.0))
+    });
+    let (r, resp) = filho.allocate_exact_size(vec2(g.size().x, g.size().y.max(linha)), Sense::hover());
+    filho.painter().galley(pos2(r.left(), r.top() + ((linha - g.size().y) / 2.0).max(0.0)), g, t3);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, DICA_EDITOR));
+    // `gap:14px` entre a dica e o bloco das sugestões
+    filho.add_space(14.0 - 8.0);
+    let g = galley_tit_em(&filho, PARA_COMECAR, 10.5, t3);
+    let (r, resp) = filho.allocate_exact_size(g.size(), Sense::hover());
+    filho.painter().galley(r.min, g, t3);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, PARA_COMECAR));
+    let mut clicada = None;
+    filho.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
+        for (i, sql) in sugestoes.iter().enumerate() {
+            if atalho_justo(ui, sql).clicked() {
+                clicada = Some(i);
+            }
+        }
+    });
+    clicada
+}
+
 /// A seleção do editor `id` (em caracteres, em ordem); sem estado guardado, o cursor no fim.
 fn selecao(ctx: &egui::Context, id: Id, n: usize) -> (usize, usize) {
     TextEditState::load(ctx, id).and_then(|s| s.cursor.char_range()).map_or((n, n), |r| {
@@ -1106,7 +1167,8 @@ impl estado::Documento for TelaConsulta {
     }
 
     /// O que o resultado à vista diz: "8 linhas · 0,5 ms"; executando, "Executando · 1,4 s", contado ao vivo (o
-    /// quadro se renova a cada 250 ms só enquanto executa; com o arco do Executar girando, a cada ~33 ms).
+    /// quadro se renova a cada 250 ms só enquanto executa; com o arco do Executar girando, a cada ~33 ms); antes da
+    /// primeira execução, [`NADA_EXECUTADO`] em `--t3`.
     fn rodape(&mut self, ui: &mut Ui, _ctx: &mut Contexto) {
         let t2 = paleta(ui).estudio.t2;
         if let Some(e) = self.execucao.as_ref().filter(|e| e.pedido == Pedido::Executar) {
@@ -1116,6 +1178,8 @@ impl estado::Documento for TelaConsulta {
             ui.ctx().request_repaint_after(REPINTURA_EXECUTANDO);
         } else if let Some(texto_rodape) = self.cards.get(self.escolhido).and_then(Card::rodape) {
             texto(ui, &texto_rodape, 12.0, t2);
+        } else if self.cards.is_empty() && self.execucao.is_none() {
+            texto(ui, NADA_EXECUTADO, 12.0, paleta(ui).estudio.t3);
         }
     }
 
@@ -1124,7 +1188,9 @@ impl estado::Documento for TelaConsulta {
             // N3: desligado, com o arco girando no lugar do triângulo e a dica "Executando"
             estado::Oferta::default().ocupada_se(true).como_principal().com_dica(DICA_EXECUTANDO)
         } else {
-            estado::Oferta::ligada().ligada_se(!self.executando()).como_principal().com_dica(DICA_EXECUTAR)
+            // a Consulta vazia: desligado até haver texto (prancheta 15)
+            let com_texto = !self.sql.trim().is_empty();
+            estado::Oferta::ligada().ligada_se(!self.executando() && com_texto).como_principal().com_dica(DICA_EXECUTAR)
         };
         let interromper = if self.interrompivel() {
             estado::Oferta::ligada().com_dica(DICA_INTERROMPER)

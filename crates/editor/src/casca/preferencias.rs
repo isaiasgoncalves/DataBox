@@ -1,6 +1,7 @@
 //! A janela Preferências (prancheta 13, `Preferencias.dc.html`): Arquivo › Preferências (Ctrl+,), Exibir › Tema ›
 //! "Preferências de aparência" (direto na Aparência) e o botão do pé da barra de ícones. É uma janela global, como a
-//! Exportar: `.larga` (760px), o cabeçalho com a engrenagem de 20px, o corpo em grade 184 / 1fr (altura mínima de 432px)
+//! Exportar: `.larga` (760px), o cabeçalho com a engrenagem de 20px, o corpo em grade 184 / 1fr (altura fixa de 432px,
+//! revisão de UI de 19/10/2026: a janela não muda de tamanho entre as seções; a seção mais longa rola)
 //! e o rodapé com "Restaurar o padrão" à esquerda e Cancelar e Salvar à direita.
 //!
 //! **As seções** (a navegação à esquerda, nós de [`No::lateral`] com o sólido de 20px; o `selected` do AccessKit marca a
@@ -44,9 +45,10 @@ use interface::pintura::{self, RAIO_PADRAO};
 use interface::tema::{Tema, paleta, rgba};
 use prefs::{CoresCodigo, Mudanca, MudancaAparencia, MudancaExportacao, TAMANHO_CODIGO_PADRAO};
 
-/// A largura da navegação (`.pref-corpo{grid-template-columns:184px 1fr}`) e a altura mínima do corpo.
+/// A largura da navegação (`.pref-corpo{grid-template-columns:184px 1fr}`) e a altura do corpo, fixa (revisão de UI
+/// de 19/10/2026).
 pub(crate) const LARGURA_NAVEGACAO: f32 = 184.0;
-pub(crate) const ALTURA_MINIMA_CORPO: f32 = 432.0;
+pub(crate) const ALTURA_CORPO: f32 = 432.0;
 /// O respiro da seção (`.pref-sec{padding:16px 22px 18px}`).
 const RECUO_SECAO: f32 = 22.0;
 const TOPO_SECAO: f32 = 16.0;
@@ -278,6 +280,11 @@ pub(crate) struct JanelaPreferencias {
     limpar_historico: bool,
 }
 
+/// O rótulo da família padrão do código na lista: "Padrão do sistema (Consolas)".
+pub(crate) fn rotulo_da_familia_padrao() -> String {
+    format!("Padrão do sistema ({})", fontes::FAMILIA_MONO_PADRAO)
+}
+
 /// A lista de famílias: a padrão primeiro, depois as achadas e, por último, a em vigor se não estiver entre elas.
 fn lista_de_familias(achadas: &[String], em_vigor: Option<&String>) -> Vec<String> {
     let mut familias: Vec<String> = achadas.to_vec();
@@ -407,7 +414,7 @@ impl JanelaPreferencias {
 
     // ------------------------------------------------------------------ o corpo
 
-    /// A grade 184 / 1fr: a navegação (com o fio da direita) e a seção, com a altura de 432px no mínimo.
+    /// A grade 184 / 1fr: a navegação (com o fio da direita) e a seção, na altura fixa de 432px (a seção rola).
     fn corpo(&mut self, ui: &mut Ui, estado: &Estado) {
         let e = paleta(ui).estudio;
         let topo = ui.cursor().min;
@@ -427,28 +434,37 @@ impl JanelaPreferencias {
         }
         nav.add_space(12.0);
 
-        // a seção: `padding:16px 22px 18px`
+        // a seção: `padding:16px 22px 18px`, numa rolagem na altura fixa do corpo
         let x = topo.x + LARGURA_NAVEGACAO;
-        let rect_secao = Rect::from_min_size(
-            pos2(x + RECUO_SECAO, topo.y + TOPO_SECAO),
-            vec2((largura - LARGURA_NAVEGACAO - 2.0 * RECUO_SECAO).max(80.0), f32::INFINITY),
-        );
-        let mut secao = ui.new_child(
-            UiBuilder::new()
-                .id_salt(id.with(("secao", self.secao)))
-                .max_rect(rect_secao)
-                .layout(Layout::top_down(Align::Min)),
-        );
-        secao.spacing_mut().item_spacing = vec2(8.0, 0.0);
-        match self.secao {
-            Secao::Geral => self.secao_geral(&mut secao, estado),
-            Secao::Aparencia => self.secao_aparencia(&mut secao),
-            Secao::ConsultaSql => self.secao_consulta(&mut secao),
-            Secao::Exportacao => self.secao_exportacao(&mut secao),
-        }
-        secao.add_space(18.0);
+        let area = Rect::from_min_max(pos2(x, topo.y), pos2(topo.x + largura, topo.y + ALTURA_CORPO));
+        let mut ui_area =
+            ui.new_child(UiBuilder::new().id_salt(id.with("area")).max_rect(area).layout(Layout::top_down(Align::Min)));
+        ui_area.set_clip_rect(area.intersect(ui.clip_rect()));
+        egui::ScrollArea::vertical()
+            .id_salt(id.with(("rolagem", self.secao)))
+            .auto_shrink([false, false])
+            .max_height(ALTURA_CORPO)
+            .show(&mut ui_area, |ui| {
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin {
+                        left: RECUO_SECAO as i8,
+                        right: RECUO_SECAO as i8,
+                        top: TOPO_SECAO as i8,
+                        bottom: 18,
+                    })
+                    .show(ui, |secao| {
+                        secao.set_width((area.width() - 2.0 * RECUO_SECAO).max(80.0));
+                        secao.spacing_mut().item_spacing = vec2(8.0, 0.0);
+                        match self.secao {
+                            Secao::Geral => self.secao_geral(secao, estado),
+                            Secao::Aparencia => self.secao_aparencia(secao),
+                            Secao::ConsultaSql => self.secao_consulta(secao),
+                            Secao::Exportacao => self.secao_exportacao(secao),
+                        }
+                    });
+            });
 
-        let altura = ALTURA_MINIMA_CORPO.max(nav.min_rect().height()).max(secao.min_rect().bottom() - topo.y);
+        let altura = ALTURA_CORPO.max(nav.min_rect().height());
         let corpo = Rect::from_min_size(topo, vec2(largura, altura));
         // `.pref-nav{border-right:1px solid var(--vidrob)}`
         ui.painter().vline(x - 0.5, corpo.y_range(), Stroke::new(1.0, e.vidrob));
@@ -548,7 +564,10 @@ impl JanelaPreferencias {
 
         // a fonte do código: a família e o tamanho
         let nomes = &self.familias;
-        let opcoes_familia: Vec<(usize, &str)> = nomes.iter().map(String::as_str).enumerate().collect();
+        // a padrão (a primeira) diz que é a do sistema (revisão de UI de 19/10/2026): "Padrão do sistema (Consolas)"
+        let padrao = rotulo_da_familia_padrao();
+        let opcoes_familia: Vec<(usize, &str)> =
+            nomes.iter().enumerate().map(|(i, n)| (i, if i == 0 { padrao.as_str() } else { n.as_str() })).collect();
         let mut familia = nomes.iter().position(|n| Some(n.as_str()) == atual.familia.as_deref()).unwrap_or(0);
         let rotulos_tamanho = rotulos_dos_tamanhos(atual.tamanho);
         let opcoes_tamanho: Vec<(f32, &str)> = rotulos_tamanho.iter().map(|(v, r)| (*v, r.as_str())).collect();

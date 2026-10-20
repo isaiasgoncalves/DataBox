@@ -140,6 +140,7 @@ fn executar(args: &Argumentos) -> ExitCode {
     let tema = tema_da_interface(prefs.tema());
     let aparencia = prefs.aparencia();
     let paineis = prefs.paineis();
+    let lugares = prefs.lugares();
     let servico = Arc::new(servico::Servico::novo(prefs));
     let servico_ao_sair = Arc::clone(&servico);
     let reduzido = movimento_reduzido_do_windows();
@@ -163,12 +164,13 @@ fn executar(args: &Argumentos) -> ExitCode {
             // manda o `ViewportCommand::SetTheme` (Sistema → o do Windows, Claro, Escuro)
             cc.egui_ctx.options_mut(|o| o.sync_window_theme = true);
             // o renderizador que abriu a janela, para a janela "Sobre o DataBox"
-            // e as larguras do Explorador e das Propriedades que a pessoa deixou (as divisórias)
+            // e as larguras das docas que a pessoa deixou (as divisórias) e onde ela pôs cada painel
             Ok(Box::new(
                 Editor::novo(servico, tema, partida)
                     .com_barra_propria(BARRA_PROPRIA)
                     .com_renderizador(renderizador)
-                    .com_larguras(paineis),
+                    .com_larguras(paineis)
+                    .com_lugares(lugares),
             ))
         }),
     );

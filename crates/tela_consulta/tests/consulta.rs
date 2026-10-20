@@ -297,8 +297,8 @@ fn tela_tem_faixa_editor_e_tabelas() {
     for nome in ["clientes", "\"Tabela com espaço\"", "v_pedidos_por_cliente"] {
         assert!(h.query_by_role_and_label(Role::Link, &format!("Inserir {nome} no comando")).is_some(), "{nome}");
     }
-    // a barra: o Executar principal e a busca; sem resultado, o Exportar fica desligado (fora do palco)
-    assert!(h.query_by_role_and_label(Role::Button, "Executar").is_some());
+    // a barra: a busca; com o editor vazio, o Executar fica desligado, e sem resultado, o Exportar (fora do palco)
+    assert!(h.query_by_role_and_label(Role::Button, "Executar").is_none());
     assert!(h.query_by_label("Buscar no editor").is_some());
     assert!(h.query_by_role_and_label(Role::Button, "Exportar").is_none());
     // o foco nasce no editor, que encosta na faixa e tem 232px
@@ -539,16 +539,66 @@ fn exportar_o_resultado_do_comando_selecionado() {
 fn texto_vazio_avisa_no_toast() {
     let amb = Ambiente::exemplo("consulta_vazio");
     let mut h = abrir(&amb, None, Tema::Claro);
-    h.get_by_role_and_label(Role::Button, "Executar").click();
+    // a Consulta vazia (prancheta 15): o Executar da barra fica desligado até haver texto (fora do palco); o
+    // Ctrl+Enter avisa
+    assert!(h.query_by_role_and_label(Role::Button, "Executar").is_none());
+    assert!(!tela(&h).ofertas(&h.state().estado).ligado(estado::Verbo::Executar));
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Enter);
     h.run_steps(2);
     assert_eq!(interface::pecas::toast::toast_atual(&h.ctx).as_deref(), Some("Escreva um comando para executar."));
     assert_eq!(execucoes(&h), 0);
+    // só espaços: ainda desligado
+    escrever(&mut h, "   ");
+    assert!(!tela(&h).ofertas(&h.state().estado).ligado(estado::Verbo::Executar));
     // só comentários: o servidor não acha comando (um aviso só, sem o seletor)
     executar(&mut h, Some("-- nada aqui"), false);
     assert!(
         h.query_by_label("Não havia comando para executar: o texto só tem comentários ou ponto e vírgula.").is_some()
     );
     assert_eq!(h.query_all_by_role(Role::Tab).count(), 0);
+}
+
+/// A Consulta vazia (prancheta 15): a dica em itálico e as sugestões "Para começar" com a primeira tabela; o clique
+/// numa sugestão põe o SQL no editor (a dica e as sugestões somem) e liga o Executar.
+#[test]
+fn consulta_vazia_tem_a_dica_e_sugestoes_que_inserem_sql() {
+    let amb = Ambiente::exemplo("consulta_vazia");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    assert!(h.query_by_label(tela_consulta::DICA_EDITOR).is_some());
+    assert!(h.query_by_label(tela_consulta::PARA_COMECAR).is_some());
+    assert!(h.query_by_label(tela_consulta::NADA_EXECUTADO).is_some(), "o rodapé antes da primeira execução");
+    let sugestoes =
+        ["SELECT * FROM clientes LIMIT 100", "SELECT count(*) FROM clientes", "PRAGMA table_info(clientes)"];
+    for s in sugestoes {
+        assert!(h.query_by_role_and_label(Role::Link, s).is_some(), "{s}");
+    }
+    // as sugestões ficam no editor, na fileira de baixo da dica, depois da calha
+    let editor = tela(&h).area_editor();
+    let primeira = h.get_by_role_and_label(Role::Link, sugestoes[0]).rect();
+    assert!(editor.contains_rect(primeira), "{primeira:?} fora de {editor:?}");
+    assert!(primeira.left() >= editor.left() + 46.0 + 14.0 - 0.5);
+    // o clique insere o SQL, com o cursor no fim e o foco no editor
+    h.get_by_role_and_label(Role::Link, sugestoes[1]).click();
+    h.run_steps(3);
+    assert_eq!(tela(&h).texto(), sugestoes[1]);
+    assert!(h.query_by_label(tela_consulta::DICA_EDITOR).is_none());
+    assert!(h.query_by_role_and_label(Role::Link, sugestoes[0]).is_none());
+    assert!(h.ctx.memory(|m| m.has_focus(tela(&h).id_do_editor())));
+    assert!(h.query_by_label(&format!("Linha 1, coluna {}", sugestoes[1].len() + 1)).is_some());
+    assert!(tela(&h).ofertas(&h.state().estado).ligado(estado::Verbo::Executar));
+    // e executa como qualquer texto
+    executar(&mut h, None, true);
+    assert_eq!(tela(&h).tipos_dos_cards(), ["linhas"]);
+    assert!(h.query_by_label(tela_consulta::NADA_EXECUTADO).is_none());
+}
+
+#[test]
+fn capturas_da_consulta_vazia() {
+    for (tema, nome) in [(Tema::Escuro, "escuro"), (Tema::Claro, "claro")] {
+        let amb = Ambiente::exemplo(&format!("consulta_vazia_captura_{nome}"));
+        let mut h = abrir(&amb, None, tema);
+        capturar_sem_hover(&mut h, &format!("consulta-vazia-{nome}.png"));
+    }
 }
 
 // ------------------------------------------------------------------ atalhos, seleção, endereço, busca

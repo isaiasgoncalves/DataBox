@@ -22,6 +22,9 @@ pub const MSG_SUBSTITUIDA: &str = "Leitura substituída por outra mais nova.";
 /// Mensagem do comando da Consulta SQL cortado pelo `interromper_consulta` .
 pub const MSG_INTERROMPIDA: &str = "A consulta foi interrompida.";
 
+/// Mensagem do erro 409 do [`crate::Banco::desfazer_celula`]: a célula já não tem o valor que a edição gravou.
+pub const MSG_CELULA_MUDOU: &str = "A célula mudou depois da edição; o valor de antes não foi gravado de volta.";
+
 pub(crate) fn msg_transacao(acao: &str) -> String {
     format!(
         "Há uma transação aberta na Consulta SQL; grave (COMMIT) ou descarte (ROLLBACK) antes de {acao}. \

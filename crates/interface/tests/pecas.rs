@@ -229,6 +229,27 @@ fn atalho_de_sql_e_um_link_da_largura_toda() {
 }
 
 #[test]
+fn atalho_justo_tem_a_largura_do_texto() {
+    use interface::pecas::texto::{atalho, atalho_justo};
+    let mut h = harness((None::<egui::Rect>, None::<egui::Rect>), |ui, s| {
+        ui.set_width(600.0);
+        s.0 = Some(atalho_justo(ui, "SELECT count(*) FROM clientes").rect);
+        s.1 = Some(atalho(ui, "SELECT count(*) FROM clientes").rect);
+    });
+    h.run_steps(1);
+    let (justo, cheio) = (h.state().0.unwrap(), h.state().1.unwrap());
+    // a mesma altura; a largura do texto com o `padding:0 10px` e a borda, bem menos que a da linha
+    assert_eq!(justo.height(), cheio.height());
+    assert!(justo.width() < 300.0 && justo.width() > 150.0, "{justo:?}");
+    assert!(cheio.width() >= 599.0, "{cheio:?}");
+    assert_eq!(
+        h.query_all_by_role_and_label(Role::Link, "SELECT count(*) FROM clientes").count(),
+        2,
+        "os dois são links"
+    );
+}
+
+#[test]
 fn cabecalho_com_a_pastilha_antes_do_nome() {
     use interface::grade::{LARGURA_PASTILHA_TH, Th, largura_cabecalho, pintar_cabecalho_coluna};
     use interface::icones::TipoColuna;
@@ -1113,6 +1134,29 @@ fn toast_com_acao_tem_o_botao_dentro_e_devolve_a_carga_uma_vez() {
     assert_eq!(acao_do_toast(&h.ctx).as_deref(), Some(caminho));
     assert!(acao_do_toast(&h.ctx).is_none(), "a chamada consome");
     assert!(toast_atual(&h.ctx).is_none(), "cumprida a ação, o toast sai");
+}
+
+/// O toast com ação por outro prazo (o "Desfazer · Ctrl+Z" da gravação no banco, 6 s na prancheta 15): à vista
+/// até o prazo e fora depois da saída.
+#[test]
+fn toast_com_acao_por_um_prazo() {
+    use interface::pecas::toast::{AcaoToast, rotulo_da_acao_do_toast, toast_concluido_com_acao_por};
+    let mut h = harness((), |ui, _| desenhar_toast(ui.ctx(), f32::INFINITY));
+    h.input_mut().time = Some(0.0);
+    h.step();
+    toast_concluido_com_acao_por(
+        &h.ctx,
+        "Gravado em clientes (linha 3, email)",
+        AcaoToast { rotulo: "Desfazer · Ctrl+Z".into(), carga: "desfazer".into() },
+        6.0,
+    );
+    h.input_mut().time = Some(5.9);
+    h.step();
+    assert_eq!(rotulo_da_acao_do_toast(&h.ctx).as_deref(), Some("Desfazer · Ctrl+Z"));
+    h.input_mut().time = Some(6.5);
+    h.step();
+    assert!(toast_atual(&h.ctx).is_none(), "passado o prazo e a saída, o toast some");
+    h.input_mut().time = None;
 }
 
 #[test]
@@ -2913,12 +2957,13 @@ fn faixa_de_abas_encolhe_os_nomes_e_rola_ate_a_ativa() {
     let mut h = harness(EstadoAbas { largura: 500.0, ..Default::default() }, abas_de_teste);
     h.run_steps(1);
     let fim = |h: &Harness<'_, EstadoAbas>| h.get(by().role(Role::Tab).label("Consulta 1")).rect().right();
-    let x_faixa = h.get(by().role(Role::Tab).label("exemplo.db · Visão geral")).rect().left() - 10.0;
+    // a primeira aba encosta na quina (`padding-left:0`, revisão de UI de 19/10/2026); à direita, os 10px e o "+"
+    let x_faixa = h.get(by().role(Role::Tab).label("exemplo.db · Visão geral")).rect().left();
     assert!(fim(&h) <= x_faixa + 500.0 - 10.0 - 32.0 + 0.5, "{}", fim(&h));
     // 260px: nem encolhidas elas cabem; a faixa rola e a ativa (a última) fica à vista
     let mut h = harness(EstadoAbas { largura: 260.0, ativa: 2, ..Default::default() }, abas_de_teste);
     h.run_steps(2);
-    let area = egui::Rangef::new(x_faixa + 10.0, x_faixa + 260.0 - 10.0 - 32.0);
+    let area = egui::Rangef::new(x_faixa, x_faixa + 260.0 - 10.0 - 32.0);
     let ultima = h.get(by().role(Role::Tab).label("Consulta 1")).rect();
     assert!(ultima.left() >= area.min - 0.5 && ultima.right() <= area.max + 0.5, "{ultima:?} {area:?}");
     let primeira = h.query(by().role(Role::Tab).label("exemplo.db · Visão geral"));

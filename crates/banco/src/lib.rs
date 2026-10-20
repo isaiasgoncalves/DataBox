@@ -30,6 +30,9 @@
 //!   ler_blob(nome, &Chave, coluna) -> Resultado<Option<Vec<u8>>>   BLOB como está; NULL → None; resto em UTF-8
 //!   inserir(nome, &[(String, Entrada)]) -> Resultado<LinhaGravada>
 //!   atualizar(nome, &Chave, &[(String, Entrada)]) -> Resultado<LinhaGravada>   a chave pode mudar (PK editada)
+//!   desfazer_celula(nome, &Chave, coluna, gravado: &Celula, antigo: &Celula) -> Resultado<LinhaGravada>
+//!                                                       o Desfazer da grade: grava `antigo` só se a célula ainda
+//!                                                       tem `gravado` (senão 409 MSG_CELULA_MUDOU)
 //!   excluir(nome, &[Chave]) -> Resultado<usize>         tudo ou nada
 //!   consultar(sql, limite: usize) -> Resultado<ResultadoConsulta>   comando a comando, para no primeiro erro
 //!   interromper_consulta() -> bool                      corta o `consultar` em andamento ou que espera a vez;
@@ -54,7 +57,7 @@
 //! FiltroExportacao { busca, filtros, ordem, direcao, chaves: Option<Vec<Chave>> }  (Default)
 //! AcaoManutencao::{Integridade, Chaves, Vacuum, Otimizar, Analisar} · TODAS · como_str() · de_texto
 //! Parar = dyn Fn() -> bool + Send + Sync          verdadeiro interrompe a leitura da exportação no SQLite
-//! MSG_SUBSTITUIDA · MSG_INTERROMPIDA ("A consulta foi interrompida.")
+//! MSG_SUBSTITUIDA · MSG_INTERROMPIDA ("A consulta foi interrompida.") · MSG_CELULA_MUDOU
 //! ESPERA_GRAVACAO_MS (5000) · ESPERA_LEITURA_MS (1500) · ESPERA_APOS_TRAVA_MS (100)
 //! ESPERA_COPIA_MS (5000) · LIMITE_CONTAGEM_BYTES (256 MB) · LIMITE_TEMP_MEMORIA (1 GB) · LIMITE_TEXTO (300)
 //! ```
@@ -144,7 +147,7 @@ pub use banco::{
 };
 pub use busca::{Filtro, Operador};
 pub use consulta::Interrupcao;
-pub use erros::{MSG_INTERROMPIDA, MSG_SUBSTITUIDA};
+pub use erros::{MSG_CELULA_MUDOU, MSG_INTERROMPIDA, MSG_SUBSTITUIDA};
 pub use exportacao::{FiltroExportacao, LinhasExportacao, Parar};
 pub use manutencao::{AcaoManutencao, CopiaFeita, ResultadoManutencao};
 pub use sql::dividir_comandos;

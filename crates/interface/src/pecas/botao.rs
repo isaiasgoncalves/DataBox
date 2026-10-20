@@ -104,6 +104,13 @@ enum Tamanho {
 
 /// Lado da silhueta antes do texto (`.btn .sil{width:14px}`).
 const LADO_ICONE_TEXTO: f32 = 14.0;
+/// A altura da etiqueta `.kbd` (`line-height:16px` e a borda de 1px).
+const ALTURA_KBD: f32 = 18.0;
+
+/// A largura da etiqueta `.kbd` com `texto` (`padding:0 4px` e a borda de 1px).
+fn largura_kbd(ui: &Ui, texto: &str) -> f32 {
+    (galley(ui, texto, fontes::fonte(10.5, Peso::Normal), Color32::PLACEHOLDER).size().x + 2.0 * 4.0 + 2.0).ceil()
+}
 
 /// Um botão. Use com `ui.add(Botao::primario("Salvar"))`.
 #[must_use = "use ui.add(botao)"]
@@ -114,6 +121,8 @@ pub struct Botao<'a> {
     icone_texto: Option<Icone>,
     /// O `.btn.lista` ([`Botao::lista`]).
     lista: bool,
+    /// A etiqueta `.kbd` depois do texto ([`Botao::tecla`]).
+    tecla: Option<&'a str>,
     tipo: TipoBotao,
     redondo: bool,
     tamanho: Tamanho,
@@ -138,6 +147,7 @@ impl<'a> Botao<'a> {
             icone: None,
             icone_texto: None,
             lista: false,
+            tecla: None,
             tipo: TipoBotao::Normal,
             redondo: false,
             tamanho: Tamanho::Normal,
@@ -166,6 +176,13 @@ impl<'a> Botao<'a> {
     /// [`Botao::lista`].
     pub fn com_icone(mut self, icone: Icone) -> Self {
         self.icone_texto = Some(icone);
+        self
+    }
+
+    /// O atalho numa etiqueta `.kbd` depois do texto, com `gap:6px` (os botões "Painéis" do Início: "Explorador
+    /// Ctrl+B"): 10,5px em `--t3`, a borda `--b2` de 1px, raio 4 e `padding:0 4px`. O leitor de tela ouve só o texto.
+    pub fn tecla(mut self, tecla: &'a str) -> Self {
+        self.tecla = Some(tecla);
         self
     }
 
@@ -705,6 +722,7 @@ struct Quadro<'t> {
     icone: Option<Icone>,
     icone_texto: Option<Icone>,
     lista: bool,
+    tecla: Option<&'t str>,
     tipo: TipoBotao,
     redondo: bool,
     tamanho: Tamanho,
@@ -783,10 +801,11 @@ fn pintar(ui: &Ui, rect: Rect, q: &Quadro<'_>) {
         } else {
             galley(ui, q.texto, fonte, cor)
         };
+        let largura_tecla = q.tecla.map_or(0.0, |t| GAP + largura_kbd(ui, t));
         let x = if q.lista {
             rect.left() + 1.0 + PADDING
         } else {
-            rect.center().x - (g.size().x + largura_ponto + largura_icone) / 2.0
+            rect.center().x - (g.size().x + largura_ponto + largura_icone + largura_tecla) / 2.0
         };
         if q.ocupado && q.arco {
             let caixa = Rect::from_min_size(
@@ -811,7 +830,18 @@ fn pintar(ui: &Ui, rect: Rect, q: &Quadro<'_>) {
             );
             icones::pintar(&painter, caixa, icone, cor_icone);
         }
+        let fim_do_texto = x + largura_ponto + largura_icone + g.size().x;
         painter.galley(pos2(x + largura_ponto + largura_icone, rect.center().y - g.size().y / 2.0), g, cor);
+        if let Some(t) = q.tecla {
+            // `.kbd{font-size:10.5px;color:--t3;border:1px solid --b2;border-radius:4px;padding:0 4px;line-height:16px}`
+            let gk = galley(ui, t, fontes::fonte(10.5, Peso::Normal), p.estudio.t3);
+            let caixa = Rect::from_min_size(
+                pos2(fim_do_texto + GAP, rect.center().y - ALTURA_KBD / 2.0),
+                vec2(largura_kbd(ui, t), ALTURA_KBD),
+            );
+            painter.rect_stroke(caixa, 4.0, Stroke::new(1.0, p.estudio.b2), StrokeKind::Inside);
+            painter.galley(caixa.center() - gk.size() / 2.0, gk, p.estudio.t3);
+        }
     }
     if q.foco {
         pintura::anel_foco(&fora, p, rect, f32::INFINITY);
@@ -837,6 +867,7 @@ pub fn pintar_botao(
         icone: None,
         icone_texto: None,
         lista: false,
+        tecla: None,
         tipo,
         redondo,
         tamanho: Tamanho::Normal,
@@ -876,8 +907,11 @@ impl Widget for Botao<'_> {
             let altura = if self.tamanho == Tamanho::Pequeno { ALTURA_PEQUENO } else { altura_atual(ui) };
             let largura_ponto = largura_do_ocupado(self.ocupado, self.arco);
             let largura_icone = if self.icone_texto.is_some() { LADO_ICONE_TEXTO + GAP } else { 0.0 };
+            let largura_tecla = self.tecla.map_or(0.0, |t| GAP + largura_kbd(ui, t));
             // `padding:0 15px` + a borda de 1px dos dois lados; a lista ocupa a largura toda
-            let largura = (conteudo + largura_ponto + largura_icone + 2.0 * padding + 2.0).ceil().max(self.largura_min);
+            let largura = (conteudo + largura_ponto + largura_icone + largura_tecla + 2.0 * padding + 2.0)
+                .ceil()
+                .max(self.largura_min);
             let largura = if self.lista { ui.available_width().max(self.largura_min) } else { largura };
             (largura, altura)
         };
@@ -905,6 +939,7 @@ impl Widget for Botao<'_> {
                 icone: self.icone,
                 icone_texto: self.icone_texto,
                 lista: self.lista,
+                tecla: self.tecla,
                 tipo: self.tipo,
                 redondo: self.redondo,
                 tamanho: self.tamanho,

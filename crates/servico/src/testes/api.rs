@@ -520,6 +520,31 @@ fn inserir_atualizar_excluir() {
     assert_eq!(a.servico.contagem(&id, "clientes", None, &[], None).unwrap().linhas, N_CLIENTES);
 }
 
+/// O Desfazer da grade: o valor de antes volta (dentro da transação aberta, como a edição) e o banco trocado não
+/// grava nada.
+#[test]
+fn desfazer_celula_volta_o_valor_e_respeita_a_transacao() {
+    let a = ambiente("desfazer");
+    let id = a.id();
+    let um = Chave::Rowid(1);
+    let antes = a.servico.linha(&id, "clientes", &um).unwrap().valor("cidade").cloned().unwrap();
+    let r = a.servico.atualizar(&id, "clientes", &um, &vals(&[("cidade", tx("Natal"))])).unwrap();
+    let gravado = r.resultado.linha.unwrap()[3].clone();
+    let r = a.servico.desfazer_celula(&id, "clientes", &um, "cidade", &gravado, &antes).unwrap();
+    assert_eq!((r.resultado.linha.unwrap()[3].clone(), r.transacao_aberta), (antes.clone(), false));
+
+    assert!(a.servico.sql(&id, "BEGIN", 1000).unwrap().transacao_aberta);
+    let r = a.servico.atualizar(&id, "clientes", &um, &vals(&[("cidade", tx("Natal"))])).unwrap();
+    assert!(r.transacao_aberta);
+    let r = a.servico.desfazer_celula(&id, "clientes", &um, "cidade", &gravado, &antes).unwrap();
+    assert!(r.transacao_aberta, "o UPDATE entra na transação aberta");
+    a.servico.sql(&id, "ROLLBACK", 1000).unwrap();
+    assert_eq!(a.servico.linha(&id, "clientes", &um).unwrap().valor("cidade"), Some(&antes));
+
+    let e = erro_com(a.servico.desfazer_celula("outro", "clientes", &um, "cidade", &antes, &gravado), 409);
+    assert_eq!(e.codigo, Some(Codigo::BancoTrocado));
+}
+
 #[test]
 fn gravacao_com_erro_de_regra() {
     let a = ambiente("regra");
