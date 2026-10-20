@@ -1,20 +1,19 @@
 //! A casca: a barra de título integrada aos
 //! menus ([`janela`], com os menus de [`menus`] e os controles da janela sem decoração), a barra de ferramentas
-//! ([`ferramentas`]), a barra de ícones ([`icones`]), o painel da esquerda com o Explorador ([`explorador`]) ou o
-//! Histórico de consultas ([`historico`]), a faixa de abas ([`abas`]), o painel de Propriedades ([`propriedades`]), as
-//! larguras dos painéis laterais e as divisórias que as mudam ([`larguras`]), a barra de status ([`status`]), os atalhos de teclado ([`atalhos`]), o aviso de transação aberta e as janelas
-//! "Atalhos do teclado", "Preferências" ([`preferencias`]) e "Sobre o DataBox". As peças são as do interface
-//! (`pecas::casca`, `barra_titulo`,
-//! `ferramentas`, `arvore`, `painel`, `abas_documento`, `barra_status`); o que elas pedem vira [`Acao`] para a casca
-//! aplicar no fim do quadro. Os nós do Explorador e o Início da barra de ícones abrem a aba da rota ou focam a que
-//! já está aberta.
+//! ([`ferramentas`]), as docas e as janelas próprias dos painéis ([`docas`]: o Explorador ([`explorador`]), o
+//! Histórico de consultas ([`historico`]) e as Propriedades ([`propriedades`])), a faixa de abas ([`abas`]), as
+//! larguras das docas e as divisórias que as mudam ([`larguras`]), a barra de status ([`status`]), os atalhos de
+//! teclado ([`atalhos`]), o aviso de transação aberta e as janelas "Atalhos do teclado", "Preferências"
+//! ([`preferencias`]) e "Sobre o DataBox". As peças são as do interface (`pecas::casca`, `barra_titulo`,
+//! `ferramentas`, `arvore`, `painel`, `doca`, `abas_documento`, `barra_status`); o que elas pedem vira [`Acao`] para
+//! a casca aplicar no fim do quadro. Os nós do Explorador abrem a aba da rota ou focam a que já está aberta.
 
 pub(crate) mod abas;
 pub(crate) mod atalhos;
+pub(crate) mod docas;
 pub(crate) mod explorador;
 pub(crate) mod ferramentas;
 pub(crate) mod historico;
-pub(crate) mod icones;
 pub(crate) mod janela;
 pub(crate) mod larguras;
 pub(crate) mod menus;
@@ -32,6 +31,7 @@ use interface::pecas::avisos::{TomAviso, carregando, texto_com_link_a_direita};
 use interface::pecas::detalhes::detalhes;
 use interface::pecas::documento::Documento as DocumentoPeca;
 use interface::pecas::janela::Janela;
+use interface::pecas::painel::Encaixe;
 use interface::pecas::texto::Trecho;
 
 use crate::documento::Documento;
@@ -61,8 +61,8 @@ pub(crate) fn frase_da_transacao(consulta: &str) -> String {
 }
 
 /// As linhas da janela "Atalhos do teclado" (os da grade, da Consulta e da casca: as
-/// abas, os painéis, o Atualizar, a pasta e o Copiar caminho do Explorador).
-pub(crate) const ATALHOS: [(&str, &str); 17] = [
+/// abas, o Início, os painéis, o Atualizar, a pasta e o Copiar caminho do Explorador).
+pub(crate) const ATALHOS: [(&str, &str); 19] = [
     ("Ctrl+Shift+O", "Abrir uma pasta"),
     ("Ctrl+O", "Abrir um arquivo"),
     ("Ctrl+S", "Salvar"),
@@ -72,6 +72,8 @@ pub(crate) const ATALHOS: [(&str, &str); 17] = [
     ("Ctrl+Shift+V", "Colar com correspondência"),
     ("Ctrl+Tab e Ctrl+Shift+Tab", "Ir para a aba seguinte e para a anterior"),
     ("Alt+← e Alt+→", "Voltar e avançar entre as abas"),
+    ("Alt+Home", "Ir para o Início"),
+    ("Alt+1 a Alt+4", "As vistas das Propriedades da tabela (Resumo, Colunas, Índices, SQL)"),
     ("F5", "Atualizar a aba (a Visão geral ou a tabela)"),
     ("Ctrl+B", "Mostrar ou esconder o Explorador"),
     ("Ctrl+Alt+B", "Mostrar ou esconder as Propriedades"),
@@ -200,9 +202,17 @@ impl Casca {
         saida
     }
 
-    /// O painel de Propriedades do documento à vista (a aba `aba`) no espaço de `ui` (ver [`propriedades`]).
-    pub fn propriedades(&mut self, ui: &mut Ui, documento: &mut Documento, aba: estado::IdAba, ctx: &mut Contexto) {
-        propriedades::painel(ui, documento, aba, ctx);
+    /// O painel de Propriedades do documento à vista (a aba `aba`) no espaço de `ui` (ver [`propriedades`]), com as
+    /// ações em `lugar_acoes` (a fileira da doca ou o rodapé da janela própria).
+    pub fn propriedades(
+        &mut self,
+        ui: &mut Ui,
+        lugar_acoes: Encaixe,
+        documento: &mut Documento,
+        aba: estado::IdAba,
+        ctx: &mut Contexto,
+    ) {
+        propriedades::painel(ui, lugar_acoes, documento, aba, ctx);
     }
 
     /// O Explorador no espaço de `ui` (ver [`explorador`]). `falha` é o motivo de a lista de objetos não ter chegado
@@ -212,6 +222,7 @@ impl Casca {
     pub fn explorador(
         &mut self,
         ui: &mut Ui,
+        lugar_acoes: Encaixe,
         estado: &Estado,
         versao: u64,
         rota: &Rota,
@@ -220,7 +231,7 @@ impl Casca {
         acoes: &mut Vec<Acao>,
     ) {
         let textos = textos(&mut self.textos, versao, estado);
-        self.explorador.mostrar(ui, estado, textos, rota, falha, consulta, acoes);
+        self.explorador.mostrar(ui, lugar_acoes, estado, textos, rota, falha, consulta, acoes);
     }
 
     /// O "Mostrar na pasta" do menu de contexto do Explorador pedido desde a última chamada (a casca abre o
@@ -368,6 +379,8 @@ mod testes {
                 "Ctrl+Shift+V",
                 "Ctrl+Tab e Ctrl+Shift+Tab",
                 "Alt+← e Alt+→",
+                "Alt+Home",
+                "Alt+1 a Alt+4",
                 "F5",
                 "Ctrl+B",
                 "Ctrl+Alt+B",

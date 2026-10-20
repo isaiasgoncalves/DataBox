@@ -46,6 +46,7 @@ struct Estado {
 pub struct MenuContexto<'a> {
     id: Id,
     rotulo: &'a str,
+    no_clique: bool,
 }
 
 /// Consome o Shift+F10 só com os modificadores exatos: o `consume_key` aceitaria também o Alt+Shift+F10 e o
@@ -63,7 +64,14 @@ fn consumir_shift_f10(ctx: &Context) -> bool {
 impl<'a> MenuContexto<'a> {
     /// `id_salt` separa o menu de um dono do de outro (o caminho do nó, no Explorador).
     pub fn new(id_salt: impl std::hash::Hash + std::fmt::Debug) -> Self {
-        MenuContexto { id: Id::new(("databox::menu_contexto", id_salt)), rotulo: "" }
+        MenuContexto { id: Id::new(("databox::menu_contexto", id_salt)), rotulo: "", no_clique: false }
+    }
+
+    /// Abre também no clique principal do `dono`, embaixo dele (o "Todas as abas" da faixa de abas, um botão que é
+    /// só o menu), e no Enter ou Espaço com o foco nele (aí o foco vai ao primeiro item).
+    pub fn no_clique(mut self) -> Self {
+        self.no_clique = true;
+        self
     }
 
     /// O nome do menu para o leitor de tela (o `aria-label` da prancheta: o nome do arquivo).
@@ -103,6 +111,11 @@ impl<'a> MenuContexto<'a> {
                 .unwrap_or_else(|| dono.rect.left_bottom());
             estado.pedir_foco = false;
             abrir = true;
+        } else if self.no_clique && dono.clicked() {
+            estado.pos = dono.rect.left_bottom();
+            // pelo teclado (o Enter ou o Espaço no botão), o foco vai ao primeiro item
+            estado.pedir_foco = dono.interact_pointer_pos().is_none();
+            abrir = !aberto_antes;
         } else if dono.has_focus() && consumir_shift_f10(&ctx) {
             estado.pos = dono.rect.left_bottom() + vec2(RECUO_TECLADO, 0.0);
             estado.pedir_foco = true;

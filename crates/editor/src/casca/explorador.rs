@@ -19,10 +19,9 @@
 //! **O banco**: o nome em 600, sem ponto de estado (o "Aberto" saiu na revisão de 15/10/2026: verde e âmbar viram o
 //! mesmo tom para quem tem daltonismo); com a transação aberta, o ícone Atenção de 16px com a dica "Transação
 //! aberta" (prancheta `DadosClaro.dc.html`), e a dica do caminho; o clique foca a Visão geral. Tabelas (aberto no
-//! começo), Visões e Sistema, com as contagens. Cada tabela tem Dados, Estrutura, Índices e gatilhos e Definição SQL;
-//! cada visão, Dados e Definição SQL; os objetos do sistema abrem direto nos Dados. O clique no nome abre a aba dele
-//! (ou foca a aberta) e abre o nó; o clique numa parte abre a aba da parte. A parte da aba à vista fica marcada
-//! (`.no.on`), e os pais dela se abrem quando a aba à vista muda. Acima de [`LIMITE_SEM_FILTRO`] tabelas, o campo
+//! começo), Visões e Sistema, com as contagens. Cada tabela, visão e objeto do sistema é uma folha (revisão de UI de
+//! 19/10/2026: a Estrutura, os Índices e a Definição são vistas das Propriedades e do menu Tabela): o clique abre a
+//! aba dele (ou foca a aberta), que fica marcada (`.no.on`), e os pais dela se abrem quando a aba à vista muda. Acima de [`LIMITE_SEM_FILTRO`] tabelas, o campo
 //! "Filtrar tabelas" (sem acento nem caixa), que vale só para o banco em que foi digitado.
 //!
 //! **O menu de contexto** (decisão 16, prancheta 15; `pecas::menu_contexto::MenuContexto`, no clique direito e no
@@ -36,8 +35,7 @@
 //! `expanded` nos que abrem); ↑ e ↓ pelo foco do egui; → abre e ← fecha (o `No`); Enter e Espaço são o clique;
 //! Shift+F10 abre o menu de contexto no nó com o foco e Ctrl+Shift+C copia o caminho dele (só com esses
 //! modificadores: o AltGr não conta; no Windows o egui-winit entrega o Ctrl+Shift+C como `Event::Copy`). O rótulo de
-//! uma pasta é "dados, pasta"; o das tabelas e das visões é o nome; as partes mostram só "Estrutura", com o rótulo
-//! "clientes · Estrutura".
+//! uma pasta é "dados, pasta"; o das tabelas e das visões é o nome.
 //!
 //! **Vazio**: sem pasta e sem banco, só o título no cabeçalho e, no meio, o sólido da pasta de 48, "Nenhuma pasta
 //! aberta.", "Abra uma pasta para ver os bancos, planilhas e textos que ela tem." e o botão "Abrir pasta" (prancheta 4).
@@ -54,7 +52,7 @@ use egui::text::LayoutJob;
 use egui::{
     Align, Event, Key, Margin, Modifiers, Rect, Response, ScrollArea, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2,
 };
-use estado::{Acao, ChaveAba, Estado, NoDaPasta, Parte, PastaAberta, Rota, icone_da_tabela};
+use estado::{Acao, ChaveAba, Estado, NoDaPasta, PastaAberta, Rota, icone_da_tabela};
 use interface::fontes::{self, Peso};
 use interface::formato::{formatar_numero, sem_acento};
 use interface::icones::{self, EstadoIcone, Icone, TipoArquivo};
@@ -64,7 +62,7 @@ use interface::pecas::botao::Botao;
 use interface::pecas::campos::Entrada as Campo;
 use interface::pecas::casca::PainelMenu;
 use interface::pecas::menu_contexto::MenuContexto;
-use interface::pecas::painel::Painel;
+use interface::pecas::painel::{Encaixe, Painel};
 use interface::pecas::texto::{formato, galley, hint, paragrafo, texto};
 use interface::pecas::toast::toast_concluido;
 use interface::tema::paleta;
@@ -121,11 +119,6 @@ impl Grupo {
     }
 }
 
-/// A chave do nó de uma tabela ou visão (no conjunto dos abertos).
-fn chave_objeto(nome: &str, e_visao: bool) -> String {
-    format!("{}:{nome}", if e_visao { "v" } else { "t" })
-}
-
 /// O cilindro do banco: o cinza com o cadeado quando ele está aberto só para leitura.
 pub(crate) fn icone_do_banco(b: &BancoInfo) -> Icone {
     if b.somente_leitura { Icone::BancoSoLeitura } else { Icone::Banco }
@@ -156,16 +149,6 @@ pub(crate) fn icone_do_objeto(objetos: Option<&ObjetosInfo>, nome: &str, e_visao
         Icone::Sistema
     } else {
         Icone::Tabela
-    }
-}
-
-/// O ícone de cada parte da tabela.
-fn icone_da_parte(parte: Parte) -> Icone {
-    match parte {
-        Parte::Dados => Icone::Dados,
-        Parte::Estrutura => Icone::Estrutura,
-        Parte::Indices => Icone::Indices,
-        Parte::Definicao => Icone::Definicao,
     }
 }
 
@@ -430,18 +413,16 @@ impl Explorador {
         if chave == self.revelada {
             return;
         }
-        if let Some(ChaveAba::Parte { nome, .. }) = &chave {
+        if let Some(ChaveAba::Objeto { nome }) = &chave {
             // o grupo sai da lista de objetos (a rota pode ainda não ter o tipo certo); sem ela, espera chegar
             let Some(o) = objetos else { return };
             self.abertos.insert(NO_BANCO.to_string());
             if o.visoes.iter().any(|v| &v.nome == nome) {
                 self.abertos.insert(Grupo::Visoes.chave().to_string());
-                self.abertos.insert(chave_objeto(nome, true));
             } else if o.sistema.iter().any(|s| &s.nome == nome) {
                 self.abertos.insert(Grupo::Sistema.chave().to_string());
             } else {
                 self.abertos.insert(Grupo::Tabelas.chave().to_string());
-                self.abertos.insert(chave_objeto(nome, false));
             }
         }
         self.revelada = chave;
@@ -500,6 +481,7 @@ impl Explorador {
     pub(crate) fn mostrar(
         &mut self,
         ui: &mut Ui,
+        lugar_acoes: Encaixe,
         estado: &Estado,
         textos: &Textos,
         rota: &Rota,
@@ -508,7 +490,7 @@ impl Explorador {
         acoes: &mut Vec<Acao>,
     ) {
         let inicio = acoes.len();
-        self.painel(ui, estado, textos, rota, falha, consulta, acoes);
+        self.painel(ui, lugar_acoes, estado, textos, rota, falha, consulta, acoes);
         for a in &acoes[inicio..] {
             if self.emitidas.len() == GUARDADAS {
                 self.emitidas.pop_front();
@@ -521,6 +503,7 @@ impl Explorador {
     fn painel(
         &mut self,
         ui: &mut Ui,
+        lugar_acoes: Encaixe,
         estado: &Estado,
         textos: &Textos,
         rota: &Rota,
@@ -537,7 +520,7 @@ impl Explorador {
         }
         if banco.is_none() && pasta.is_none() {
             // prancheta 4: só o título no cabeçalho
-            Painel::new("explorador", "Explorador").mostrar(ui, |ui| {
+            Painel::new("explorador", "Explorador").encaixe(lugar_acoes).mostrar(ui, |ui| {
                 if vazio_centrado_com(
                     ui,
                     Icone::PastaSolida,
@@ -567,6 +550,7 @@ impl Explorador {
         };
         let (mut recolher, mut abrir_pasta) = (false, false);
         Painel::new("explorador", "Explorador")
+            .encaixe(lugar_acoes)
             .acoes(|ui| {
                 // da direita para a esquerda: Abrir pasta e Recolher tudo
                 recolher = ui.add(Botao::icone(Icone::Recolher).do_cabecalho().dica("Recolher tudo")).clicked();
@@ -906,7 +890,8 @@ impl Explorador {
         }
     }
 
-    /// Uma tabela ou visão e, aberta, as partes dela.
+    /// Uma tabela ou visão: uma folha (revisão de UI de 19/10/2026: as partes viraram vistas das Propriedades e do
+    /// menu Tabela). O clique abre a aba do objeto (ou foca a aberta); ela fica marcada com a aba à vista.
     #[allow(clippy::too_many_arguments)]
     fn objeto(
         &mut self,
@@ -919,35 +904,13 @@ impl Explorador {
         base: usize,
         acoes: &mut Vec<Acao>,
     ) {
-        let chave = chave_objeto(nome, e_visao);
-        let mut no = No::new(nome).recuo(recuo(base + 2)).seta(self.seta(&chave)).icone(icone).dica(nome);
+        let ativo = rota.nome_objeto() == Some(nome);
+        let mut no = No::new(nome).recuo(recuo(base + 2)).seta(Seta::Vazia).icone(icone).dica(nome).ativo(ativo);
         if let Some(c) = contagem {
             no = no.contagem(c);
         }
-        let r = no.mostrar(ui);
-        if r.alternou {
-            self.alternar(&chave);
-        } else if r.resposta.clicked() {
-            self.abertos.insert(chave.clone());
+        if no.mostrar(ui).resposta.clicked() {
             acoes.push(Acao::Navegar(Rota::objeto(nome, e_visao)));
-        }
-        if !self.aberto(&chave) {
-            return;
-        }
-        let partes: &[Parte] = if e_visao { &Parte::DA_VISAO } else { &Parte::DA_TABELA };
-        for &parte in partes {
-            let rotulo = format!("{nome} · {}", parte.rotulo());
-            let ativo = rota.nome_objeto() == Some(nome) && rota.aba() == Some(parte);
-            let r = No::new(parte.rotulo())
-                .rotulo(&rotulo)
-                .recuo(recuo(base + 3))
-                .seta(Seta::Vazia)
-                .icone(icone_da_parte(parte))
-                .ativo(ativo)
-                .mostrar(ui);
-            if r.resposta.clicked() {
-                acoes.push(Acao::Navegar(Rota::objeto_na_aba(nome, e_visao, parte)));
-            }
         }
     }
 }
@@ -1074,7 +1037,7 @@ mod testes {
     }
 
     #[test]
-    fn os_pais_da_parte_a_vista_se_abrem_quando_ela_muda() {
+    fn os_pais_do_objeto_a_vista_se_abrem_quando_ele_muda() {
         let amb = Ambiente::exemplo("explorador_revelar");
         let b = amb.estado.banco.clone().expect("banco");
         let o = amb.estado.objetos.clone().expect("objetos");
@@ -1083,26 +1046,25 @@ mod testes {
         // no começo, o banco e as Tabelas
         assert!(x.aberto(NO_BANCO) && x.aberto(Grupo::Tabelas.chave()));
         assert!(!x.aberto(Grupo::Visoes.chave()) && !x.aberto(Grupo::Sistema.chave()));
-        // a aba à vista passa a ser a estrutura de clientes: a tabela se abre
-        let estrutura = Rota::objeto_na_aba("clientes", false, Parte::Estrutura);
-        x.acompanhar(&b, Some(&o), &estrutura);
-        assert!(x.aberto("t:clientes"));
-        // fechada pela pessoa, continua fechada enquanto a aba à vista é a mesma (mesmo com outra página)
-        x.alternar("t:clientes");
-        x.acompanhar(&b, Some(&o), &estrutura);
-        assert!(!x.aberto("t:clientes"));
+        // fechadas pela pessoa, as Tabelas continuam fechadas enquanto a aba à vista é a mesma
+        x.alternar(Grupo::Tabelas.chave());
+        x.acompanhar(&b, Some(&o), &Rota::Banco);
+        assert!(!x.aberto(Grupo::Tabelas.chave()));
+        // a aba de clientes à vista (em qualquer parte) abre as Tabelas de novo
+        x.acompanhar(&b, Some(&o), &Rota::objeto("clientes", false));
+        assert!(x.aberto(Grupo::Tabelas.chave()));
         // a visão abre o grupo das Visões, mesmo pedida como tabela; o objeto do sistema abre o Sistema
         x.acompanhar(&b, Some(&o), &Rota::objeto("v_pedidos_por_cliente", false));
-        assert!(x.aberto(Grupo::Visoes.chave()) && x.aberto("v:v_pedidos_por_cliente"));
+        assert!(x.aberto(Grupo::Visoes.chave()));
         let sistema = o.sistema.first().map(|s| s.nome.clone()).expect("um objeto do sistema");
         x.acompanhar(&b, Some(&o), &Rota::objeto(sistema, false));
         assert!(x.aberto(Grupo::Sistema.chave()));
         // sem a lista de objetos, espera por ela
         let mut y = Explorador::default();
-        y.acompanhar(&b, None, &Rota::objeto("clientes", false));
-        assert!(!y.aberto("t:clientes"));
-        y.acompanhar(&b, Some(&o), &Rota::objeto("clientes", false));
-        assert!(y.aberto("t:clientes"));
+        y.acompanhar(&b, None, &Rota::objeto("v_pedidos_por_cliente", true));
+        assert!(!y.aberto(Grupo::Visoes.chave()));
+        y.acompanhar(&b, Some(&o), &Rota::objeto("v_pedidos_por_cliente", true));
+        assert!(y.aberto(Grupo::Visoes.chave()));
     }
 
     #[test]

@@ -1,21 +1,28 @@
-//! A tela de uma tabela ou visão (`#/t/:nome/:aba`, `#/v/:nome/:aba`): carrega a
-//! tabela pelo serviço e entrega a parte da aba (Dados, Estrutura, Índices e gatilhos, Definição SQL) ao crate dela
-//! com a [`TabelaAberta`], pelo contrato [`ParteTabela`]: a faixa, o conteúdo e o rodapé da parte no documento da
-//! casca, o Atualizar e o Exportar ("Exportar clientes") junto das ofertas da parte, e nas Propriedades a seção
-//! "Tabela" antes das da parte e o "Arquivo" curto depois. A tabela que não existe mais vira o card "A tabela X não
-//! existe mais neste banco." com o link para a Visão geral.
+//! A tela de uma tabela ou visão (`#/t/:nome/:aba`, `#/v/:nome/:aba`): carrega a tabela pelo serviço e entrega as
+//! partes (Dados, Estrutura, Índices e gatilhos, Definição SQL) ao crate delas com a [`TabelaAberta`], pelo contrato
+//! [`ParteTabela`]. A tabela que não existe mais vira o card "A tabela X não existe mais neste banco." com o link
+//! para a Visão geral.
+//!
+//! Revisão de UI de 19/10/2026 (uma aba por objeto): o **documento** é sempre a grade dos Dados (a faixa, o conteúdo
+//! e o rodapé deles, o Atualizar e o Exportar ("Exportar clientes") junto das ofertas deles). As outras partes viram
+//! **vistas das Propriedades** ([`Vista`]), no segmentado do topo do painel: Resumo (a seção "Tabela", as dos Dados e
+//! o "Arquivo" curto), Colunas (a Estrutura), Índices (os Índices e gatilhos) e SQL (a Definição); a visão só tem
+//! Resumo e SQL. Na doca o segmentado usa os rótulos curtos; na janela própria (a forma larga, a partir de
+//! [`LARGURA_FORMA_LARGA`]), por extenso. A rota com outra parte (`#/t/clientes/estrutura`, o "Colunas" da Visão
+//! geral, o Renomear) abre a aba do objeto com aquela vista; o endereço da aba fica o dos Dados. A coluna escolhida
+//! na vista Colunas acende na grade.
 
 use banco::{Contagem, TipoObjeto};
 use egui::Ui;
 use estado::{
     Aba, Acao, BuscaDaBarra, Contexto, Estado, EventoBusca, Oferta, Ofertas, ParteTabela, PedidoJanelaExportar,
-    Promessa, Reacao, Rota, TabelaAberta, Verbo,
+    PedidoTabela, Promessa, Reacao, Rota, TabelaAberta, Verbo,
 };
 use interface::formato::formatar_bytes;
 use interface::formato::plural;
 use interface::pecas::avisos::{aviso_texto, carregando, vazio};
 use interface::pecas::cartao::Cartao;
-use interface::pecas::navegacao::{Cabecalho, Passo};
+use interface::pecas::navegacao::{Cabecalho, Passo, TamanhoTrilho, trilho};
 use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::texto::link;
 use servico::TabelaCompleta;
@@ -47,47 +54,101 @@ fn pedido_exportacao(tabela: &TabelaAberta) -> PedidoJanelaExportar {
     pedido
 }
 
-/// A aba ativa, do crate dela.
-enum AbaAtiva {
-    Dados(Box<AbaDados>),
+/// A partir desta largura, as Propriedades estão na forma larga (a janela própria): o segmentado por extenso e a
+/// tabela de colunas da Estrutura no lugar da lista compacta.
+pub(crate) const LARGURA_FORMA_LARGA: f32 = 560.0;
+
+/// O que as Propriedades da tabela mostram (o segmentado `.seg` do topo do painel, prancheta 2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum Vista {
+    /// A seção "Tabela", as dos Dados e o "Arquivo" curto.
+    #[default]
+    Resumo,
+    /// A Estrutura.
+    Colunas,
+    /// Os Índices e gatilhos.
+    Indices,
+    /// A Definição SQL.
+    Sql,
+}
+
+impl Vista {
+    pub(crate) const DA_TABELA: [Vista; 4] = [Vista::Resumo, Vista::Colunas, Vista::Indices, Vista::Sql];
+    pub(crate) const DA_VISAO: [Vista; 2] = [Vista::Resumo, Vista::Sql];
+
+    /// A vista de uma parte da rota (os Dados são o Resumo: a parte já está no documento).
+    pub(crate) fn da_parte(parte: Aba) -> Vista {
+        match parte {
+            Aba::Dados => Vista::Resumo,
+            Aba::Estrutura => Vista::Colunas,
+            Aba::Indices => Vista::Indices,
+            Aba::Definicao => Vista::Sql,
+        }
+    }
+
+    /// O rótulo no segmentado: curto na doca; por extenso na forma larga (a janela própria, prancheta 6).
+    pub(crate) fn rotulo(self, larga: bool) -> &'static str {
+        match (self, larga) {
+            (Vista::Resumo, _) => "Resumo",
+            (Vista::Colunas, _) => "Colunas",
+            (Vista::Indices, false) => "Índices",
+            (Vista::Indices, true) => "Índices e gatilhos",
+            (Vista::Sql, false) => "SQL",
+            (Vista::Sql, true) => "Definição SQL",
+        }
+    }
+}
+
+/// A parte de uma vista das Propriedades, do crate dela.
+enum ParteDaVista {
     Estrutura(Box<AbaEstrutura>),
     Indices(Box<AbaIndices>),
     Definicao(Box<AbaDefinicao>),
 }
 
-impl AbaAtiva {
-    fn nova(aba: Aba, tabela: &TabelaAberta) -> AbaAtiva {
-        match aba {
-            Aba::Dados => AbaAtiva::Dados(Box::new(AbaDados::nova(tabela))),
-            Aba::Estrutura => AbaAtiva::Estrutura(Box::new(AbaEstrutura::nova(tabela))),
-            Aba::Indices => AbaAtiva::Indices(Box::new(AbaIndices::nova(tabela))),
-            Aba::Definicao => AbaAtiva::Definicao(Box::new(AbaDefinicao::nova(tabela))),
+impl ParteDaVista {
+    /// A parte da vista (o Resumo não tem: são as seções da tela).
+    fn nova(vista: Vista, tabela: &TabelaAberta) -> Option<ParteDaVista> {
+        match vista {
+            Vista::Resumo => None,
+            Vista::Colunas => Some(ParteDaVista::Estrutura(Box::new(AbaEstrutura::nova(tabela)))),
+            Vista::Indices => Some(ParteDaVista::Indices(Box::new(AbaIndices::nova(tabela)))),
+            Vista::Sql => Some(ParteDaVista::Definicao(Box::new(AbaDefinicao::nova(tabela)))),
+        }
+    }
+
+    fn vista(&self) -> Vista {
+        match self {
+            ParteDaVista::Estrutura(_) => Vista::Colunas,
+            ParteDaVista::Indices(_) => Vista::Indices,
+            ParteDaVista::Definicao(_) => Vista::Sql,
         }
     }
 
     /// A parte, pelo contrato delas.
     fn parte(&mut self) -> &mut dyn ParteTabela {
         match self {
-            AbaAtiva::Dados(a) => a.as_mut(),
-            AbaAtiva::Estrutura(a) => a.as_mut(),
-            AbaAtiva::Indices(a) => a.as_mut(),
-            AbaAtiva::Definicao(a) => a.as_mut(),
+            ParteDaVista::Estrutura(a) => a.as_mut(),
+            ParteDaVista::Indices(a) => a.as_mut(),
+            ParteDaVista::Definicao(a) => a.as_mut(),
         }
     }
 
     fn parte_ref(&self) -> &dyn ParteTabela {
         match self {
-            AbaAtiva::Dados(a) => a.as_ref(),
-            AbaAtiva::Estrutura(a) => a.as_ref(),
-            AbaAtiva::Indices(a) => a.as_ref(),
-            AbaAtiva::Definicao(a) => a.as_ref(),
+            ParteDaVista::Estrutura(a) => a.as_ref(),
+            ParteDaVista::Indices(a) => a.as_ref(),
+            ParteDaVista::Definicao(a) => a.as_ref(),
         }
     }
 }
 
 struct Pronta {
     tabela: TabelaAberta,
-    aba: AbaAtiva,
+    /// Os Dados: o documento.
+    dados: Box<AbaDados>,
+    /// A parte da vista das Propriedades (a Estrutura, os Índices, a Definição), feita quando a vista aparece.
+    vista: Option<ParteDaVista>,
     /// "60 linhas · 7 colunas" (o status da barra).
     sub: String,
 }
@@ -107,8 +168,12 @@ enum Situacao {
 
 /// A tela de tabela ou visão.
 pub(crate) struct TelaTabela {
-    /// A rota pedida (corrigida depois de carregar, se o objeto for do outro tipo ou a aba não existir nele).
+    /// A rota pedida (corrigida depois de carregar para a parte Dados, e para o tipo certo do objeto).
     rota: Rota,
+    /// A vista das Propriedades (a parte que a rota pediu, no começo).
+    vista: Vista,
+    /// Um pedido do menu Tabela à espera da Estrutura (que só existe com a vista Colunas à vista).
+    pedido: Option<PedidoTabela>,
     carga: Option<Promessa<TabelaCompleta>>,
     contagem: Option<Promessa<Contagem>>,
     situacao: Situacao,
@@ -123,7 +188,47 @@ fn e_inexistente(e: &comum::ErroBanco) -> bool {
 
 impl TelaTabela {
     pub fn nova(rota: Rota) -> TelaTabela {
-        TelaTabela { rota, carga: None, contagem: None, situacao: Situacao::Carregando, arquivo: None }
+        let vista = Vista::da_parte(rota.aba().unwrap_or_default());
+        TelaTabela {
+            rota,
+            vista,
+            pedido: None,
+            carga: None,
+            contagem: None,
+            situacao: Situacao::Carregando,
+            arquivo: None,
+        }
+    }
+
+    /// A vista das Propriedades agora.
+    pub(crate) fn vista(&self) -> Vista {
+        self.vista
+    }
+
+    /// Põe à vista nas Propriedades a parte pedida (a rota com outra parte, o menu Tabela); a visão só tem o Resumo e
+    /// o SQL.
+    pub(crate) fn mostrar_parte(&mut self, parte: Aba) {
+        let vista = Vista::da_parte(parte);
+        let e_visao = match &self.situacao {
+            Situacao::Pronta(p) => p.tabela.e_visao,
+            _ => matches!(self.rota, Rota::Visao { .. }),
+        };
+        let vistas: &[Vista] = if e_visao { &Vista::DA_VISAO } else { &Vista::DA_TABELA };
+        if vistas.contains(&vista) {
+            self.vista = vista;
+        }
+    }
+
+    /// Um pedido do menu Tabela (Nova coluna, Renomear, Excluir a tabela): vai para a Estrutura, que fica à vista nas
+    /// Propriedades (vista Colunas) e o atende no próximo quadro.
+    pub(crate) fn pedir(&mut self, pedido: PedidoTabela) {
+        self.vista = Vista::Colunas;
+        self.pedido = Some(pedido);
+    }
+
+    /// A tabela pode mudar de estrutura (é tabela, o banco grava e o SQLite deixa editar).
+    pub(crate) fn editavel(&self, somente_leitura: bool) -> bool {
+        self.tabela_aberta().is_some_and(|t| !t.e_visao && crate::telas::pode_editar(t.info(), somente_leitura))
     }
 
     /// Há tarefas desta tela rodando (a da aba não conta).
@@ -202,9 +307,13 @@ impl TelaTabela {
     fn montar(&mut self, ui: &Ui, ctx: &mut Contexto, completa: TabelaCompleta) {
         let e_visao = completa.info.tipo == TipoObjeto::View;
         let nome = self.nome().to_string();
-        let lista: &[Aba] = if e_visao { &Aba::DA_VISAO } else { &Aba::DA_TABELA };
+        // o documento é sempre a parte Dados; a parte que a rota pediu já virou a vista das Propriedades
         let pedida = self.rota.aba().unwrap_or_default();
-        let aba = if lista.contains(&pedida) { pedida } else { Aba::Dados };
+        let aba = Aba::Dados;
+        let vistas: &[Vista] = if e_visao { &Vista::DA_VISAO } else { &Vista::DA_TABELA };
+        if !vistas.contains(&self.vista) {
+            self.vista = Vista::Resumo;
+        }
         let mesmo_tipo = matches!(self.rota, Rota::Visao { .. }) == e_visao;
         if !mesmo_tipo || aba != pedida {
             // o endereço muda sem entrar no histórico; a query só fica na mesma aba
@@ -225,8 +334,9 @@ impl TelaTabela {
             self.contagem = Some(ctx.tarefa(ui.ctx(), move |s, id| s.contagem(id, &n, None, &[], None)));
         }
         let tabela = TabelaAberta::nova(nome, e_visao, completa, self.rota.clone());
-        let aba_ativa = AbaAtiva::nova(aba, &tabela);
-        self.situacao = Situacao::Pronta(Box::new(Pronta { tabela, aba: aba_ativa, sub }));
+        let dados = Box::new(AbaDados::nova(&tabela));
+        let vista = ParteDaVista::nova(self.vista, &tabela);
+        self.situacao = Situacao::Pronta(Box::new(Pronta { tabela, dados, vista, sub }));
     }
 
     pub fn ui(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
@@ -286,8 +396,14 @@ impl TelaTabela {
             // a parte no formato de documento: a casca desenha a faixa e o rodapé dela, e aqui vem só o conteúdo (as
             // partes ficam nas abas da casca e no Explorador; o título, o Exportar e a ajuda, na barra e nas dicas)
             Situacao::Pronta(p) => {
-                let Pronta { tabela, aba, .. } = p.as_mut();
-                aba.parte().conteudo(ui, ctx, tabela);
+                let Pronta { tabela, dados, vista, .. } = p.as_mut();
+                // a coluna escolhida na vista Colunas acende na grade
+                let escolhida = vista
+                    .as_ref()
+                    .filter(|v| v.vista() == Vista::Colunas)
+                    .and_then(|v| v.parte_ref().coluna_escolhida());
+                dados.destacar_coluna(escolhida);
+                dados.conteudo(ui, ctx, tabela);
                 if tabela.recarregar {
                     tabela.recarregar = false;
                     recarregar = Some(tabela.rota.clone());
@@ -304,22 +420,22 @@ impl TelaTabela {
     }
 }
 
-/// A tela de tabela como documento da casca: junta Atualizar e Exportar ("Exportar clientes", depois de lida), que
-/// valem para toda tabela, às ofertas da parte, e desenha a seção "Tabela" das Propriedades antes das da parte e o
-/// "Arquivo" curto depois.
+/// A tela de tabela como documento da casca: o documento é a parte Dados, com o Atualizar e o Exportar ("Exportar
+/// clientes", depois de lida), que valem para toda tabela, junto das ofertas dela; as Propriedades têm o segmentado
+/// das vistas ([`Vista`]) no topo.
 impl estado::Documento for TelaTabela {
-    /// A da parte, depois de lida (antes, a página sem faixa nem rodapé, com o "Lendo a tabela…").
+    /// A dos Dados, depois de lida (antes, a página sem faixa nem rodapé, com o "Lendo a tabela…").
     fn anatomia(&self) -> estado::Anatomia {
         match &self.situacao {
-            Situacao::Pronta(p) => p.aba.parte_ref().anatomia(),
+            Situacao::Pronta(p) => p.dados.anatomia(),
             _ => estado::Anatomia::default(),
         }
     }
 
     fn faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
         if let Situacao::Pronta(p) = &mut self.situacao {
-            let Pronta { tabela, aba, .. } = p.as_mut();
-            aba.parte().faixa(ui, ctx, tabela);
+            let Pronta { tabela, dados, .. } = p.as_mut();
+            dados.faixa(ui, ctx, tabela);
         }
     }
 
@@ -329,19 +445,19 @@ impl estado::Documento for TelaTabela {
 
     fn rodape(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
         if let Situacao::Pronta(p) = &mut self.situacao {
-            let Pronta { tabela, aba, .. } = p.as_mut();
-            aba.parte().rodape(ui, ctx, tabela);
+            let Pronta { tabela, dados, .. } = p.as_mut();
+            dados.rodape(ui, ctx, tabela);
         }
     }
 
     fn ofertas(&self, estado: &Estado) -> Ofertas {
-        let da_parte = match &self.situacao {
-            Situacao::Pronta(p) => p.aba.parte_ref().ofertas(&p.tabela, estado),
+        let dos_dados = match &self.situacao {
+            Situacao::Pronta(p) => p.dados.ofertas(&p.tabela, estado),
             _ => Ofertas::default(),
         };
         let exportar =
             Oferta::ligada().ligada_se(self.tabela_aberta().is_some()).com_dica(format!("Exportar {}", self.nome()));
-        da_parte
+        dos_dados
             .com(Verbo::Atualizar, Oferta::ligada().ligada_se(!TelaTabela::ocupada(self)))
             .com(Verbo::Exportar, exportar)
     }
@@ -353,7 +469,7 @@ impl estado::Documento for TelaTabela {
                     ctx.emitir(Acao::AbrirExportacao(pedido));
                 }
             }
-            // a tabela relê (com a página, a ordem e a busca da aba Dados) e a casca relê os objetos (as outras abas
+            // a tabela relê (com a página, a ordem e a busca dos Dados) e a casca relê os objetos (as outras abas
             // da mesma tabela releem quando aparecerem)
             Verbo::Atualizar => {
                 self.recarregar();
@@ -361,31 +477,35 @@ impl estado::Documento for TelaTabela {
             }
             _ => {
                 if let Situacao::Pronta(p) = &mut self.situacao {
-                    let Pronta { tabela, aba, .. } = p.as_mut();
-                    aba.parte().executar(verbo, egui, ctx, tabela);
+                    let Pronta { tabela, dados, .. } = p.as_mut();
+                    dados.executar(verbo, egui, ctx, tabela);
                 }
             }
         }
     }
 
-    /// A busca da barra é a da parte ("Buscar em clientes", "Buscar colunas"); antes de a tabela ser lida, e nas
-    /// partes sem busca (Índices e gatilhos, Definição SQL), desligada.
+    /// A busca da barra é a dos Dados ("Buscar em clientes"); antes de a tabela ser lida, desligada.
     fn busca(&mut self) -> Option<BuscaDaBarra<'_>> {
         match &mut self.situacao {
-            Situacao::Pronta(p) => p.aba.parte().busca(),
+            Situacao::Pronta(p) => p.dados.busca(),
             _ => None,
         }
     }
 
     fn evento_busca(&mut self, evento: EventoBusca, egui: &egui::Context, ctx: &mut Contexto) {
         if let Situacao::Pronta(p) = &mut self.situacao {
-            let Pronta { tabela, aba, .. } = p.as_mut();
-            aba.parte().evento_busca(evento, egui, ctx, tabela);
+            let Pronta { tabela, dados, .. } = p.as_mut();
+            dados.evento_busca(evento, egui, ctx, tabela);
         }
     }
 
     fn tem_propriedades(&self) -> bool {
         true
+    }
+
+    /// No Resumo, as seções rolam pela casca; nas outras vistas, o segmentado fica fixo e a vista rola por dentro.
+    fn propriedades_rolam(&self) -> bool {
+        self.vista == Vista::Resumo || !matches!(self.situacao, Situacao::Pronta(_))
     }
 
     fn propriedades(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
@@ -399,27 +519,86 @@ impl estado::Documento for TelaTabela {
             self.arquivo = Some((ctx.versao, caminho, tamanho));
         }
         let nome = self.nome().to_string();
-        match &mut self.situacao {
-            Situacao::Pronta(p) => {
-                let Pronta { tabela, aba, .. } = p.as_mut();
-                let (parte, lida) = (aba.parte(), &*tabela);
-                estado::secao_tabela(ui, lida, |ui| parte.acoes_da_tabela(ui, ctx, lida));
-                aba.parte().propriedades(ui, ctx, tabela);
-            }
+        let Situacao::Pronta(p) = &mut self.situacao else {
             // antes de ser lida, só o nome
-            _ => {
-                let _ = Secao::new("propriedades::tabela", "Tabela").primeira(true).mostrar(ui, |ui| {
-                    ficha(ui, |d| d.linha_texto("Nome", Some(&nome), "—"));
+            let _ = Secao::new("propriedades::tabela", "Tabela").primeira(true).mostrar(ui, |ui| {
+                ficha(ui, |d| d.linha_texto("Nome", Some(&nome), "—"));
+            });
+            return;
+        };
+        // o segmentado das vistas (`.seg` de ponta a ponta, `padding:8px 10px 6px`)
+        let vistas: &[Vista] = if p.tabela.e_visao { &Vista::DA_VISAO } else { &Vista::DA_TABELA };
+        let larga = ui.available_width() >= LARGURA_FORMA_LARGA;
+        let rotulos: Vec<&str> = vistas.iter().map(|v| v.rotulo(larga)).collect();
+        let atual = vistas.iter().position(|v| *v == self.vista);
+        let mut escolhida = None;
+        recuado(ui, [8.0, 10.0, 6.0], |ui| {
+            let id = ui.id().with(("vistas-da-tabela", &nome));
+            let (clicada, _) = trilho(ui, id, &rotulos, atual, TamanhoTrilho::CompactoCheio, false);
+            escolhida = clicada.and_then(|i| vistas.get(i).copied());
+        });
+        if let Some(v) = escolhida {
+            self.vista = v;
+            ui.ctx().request_repaint();
+        }
+        let vista = self.vista;
+        let pedido = self.pedido.take();
+        match vista {
+            Vista::Resumo => {
+                let Pronta { tabela, dados, .. } = p.as_mut();
+                let (parte, lida) = (dados.as_mut(), &*tabela);
+                estado::secao_tabela(ui, lida, |ui| parte.acoes_da_tabela(ui, ctx, lida));
+                dados.propriedades(ui, ctx, tabela);
+                let (caminho, tamanho) =
+                    self.arquivo.as_ref().map(|(_, c, t)| (c.as_str(), t.as_str())).unwrap_or_default();
+                let _ = Secao::new("propriedades::arquivo_curto", "Arquivo").mostrar(ui, |ui| {
+                    ficha(ui, |d| {
+                        d.linha_texto("Caminho", Some(caminho), "—");
+                        d.linha_texto("Tamanho", Some(tamanho), "—");
+                    });
                 });
             }
+            _ => {
+                let egui = ui.ctx().clone();
+                // a parte da vista, feita agora se ainda não existe (ou era de outra vista)
+                if p.vista.as_ref().map(ParteDaVista::vista) != Some(vista) {
+                    p.vista = ParteDaVista::nova(vista, &p.tabela);
+                }
+                let Pronta { tabela, vista: parte_vista, .. } = p.as_mut();
+                let Some(parte_vista) = parte_vista else { return };
+                let parte = parte_vista.parte();
+                if let Some(pedido) = pedido {
+                    parte.pedido(pedido, &egui, ctx, tabela);
+                }
+                // a faixa da parte ("Colunas · 7 colunas", "Comando de criação" e o Copiar) como cabeçalho da vista
+                let largura = ui.available_width();
+                let (linha, _) =
+                    ui.allocate_exact_size(egui::vec2(largura, ALTURA_CABECALHO_VISTA), egui::Sense::hover());
+                let mut ui_faixa = ui.new_child(
+                    egui::UiBuilder::new()
+                        .max_rect(linha.shrink2(egui::vec2(12.0, 0.0)))
+                        .layout(egui::Layout::left_to_right(egui::Align::Center)),
+                );
+                parte.faixa(&mut ui_faixa, ctx, tabela);
+                if vista == Vista::Sql {
+                    // a Definição rola por dentro, na altura que sobra
+                    parte.conteudo(ui, ctx, tabela);
+                } else {
+                    egui::ScrollArea::vertical()
+                        .id_salt(("vista", vista as u8, &nome))
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.spacing_mut().item_spacing.y = 0.0;
+                            recuado(ui, [0.0, 10.0, 10.0], |ui| parte.conteudo(ui, ctx, tabela));
+                            parte.propriedades(ui, ctx, tabela);
+                        });
+                }
+                if tabela.recarregar {
+                    // a estrutura mudou pela vista: a tela relê no próximo quadro do documento
+                    egui.request_repaint();
+                }
+            }
         }
-        let (caminho, tamanho) = self.arquivo.as_ref().map(|(_, c, t)| (c.as_str(), t.as_str())).unwrap_or_default();
-        let _ = Secao::new("propriedades::arquivo_curto", "Arquivo").mostrar(ui, |ui| {
-            ficha(ui, |d| {
-                d.linha_texto("Caminho", Some(caminho), "—");
-                d.linha_texto("Tamanho", Some(tamanho), "—");
-            });
-        });
     }
 
     /// "clientes · 60 linhas · 7 colunas", depois de lida.
@@ -434,10 +613,29 @@ impl estado::Documento for TelaTabela {
 
     fn em_segundo_plano(&mut self, egui: &egui::Context, ctx: &mut Contexto) {
         if let Situacao::Pronta(p) = &mut self.situacao {
-            let Pronta { tabela, aba, .. } = p.as_mut();
-            aba.parte().em_segundo_plano(egui, ctx, tabela);
+            let Pronta { tabela, dados, vista, .. } = p.as_mut();
+            dados.em_segundo_plano(egui, ctx, tabela);
+            if let Some(v) = vista {
+                v.parte().em_segundo_plano(egui, ctx, tabela);
+            }
         }
     }
+}
+
+/// A altura do cabeçalho de uma vista das Propriedades (a faixa da parte, na altura da `.sec`).
+const ALTURA_CABECALHO_VISTA: f32 = interface::pecas::painel::ALTURA_SECAO;
+
+/// Um `Ui` com o recuo `[cima, lados, baixo]` (o `padding` de um bloco das Propriedades).
+fn recuado(ui: &mut Ui, [cima, lados, baixo]: [f32; 3], conteudo: impl FnOnce(&mut Ui)) {
+    let topo = ui.cursor().min;
+    let r = egui::Rect::from_min_max(
+        topo + egui::vec2(lados, cima),
+        egui::pos2(ui.max_rect().right() - lados, f32::INFINITY),
+    );
+    let mut dentro = ui.new_child(egui::UiBuilder::new().max_rect(r).layout(egui::Layout::top_down(egui::Align::Min)));
+    conteudo(&mut dentro);
+    let altura = dentro.min_rect().height().max(0.0) + cima + baixo;
+    ui.allocate_space(egui::vec2(ui.available_width(), altura));
 }
 
 #[cfg(test)]

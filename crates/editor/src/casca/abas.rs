@@ -6,7 +6,9 @@
 //! mostra o ponto `--acct` no lugar do ×, que volta no hover e no foco; o × dela passa pela fila de perguntas ao
 //! fechar da casca ("Salvar as alterações em…?").
 //!
-//! O clique numa aba, no × dela, o clique do meio e o "+" viram [`Acao`] (`FocarAba`, `FecharAba`, `NovaConsulta`).
+//! Na ponta direita, o "Todas as abas" (revisão de UI de 19/10/2026): o menu com cada aba aberta, a ativa marcada.
+//!
+//! O clique numa aba (ou no item dela no "Todas as abas"), no × dela, o clique do meio e o "+" viram [`Acao`] (`FocarAba`, `FecharAba`, `NovaConsulta`).
 //! Quem chama tira o foco do campo em edição no mesmo quadro e aplica a ação no seguinte, como os atalhos de
 //! teclado: a célula da grade em edição grava antes de a aba sair de vista. Quem chama também pinta o documento
 //! embaixo (`pintar_documento`), sem o fio de cima debaixo da aba ativa (a junção que a faixa devolve).
@@ -71,11 +73,11 @@ pub(crate) fn faixa(ui: &mut Ui, abas: &Abas<Documento>, estado: &Estado) -> (Op
         })
         .collect();
     let ativa = titulos.iter().position(|(_, _, ativa)| *ativa);
-    let r = FaixaAbas::new("abas", &itens).ativa(ativa).nova(estado.tem_banco()).mostrar(ui);
+    let r = FaixaAbas::new("abas", &itens).ativa(ativa).nova(estado.tem_banco()).todas(true).mostrar(ui);
     let id_de = |i: usize| abas.iter().nth(i).map(|a| a.id());
     let pedido = if let Some(id) = r.fechar.and_then(id_de) {
         Some(Acao::FecharAba(Some(id)))
-    } else if let Some(id) = r.clicada.and_then(id_de).filter(|&id| id != abas.id_ativa()) {
+    } else if let Some(id) = r.clicada.or(r.escolhida).and_then(id_de).filter(|&id| id != abas.id_ativa()) {
         Some(Acao::FocarAba(id))
     } else {
         r.nova.then_some(Acao::NovaConsulta { sql: None })

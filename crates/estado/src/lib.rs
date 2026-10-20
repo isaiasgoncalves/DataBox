@@ -163,14 +163,14 @@ mod tabela;
 mod verbo;
 
 pub use abas::{AbaAberta, Abas, Abertura, ChaveAba, Entrada, IdAba};
-pub use acao::{Acao, FiltroAtual, OrigemJanelaExportar, PedidoJanelaExportar};
+pub use acao::{Acao, FiltroAtual, OrigemJanelaExportar, PainelCasca, PedidoJanelaExportar};
 pub use contexto::{Contexto, Estado, LIMIAR_TABELA_GRANDE, MSG_SO_NA_TRANSACAO, NoDaPasta, PastaAberta, Reacao};
 pub use dialogos::{Dialogos, Escolha, FormatoArquivo, filtros_de_abrir_arquivo};
 pub use documento::{
-    Anatomia, BuscaDaBarra, Documento, EventoBusca, InfoArquivo, MSG_CAMINHO_COPIADO, ParteTabela, Rolagem, Situacao,
-    StatusDeArquivo, busca_da_barra, consultas_da_tabela, desenhar_parte_empilhada, focar_busca_da_barra,
-    icone_da_tabela, id_busca_da_barra, propriedades_no_fim, secao_abrir_na_consulta, secao_arquivo, secao_arquivo_com,
-    secao_tabela, tipo_da_tabela,
+    Anatomia, BuscaDaBarra, Documento, EventoBusca, InfoArquivo, MSG_CAMINHO_COPIADO, ParteTabela, PedidoTabela,
+    Rolagem, Situacao, StatusDeArquivo, busca_da_barra, consultas_da_tabela, desenhar_parte_empilhada,
+    focar_busca_da_barra, icone_da_tabela, id_busca_da_barra, propriedades_no_fim, secao_abrir_na_consulta,
+    secao_arquivo, secao_arquivo_com, secao_tabela, tipo_da_tabela,
 };
 pub use fonte::{FonteDeColunas, TipoDeFonte};
 pub use promessa::{MSG_INESPERADO, Promessa, esperar_tarefas, tarefas_em_andamento};

@@ -18,8 +18,9 @@ use std::path::{Path, PathBuf};
 use egui::{Margin, Rect, Response, ScrollArea, Sense, Stroke, Ui, UiBuilder, pos2, vec2};
 use estado::{Contexto, Estado, Promessa, Reacao};
 use interface::fontes::{self, Peso};
+use interface::icones::Icone;
 use interface::marca::pintar_logo;
-use interface::pecas::botao::Botao;
+use interface::pecas::botao::{Botao, LADO_CABECALHO};
 use interface::pecas::janela::Janela;
 use interface::pecas::texto::{galley, galley_cortado, galley_quebrado, mostrar_paragrafo};
 use interface::pecas::texto_pre::TextoPre;
@@ -166,6 +167,8 @@ struct Pedidos {
     licenca: bool,
     pasta: bool,
     log: bool,
+    /// O Copiar caminho de uma das duas linhas (`.cam .cp`): o caminho inteiro.
+    copiar: Option<PathBuf>,
 }
 
 impl Sobre {
@@ -202,6 +205,10 @@ impl Sobre {
         }
         self.licenca |= pedidos.licenca;
         self.terceiros |= terceiros;
+        if let Some(c) = pedidos.copiar.take() {
+            egui.copy_text(c.display().to_string());
+            toast_concluido(egui, estado::MSG_CAMINHO_COPIADO);
+        }
         if pedidos.pasta {
             self.abrir(egui, ctx, gancho, ficha.pasta_preferencias.clone());
         }
@@ -258,9 +265,14 @@ fn texto_peso(ui: &mut Ui, texto: &str, tamanho: f32, peso: Peso, cor: egui::Col
 
 /// O link da ficha (`.sb-det a`): `--acct`, sem sublinhado até o hover. Com a dica de `title`.
 fn ligacao(ui: &mut Ui, texto: &str, peso: Peso, dica: &str) -> Response {
+    ligacao_cortada(ui, texto, peso, dica, f32::INFINITY)
+}
+
+/// O [`ligacao`] cortado com "…" em `largura` (o `.cam>a` da revisão de UI de 19/10/2026).
+fn ligacao_cortada(ui: &mut Ui, texto: &str, peso: Peso, dica: &str, largura: f32) -> Response {
     let p = paleta(ui);
     let cor = p.estudio.acct;
-    let g = galley(ui, texto, fontes::fonte(12.0, peso), cor);
+    let g = galley_cortado(ui, texto, fontes::fonte(12.0, peso), cor, largura);
     let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::click());
     if ui.is_rect_visible(rect) {
         ui.painter().galley(rect.min, g, cor);
@@ -374,13 +386,24 @@ fn tabela(ui: &mut Ui, f: &Ficha, pedidos: &mut Pedidos) {
     linha(ui, 4, "Licença", &mut |ui| {
         pedidos.licenca |= ligacao(ui, "MIT", Peso::Normal, "Abrir o texto da licença").clicked();
     });
+    // os caminhos (`.cam`, revisão de UI de 19/10/2026): o link cortado com "…" e o Copiar caminho de 20px ao lado
+    let caminho = |ui: &mut Ui, rotulo: &str, dica: &str, inteiro: &Path, copiar: &mut Option<PathBuf>| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let largura = (ui.available_width() - 4.0 - LADO_CABECALHO).max(24.0);
+        let clicou = ligacao_cortada(ui, rotulo, Peso::Leve, dica, largura).clicked();
+        let botao = Botao::icone(Icone::CopiarCaminho).do_cabecalho().rotulo("Copiar caminho").dica("Copiar caminho");
+        if ui.add(botao).clicked() {
+            *copiar = Some(inteiro.to_path_buf());
+        }
+        clicou
+    };
     linha(ui, 5, "Preferências", &mut |ui| {
         let dica = format!("Abrir a pasta no Explorador: {}", f.pasta_preferencias.display());
-        pedidos.pasta |= ligacao(ui, &f.rotulo_preferencias(), Peso::Leve, &dica).clicked();
+        pedidos.pasta |= caminho(ui, &f.rotulo_preferencias(), &dica, &f.pasta_preferencias, &mut pedidos.copiar);
     });
     linha(ui, 6, "Arquivo de log", &mut |ui| {
         let dica = format!("Abrir o arquivo: {}", f.log.display());
-        pedidos.log |= ligacao(ui, &f.rotulo_log(), Peso::Leve, &dica).clicked();
+        pedidos.log |= caminho(ui, &f.rotulo_log(), &dica, &f.log, &mut pedidos.copiar);
     });
     ui.add_space(14.0);
     let y = ui.cursor().min.y;

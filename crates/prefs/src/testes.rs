@@ -2231,3 +2231,65 @@ fn cores_codigo_como_str_e_de_texto() {
         "Cores do código desconhecidas: 'Monokai'. Use databox, alto_contraste, solarized_escuro ou monokai."
     );
 }
+
+#[test]
+fn lugares_dos_paineis_gravam_mesclam_e_voltam() {
+    let tmp = PastaTemp::nova("lugares-grava");
+    let arquivo = tmp.arquivo();
+    let p = abrir(&arquivo);
+    // antes de a pessoa mexer: tudo padrão e sem a chave no arquivo
+    assert_eq!(p.lugares(), LugaresPaineis::default());
+    p.atualizar(Mudanca::lugares(LugaresPaineis { propriedades: Some(LugarPainel::Janela), ..Default::default() }))
+        .unwrap();
+    assert_eq!(p.lugares(), LugaresPaineis { propriedades: Some(LugarPainel::Janela), ..Default::default() });
+    assert_eq!(json_do_arquivo(&arquivo)["lugares_paineis"], serde_json::json!({"propriedades": "janela"}));
+    // o outro se mescla; o primeiro continua; a chave vem depois das larguras
+    p.atualizar(Mudanca::paineis(MudancaLarguraPaineis { explorador: Some(300.0), propriedades: None })).unwrap();
+    p.atualizar(Mudanca::lugares(LugaresPaineis { historico: Some(LugarPainel::Direita), ..Default::default() }))
+        .unwrap();
+    let esperados = LugaresPaineis {
+        explorador: None,
+        historico: Some(LugarPainel::Direita),
+        propriedades: Some(LugarPainel::Janela),
+    };
+    assert_eq!(abrir(&arquivo).lugares(), esperados);
+    let gravado = json_lido(&arquivo);
+    assert_eq!(
+        chaves(&gravado),
+        [
+            "versao",
+            "tema",
+            "exportacao",
+            "ultimo_diretorio",
+            "recentes",
+            "historico_sql",
+            "larguras_paineis",
+            "lugares_paineis"
+        ]
+    );
+    assert_eq!(chaves(gravado.campo("lugares_paineis").unwrap()), ["historico", "propriedades"]);
+    let dados = sanear(&gravado, MAX_BANCOS_NO_HISTORICO).unwrap();
+    assert_eq!(dados.serializar(), fs::read_to_string(&arquivo).unwrap());
+}
+
+#[test]
+fn lugares_estranhos_voltam_ao_padrao_e_as_chaves_novas_ficam() {
+    let tmp = PastaTemp::nova("lugares-estranhos");
+    let arquivo = tmp.arquivo();
+    gravar_texto(
+        &arquivo,
+        r#"{"tema": "dark", "lugares_paineis": {"explorador": "teto", "historico": 3, "propriedades": "direita", "graficos": "janela"}}"#,
+    );
+    let p = abrir(&arquivo);
+    assert_eq!(p.lugares(), LugaresPaineis { propriedades: Some(LugarPainel::Direita), ..Default::default() });
+    // regravado, o desconhecido continua
+    p.atualizar(Mudanca::lugares(LugaresPaineis { explorador: Some(LugarPainel::Esquerda), ..Default::default() }))
+        .unwrap();
+    assert_eq!(
+        json_do_arquivo(&arquivo)["lugares_paineis"],
+        serde_json::json!({"explorador": "esquerda", "propriedades": "direita", "graficos": "janela"})
+    );
+    // um "lugares_paineis" que não é objeto conta como não escolhido
+    gravar_texto(&arquivo, r#"{"tema": "dark", "lugares_paineis": "janela"}"#);
+    assert_eq!(abrir(&arquivo).lugares(), LugaresPaineis::default());
+}

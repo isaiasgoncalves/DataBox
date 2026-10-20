@@ -155,6 +155,8 @@ enum Passo {
     Ir(Rota),
     Emitir(Acao),
     Clicar(&'static str),
+    /// Clica na aba de um painel numa doca.
+    Aba(&'static str),
 }
 
 #[test]
@@ -169,9 +171,8 @@ fn parado_nao_pede_repintura() {
         ("início", Some(Passo::Ir(Rota::Inicio))),
         ("visão geral com várias abas abertas", Some(Passo::Ir(Rota::Banco))),
         ("dados de clientes de novo", Some(Passo::Ir(Rota::objeto("clientes", false)))),
-        ("histórico de consultas à vista", Some(Passo::Clicar("Histórico de consultas"))),
-        ("sem o painel da esquerda", Some(Passo::Clicar("Histórico de consultas"))),
-        ("explorador de volta", Some(Passo::Clicar("Explorador"))),
+        ("histórico de consultas à vista", Some(Passo::Aba("Histórico"))),
+        ("explorador de volta", Some(Passo::Aba("Explorador"))),
         ("propriedades escondidas", Some(Passo::Clicar("Painel de propriedades"))),
         ("propriedades à vista", Some(Passo::Clicar("Painel de propriedades"))),
     ];
@@ -179,6 +180,11 @@ fn parado_nao_pede_repintura() {
         match passo {
             Some(Passo::Ir(r)) => h.state_mut().ir(r),
             Some(Passo::Emitir(a)) => h.state_mut().emitir(a),
+            Some(Passo::Aba(rotulo)) => {
+                h.get(by().role(Role::Tab).label(rotulo)).click();
+                h.step();
+                h.remove_cursor();
+            }
             Some(Passo::Clicar(rotulo)) => {
                 h.get(by().role(Role::Button).label(rotulo)).click();
                 h.step();
@@ -189,7 +195,8 @@ fn parado_nao_pede_repintura() {
         let causas = causas_parado(&mut h);
         assert!(causas.is_empty(), "a tela {nome} parada pediu repintura: {causas:#?}");
     }
-    assert_eq!(h.state().abas_abertas().len(), 6);
+    // uma aba por objeto: a Estrutura de clientes é a aba dos Dados
+    assert_eq!(h.state().abas_abertas().len(), 5);
 }
 
 /// N3: a Consulta executando conta o tempo no rodapé, que pede um quadro a cada 250 ms, e o arco do Executar ocupado
@@ -262,15 +269,15 @@ fn faixa_de_abas_parada_nao_repinta() {
     let causas = causas_parado(&mut h);
     assert!(causas.is_empty(), "com três abas: {causas:#?}");
     // o ponteiro passa sobre uma aba, sobre o × de outra, sobre o "+" ("Nova consulta SQL"; o "Nova consulta" é o da
-    // barra de ferramentas), sobre um nó do Explorador, um botão da barra de ícones, o modo na barra de status (que
+    // barra de ferramentas), sobre um nó do Explorador, uma aba de doca, o modo na barra de status (que
     // tem dica), os botões da barra de ferramentas (um ligado, um desligado com dica, o Painel) e uma seção das
     // Propriedades, e sai
     for (papel, rotulo, ultimo) in [
-        (Role::Tab, "clientes · Dados", false),
+        (Role::Tab, "clientes", false),
         (Role::Button, "Fechar a aba exemplo.db · Visão geral", false),
         (Role::Button, "Nova consulta SQL", true),
         (Role::Link, "pedidos", false),
-        (Role::Button, "Histórico de consultas", false),
+        (Role::Tab, "Histórico", false),
         (Role::Label, "Gravação imediata", false),
         (Role::Button, "Nova consulta", false),
         (Role::Button, "Nova coluna", false),
@@ -368,28 +375,24 @@ fn paineis_parados_nao_repintam() {
     }
 
     // o Histórico de consultas com dois comandos, e o ponteiro sobre um deles
-    clicar(&mut h, Role::Button, "Histórico de consultas");
+    clicar(&mut h, Role::Tab, "Histórico");
     esperar(&mut h, "a lista do Histórico", |h| h.query(by().role(Role::Button).label("SELECT 1 AS um")).is_some());
     conferir_parado(&mut h, "o Histórico com comandos");
     passar_e_sair(&mut h, &[(Role::Button, "SELECT 1 AS um"), (Role::Button, "SELECT count(*) FROM clientes")]);
     conferir_parado(&mut h, "o Histórico depois do ponteiro");
 
-    // o Explorador com a Estrutura de clientes à vista (a tabela aberta e a parte marcada) e as Visões abertas; o
-    // ponteiro numa parte, numa visão e no Recolher tudo; depois, recolhido
-    clicar(&mut h, Role::Button, "Explorador");
+    // o Explorador com clientes à vista (a vista Colunas nas Propriedades) e as Visões abertas; o ponteiro numa
+    // tabela, numa visão e no Recolher tudo; depois, recolhido
+    clicar(&mut h, Role::Tab, "Explorador");
     h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Parte::Estrutura));
-    esperar(&mut h, "a Estrutura de clientes", |h| {
-        !h.state().ocupado() && h.query(by().role(Role::Link).label("clientes · Estrutura")).is_some()
+    esperar(&mut h, "clientes com a vista Colunas", |h| {
+        !h.state().ocupado() && h.state().vista_da_tabela() == Some("Colunas")
     });
     clicar(&mut h, Role::Link, "Visões");
-    conferir_parado(&mut h, "o Explorador com uma parte à vista e as Visões abertas");
+    conferir_parado(&mut h, "o Explorador com a tabela à vista e as Visões abertas");
     passar_e_sair(
         &mut h,
-        &[
-            (Role::Link, "clientes · Índices e gatilhos"),
-            (Role::Link, "v_pedidos_por_cliente"),
-            (Role::Button, "Recolher tudo"),
-        ],
+        &[(Role::Link, "pedidos"), (Role::Link, "v_pedidos_por_cliente"), (Role::Button, "Recolher tudo")],
     );
     conferir_parado(&mut h, "o Explorador depois do ponteiro");
     clicar(&mut h, Role::Button, "Recolher tudo");
@@ -439,7 +442,7 @@ fn explorador_com_a_leitura_dos_objetos_falhada_nao_gira_nem_repinta() {
 #[test]
 fn historico_com_a_leitura_falhada_mostra_so_o_aviso_e_nao_repinta() {
     let (_amb, mut h) = harness_parado("historico_falhou");
-    clicar(&mut h, Role::Button, "Histórico de consultas");
+    clicar(&mut h, Role::Tab, "Histórico");
     esperar(&mut h, "a leitura do Histórico", |h| !h.state().ocupado());
     h.state_mut().simular_falha_do_historico("Não foi possível ler o histórico.");
     h.run_steps(3);

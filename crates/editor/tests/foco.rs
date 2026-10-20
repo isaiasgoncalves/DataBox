@@ -59,11 +59,11 @@ fn tab_so_para_em_pecas_com_nome_e_na_ordem_da_casca() {
     let posicao = |rotulo: &str| {
         paradas.iter().position(|p| p == rotulo).unwrap_or_else(|| panic!("{rotulo} não está no Tab: {paradas:?}"))
     };
-    // a barra de título, a barra de ferramentas, a barra de ícones e o Explorador, nesta ordem
+    // a barra de título, a barra de ferramentas, a doca da esquerda (as abas dela e o Explorador), nesta ordem
     assert_eq!(paradas.first().map(String::as_str), Some("Arquivo"));
     assert!(posicao("Ajuda") < posicao("Abrir arquivo"), "{paradas:?}");
-    assert!(posicao("Painel de propriedades") < posicao("Início"), "a barra de ferramentas antes da de ícones");
-    assert!(posicao("Histórico de consultas") < posicao("exemplo.db"), "{paradas:?}");
+    assert!(posicao("Painel de propriedades") < posicao("Explorador"), "a barra de ferramentas antes da doca");
+    assert!(posicao("Explorador") < posicao("Histórico") && posicao("Histórico") < posicao("exemplo.db"));
     // na árvore, um nó depois do outro (sem a seta no meio)
     assert_eq!(posicao("Tabelas"), posicao("exemplo.db") + 1, "{paradas:?}");
     assert_eq!(posicao("clientes"), posicao("Tabelas") + 1, "{paradas:?}");
@@ -82,7 +82,7 @@ fn tab_com_a_exportar_aberta_fica_na_janela_e_nos_botoes_da_janela() {
     assert!(h.state().exportacao_aberta().is_some());
     let paradas = paradas_do_tab(&mut h, 60);
     // nada de baixo do véu (os menus, as barras, o Explorador) e nada sem nome
-    for de_baixo in ["Arquivo", "Editar", "Exibir", "Abrir arquivo", "Início", "Explorador", "exemplo.db"] {
+    for de_baixo in ["Arquivo", "Editar", "Exibir", "Abrir arquivo", "Explorador", "exemplo.db"] {
         assert!(!paradas.iter().any(|p| p == de_baixo), "{de_baixo} sob o véu entrou no Tab: {paradas:?}");
     }
     // os botões da janela continuam (ficam acima da modal)
@@ -97,29 +97,29 @@ fn setas_no_explorador_ficam_na_arvore() {
     let mut h = harness(&amb);
     h.remove_cursor();
     h.run_steps(2);
-    // o Tab até o nó clientes do Explorador
+    // o Tab até o nó Tabelas do Explorador (aberto no começo)
     let mut achou = false;
     for _ in 0..80 {
         h.key_press(Key::Tab);
         h.run_steps(1);
         if focado(&h).is_some_and(|(papel, rotulo, r)| {
-            papel == Role::Link && rotulo.as_deref() == Some("clientes") && r.right() < 330.0
+            papel == Role::Link && rotulo.as_deref() == Some("Tabelas") && r.right() < 330.0
         }) {
             achou = true;
             break;
         }
     }
-    assert!(achou, "o Tab não chegou ao nó clientes");
-    // → abre o nó e o foco fica nele (antes, ia para o "i" do documento, à direita)
-    h.key_press(Key::ArrowRight);
-    h.run_steps(2);
-    assert!(existe(&h, Role::Link, "clientes · Dados"), "o → abriu o nó");
-    assert_eq!(rotulo_focado(&h, "o →"), "clientes");
-    // ← fecha e o foco também fica
+    assert!(achou, "o Tab não chegou ao nó Tabelas");
+    // ← fecha o nó e o foco fica nele (antes, ia para o vizinho)
     h.key_press(Key::ArrowLeft);
     h.run_steps(2);
-    assert!(!existe(&h, Role::Link, "clientes · Dados"), "o ← fechou o nó");
-    assert_eq!(rotulo_focado(&h, "o ←"), "clientes");
+    assert!(!existe(&h, Role::Link, "clientes"), "o ← fechou o nó");
+    assert_eq!(rotulo_focado(&h, "o ←"), "Tabelas");
+    // → abre e o foco também fica (antes, ia para o "i" do documento, à direita)
+    h.key_press(Key::ArrowRight);
+    h.run_steps(2);
+    assert!(existe(&h, Role::Link, "clientes"), "o → abriu o nó");
+    assert_eq!(rotulo_focado(&h, "o →"), "Tabelas");
     // ↓ desce pela árvore e, no fim dela, não cai numa faixa de redimensionar sem nome
     for i in 0..12 {
         h.key_press(Key::ArrowDown);

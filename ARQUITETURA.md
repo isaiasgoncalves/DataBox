@@ -110,8 +110,9 @@ databox/
    ├─ tela_planilha/  a planilha do Excel só leitura (prancheta 17): faixa das planilhas, grade com letras,
    │                  mescladas e painéis congelados, índice em segundo plano, origem do Trazer colunas
    └─ editor/         o executável DataBox.exe (o `[[bin]]` do pacote editor): a casca (src/casca: barra de
-                      título e janela sem decoração, menus, barra de ferramentas, barra de ícones, Explorador,
-                      Histórico de consultas, faixa de abas, Propriedades, larguras dos painéis, barra de status,
+                      título e janela sem decoração, menus, barra de ferramentas, docas e janelas próprias dos
+                      painéis, Explorador, Histórico de consultas, faixa de abas, Propriedades, larguras das
+                      docas, barra de status,
                       atalhos, aviso de transação, Preferências, Sobre), os documentos das abas
                       (src/documento.rs), Início, Visão geral, o contêiner da tabela, linha de comando, recursos
                       (recursos/databox.rc: ícone, versão e manifesto; build.rs: a compilação, as licenças de
@@ -511,8 +512,9 @@ entregue às abas) e, com o recurso `apoio-testes`, `apoio_testes::{Ambiente, pa
 capturar}` para testar telas com o `egui_kittest` e gravar capturas em `capturas/rust/`.
 
 **Abas** (`estado::Abas<T>`; a casca guarda um `Abas<Documento>`):
-- `IdAba` (nunca se repete), `ChaveAba::de(&Rota)`: o Início, a Visão geral e cada parte de tabela ou visão pelo
-  nome (`Parte { nome, parte }`, sem o tipo: a tela corrige o tipo por `Substituir`) e a ficha de um arquivo de dados
+- `IdAba` (nunca se repete), `ChaveAba::de(&Rota)`: o Início, a Visão geral e cada tabela ou visão pelo nome
+  (`Objeto { nome }`, sem o tipo nem a parte: uma aba por objeto desde a revisão de UI de 19/10/2026; a tela corrige o
+  tipo e a parte por `Substituir`) e a ficha de um arquivo de dados
   (`Arquivo(chave)`, a `prefs::chave_caminho`: o mesmo arquivo cai na mesma aba; `Rota::Arquivo` não exige banco); a
   Consulta SQL não tem chave.
   `Entrada { aba, rota }` é a entrada do histórico único; `AbaAberta { id, chave, rota, numero_consulta, conteudo }`.
@@ -567,11 +569,14 @@ trait Documento     anatomia() -> Anatomia { faixa, rodape, rolagem: Rolagem::{P
                     ofertas(&Estado) -> Ofertas · executar(Verbo, &egui::Context, ctx)   (antes do conteúdo)
                     busca() -> Option<BuscaDaBarra { texto: &mut String, dica }> · evento_busca(EventoBusca::{Mudou,
                         Enter, Limpar}, …)
-                    tem_propriedades() · propriedades(ui, ctx) · status(&Estado) -> Option<String> · ocupada()
+                    tem_propriedades() · propriedades(ui, ctx) · propriedades_rolam() (false: o documento cuida da
+                        rolagem do painel) · status(&Estado) -> Option<String> · ocupada()
                     em_segundo_plano(&egui::Context, ctx)   (a cada quadro, com a aba fora de vista)
 trait ParteTabela   o mesmo, com a TabelaAberta em cada um (ofertas(&TabelaAberta, &Estado)); sem tem_propriedades
                     nem status (os da tela de tabela); mais acoes_da_tabela(ui, ctx, &TabelaAberta), o fim da seção
-                    "Tabela" (o "Renomear a tabela" da Estrutura)
+                    "Tabela" (o "Renomear a tabela" da Estrutura); pedido(PedidoTabela::{NovaColuna, Renomear,
+                    Excluir}, …), o menu Tabela; coluna_escolhida() e destacar_coluna(Option<&str>), a coluna da
+                    Estrutura que acende na grade dos Dados
 desenhar_parte_empilhada(parte, ui, ctx, tabela)   faixa, conteúdo e rodapé um embaixo do outro, sem a casca (o
                     `ui` de sempre das partes e o que os testes usam)
 secao_tabela(ui, tabela, depois) · secao_abrir_na_consulta(ui, ctx, nome) · consultas_da_tabela(nome)
@@ -583,9 +588,10 @@ Quem implementa: o Início, a Visão geral e a tela de tabela (no `editor`), a `
 `ParteTabela`, `AbaDados` (`tela_dados`), `AbaEstrutura`, `AbaIndices` e `AbaDefinicao` (`tela_esquema`). O enum
 `editor::Documento` continua dono do ciclo de vida das abas (o título, o ícone, `serve_para`, `refeito`,
 `ao_fechar`, `execucao_ao_fechar`, `marcar_para_reler`, `esquecer_transacao`) e despacha o resto por `doc()` /
-`doc_ref()`. A tela de tabela passa à parte a anatomia, a faixa, o conteúdo e o rodapé, junta o Atualizar e o Exportar
-às ofertas dela e desenha, nas Propriedades, a seção "Tabela" (com as `acoes_da_tabela` no fim) antes das seções da
-parte e o "Arquivo" curto depois. O `Recursos` e a `Saida` do editor saíram: as telas pedem tudo por `Acao` (com o
+`doc_ref()`. A tela de tabela (revisão de UI de 19/10/2026) passa aos Dados a anatomia, a faixa, o conteúdo e o
+rodapé, junta o Atualizar e o Exportar às ofertas deles e desenha, nas Propriedades, o segmentado das vistas: no
+Resumo, a seção "Tabela" (com as `acoes_da_tabela` no fim), as seções dos Dados e o "Arquivo" curto; nas vistas
+Colunas, Índices e SQL, a faixa, o conteúdo e as seções da Estrutura, dos Índices ou da Definição, com a rolagem dela. O `Recursos` e a `Saida` do editor saíram: as telas pedem tudo por `Acao` (com o
 `EscolherCopia`, o diálogo da cópia de segurança, que a casca abre e devolve à Visão geral), e o `Contexto` ganhou
 `versao` e `trocando` (`com_casca`). Com o painel de Propriedades escondido (a janela estreita ou o Ctrl+Alt+B), as
 telas de rolagem de página recebem o mesmo `propriedades` no fim da página, depois do fio e do `.tit` "Propriedades"
@@ -663,17 +669,27 @@ linha" · "Fechar".
     (§4.8): nada muda de lugar ao trocar de aba nem no meio de uma execução (o Interromper fica desligado e só liga,
     vermelho, com a Consulta executando), o que a aba não oferece fica desligado com a dica. O clique executa no
     documento antes de ele se desenhar;
-  - o **corpo** (`padding:8px; gap:8px`): a barra de ícones de 52 px (`icones.rs`: Início, Explorador e Histórico de
-    consultas, e no pé as Preferências), o painel da esquerda (o Explorador, `explorador.rs`: a pasta aberta, abaixo; sem
-    ela, a árvore do banco aberto com Tabelas, Visões e Sistema, as fichas pelo tipo de cada tabela, as partes de cada uma, a parte da aba à vista
-    marcada, o Atenção de 16 no banco com a transação aberta, Recolher tudo e o "Filtrar tabelas" acima de 12, e o
+  - o **corpo** (`padding:8px; gap:8px`; revisão de UI de 19/10/2026, sem a barra de ícones): a doca da esquerda e a
+    da direita (`docas.rs`, a peça `interface::pecas::doca`): cada painel (Explorador, Histórico, Propriedades) mora numa
+    doca ou numa janela própria do sistema (`ViewportBuilder`, `show_viewport_immediate`; nos testes, embutida); a doca
+    tem a fileira de abas (só ícone à esquerda, com o nome à direita), as ações do painel e o "Destacar em janela";
+    arrastar a aba prende o painel na outra doca ou, fora da janela, abre a janela própria, e o "Fechar" dela o devolve
+    escondido; o lugar fica em `"lugares_paineis"`. Os atalhos do trilho ficaram no Início (os botões "Painéis") e nos
+    menus (Exibir › Início, Alt+Home). O Explorador (`explorador.rs`: a pasta aberta, abaixo; sem
+    ela, a árvore do banco aberto com Tabelas, Visões e Sistema, as fichas pelo tipo de cada tabela, cada objeto uma
+    folha, o da aba à vista marcado, o Atenção de 16 no banco com a transação aberta, Recolher tudo e o "Filtrar tabelas" acima de 12, e o
     "Tentar de novo" quando a leitura dos objetos falha; ou o Histórico de consultas, `historico.rs`: o clique
     seleciona, com o SQL inteiro na dica, e o duplo clique ou o Enter abrem uma Consulta com o comando), a faixa de
     abas de 35 px (`abas.rs`: o clique foca, o × e o clique do meio fecham, o "+" abre uma Consulta) com o
     **documento** da aba ativa embaixo e as **Propriedades** (`propriedades.rs`: as seções que o documento desenha,
     §4.8, com os rótulos "Seção Arquivo", "Seção Tabela"… para o leitor de tela; não aparecem no Início nem quando o
     documento ficaria com menos de 560 px, sem mudar a escolha da pessoa: o botão, o item do Exibir e o Ctrl+Alt+B
-    ficam desligados). Mostrar ou esconder os painéis fica só na sessão;
+    ficam desligados). Mostrar ou esconder os painéis fica só na sessão; o lugar de cada um, nas preferências.
+    **Uma aba por objeto** (`ChaveAba::Objeto`): o documento da tabela é a grade dos Dados e a Estrutura, os Índices
+    e gatilhos e a Definição SQL são vistas das Propriedades (o segmentado Resumo · Colunas · Índices · SQL;
+    `tabela.rs`, `Documento::propriedades_rolam`), com os menus **Banco** e **Tabela** (`menus.rs`) e o Alt+1 a Alt+4;
+    a coluna escolhida na vista Colunas acende na grade (`ParteTabela::coluna_escolhida` e `destacar_coluna`), e o
+    menu Tabela pede à Estrutura a Nova coluna, o Renomear e o Excluir (`ParteTabela::pedido`, `estado::PedidoTabela`);
   - a **pasta no Explorador** (pranchetas 1, 4 e 15): a raiz no nível 8 (aberta sozinha; o Recolher tudo a
     deixa aberta), as subpastas que abrem sob demanda (a primeira abertura emite `Acao::ListarPasta`, com
     "Carregando…" até a leitura chegar; a falha mostra o motivo e "Tentar de novo"; a vazia, "Nenhum arquivo que o

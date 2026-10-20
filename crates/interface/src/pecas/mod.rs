@@ -15,6 +15,7 @@ pub mod cartao;
 pub mod casca;
 pub mod detalhes;
 pub mod divisoria;
+pub mod doca;
 pub mod dock;
 pub mod documento;
 pub mod ferramentas;

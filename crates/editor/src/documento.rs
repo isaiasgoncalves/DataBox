@@ -124,10 +124,8 @@ impl Documento {
                 Some(b) => (b.nome.clone(), Some("Visão geral".into())),
                 None => ("Visão geral".into(), None),
             },
-            Documento::Tabela(_) => {
-                let nome = rota.nome_objeto().unwrap_or_default().to_string();
-                (nome, rota.aba().map(|p| p.rotulo().to_string()))
-            }
+            // uma aba por objeto (revisão de UI de 19/10/2026): só o nome, sem a parte
+            Documento::Tabela(_) => (rota.nome_objeto().unwrap_or_default().to_string(), None),
             Documento::Consulta(_) => match numero {
                 Some(n) => (format!("Consulta {n}"), None),
                 None => ("Consulta".into(), None),
@@ -424,11 +422,12 @@ mod testes {
         assert!(!banco.is_empty());
         assert_eq!(titulo(Rota::Inicio, None, estado), par("Início", None));
         assert_eq!(titulo(Rota::Banco, None, estado), par(&banco, Some("Visão geral")));
-        assert_eq!(titulo(Rota::objeto("clientes", false), None, estado), par("clientes", Some("Dados")));
+        // uma aba por objeto (revisão de UI de 19/10/2026): o título é só o objeto, em qualquer parte
+        assert_eq!(titulo(Rota::objeto("clientes", false), None, estado), par("clientes", None));
         let estrutura = Rota::objeto_na_aba("clientes", false, Parte::Estrutura);
-        assert_eq!(titulo(estrutura, None, estado), par("clientes", Some("Estrutura")));
+        assert_eq!(titulo(estrutura, None, estado), par("clientes", None));
         let definicao = Rota::objeto_na_aba("v", true, Parte::Definicao);
-        assert_eq!(titulo(definicao, None, estado), par("v", Some("Definição SQL")));
+        assert_eq!(titulo(definicao, None, estado), par("v", None));
         assert_eq!(titulo(Rota::Consulta { sql: None }, Some(2), estado), par("Consulta 2", None));
         // sem banco (a casca não deixa chegar aqui), a Visão geral fica sem o sub
         let mut sem_banco = estado.clone();

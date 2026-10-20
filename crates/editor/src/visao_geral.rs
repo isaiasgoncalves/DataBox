@@ -86,8 +86,9 @@ pub(crate) const PERGUNTA_VACUUM: &str =
 /// O `gap:18px` entre os blocos do conteúdo e o título da lista (`h2` 13/600 com `margin-bottom:8px`).
 const ESPACO_BLOCOS: f32 = 18.0;
 const ESPACO_TITULO_LISTA: f32 = 8.0;
-/// As colunas da lista de Tabelas (`th style="width:…"`): Linhas, Colunas, Tipo e a do "Estrutura". Com menos de
-/// [`NOME_MINIMO`] para o nome, as quatro ficam com a largura do conteúdo (a lista não rola na janela estreita).
+/// As colunas da lista de Tabelas (`th style="width:…"`): Linhas, Colunas, Tipo e a do botão "Colunas" (a vista das
+/// Propriedades, revisão de UI de 19/10/2026). Com menos de [`NOME_MINIMO`] para o nome, as quatro ficam com a
+/// largura do conteúdo (a lista não rola na janela estreita).
 const LARGURAS_LISTA: [f32; 4] = [110.0, 100.0, 150.0, 130.0];
 const NOME_MINIMO: f32 = 200.0;
 /// O cilindro da faixa (`.sk.s20`) e a ficha de cada tabela (`.sk.s16`, com o `gap:8px` do `.link`).
@@ -305,6 +306,15 @@ pub(crate) struct TelaBanco {
     textos: Option<Textos>,
     /// O texto da busca da barra ("Buscar tabelas"): filtra a lista de tabelas pelo nome, sem acento nem caixa.
     busca: String,
+    /// O que o menu Banco pediu (uma manutenção ou a cópia), à espera do próximo quadro.
+    pedido_do_menu: Option<PedidoDoMenu>,
+}
+
+/// O que o menu Banco pede à Visão geral (revisão de UI de 19/10/2026): o mesmo dos botões da Manutenção.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PedidoDoMenu {
+    Manutencao(AcaoManutencao),
+    Copia,
 }
 
 /// A unidade do "de X para Y" do VACUUM: a do maior dos dois tamanhos (os dois na mesma escala).
@@ -336,6 +346,15 @@ impl TelaBanco {
             copia_pedida: None,
             textos: None,
             busca: String::new(),
+            pedido_do_menu: None,
+        }
+    }
+
+    /// Um pedido do menu Banco: atendido no próximo quadro, como o clique no botão da Manutenção (o Compactar
+    /// pergunta antes; com outra manutenção ou cópia correndo, o pedido é esquecido, como o botão desligado).
+    pub(crate) fn pedir(&mut self, pedido: PedidoDoMenu) {
+        if self.execucao.is_none() {
+            self.pedido_do_menu = Some(pedido);
         }
     }
 
@@ -455,6 +474,20 @@ impl TelaBanco {
         if confirmar(ui.ctx(), &mut self.confirmacao) == Some(true) {
             self.manutencao(ui.ctx(), ctx, AcaoManutencao::Vacuum);
         }
+        match self.pedido_do_menu.take() {
+            Some(PedidoDoMenu::Manutencao(AcaoManutencao::Vacuum)) if self.execucao.is_none() => {
+                self.confirmacao =
+                    Some(Confirmacao::new(PERGUNTA_VACUUM).titulo("Compactar (VACUUM)").rotulo("Compactar"));
+                ui.ctx().request_repaint();
+            }
+            Some(PedidoDoMenu::Manutencao(acao)) if self.execucao.is_none() => self.manutencao(ui.ctx(), ctx, acao),
+            Some(PedidoDoMenu::Copia) if self.execucao.is_none() => {
+                if let Some(b) = &ctx.estado.banco {
+                    ctx.emitir(Acao::EscolherCopia { nome_sugerido: format!("{} (cópia).db", nome_base(&b.nome)) });
+                }
+            }
+            _ => {}
+        }
     }
 
     /// O conteúdo do documento: a dock e a lista de Tabelas.
@@ -522,7 +555,7 @@ impl TelaBanco {
                         }
                     }
                     _ => {
-                        if ui.add(Botao::ghost("Estrutura").pequeno()).clicked() {
+                        if ui.add(Botao::ghost("Colunas").pequeno()).clicked() {
                             ir = Some(Rota::objeto_na_aba(t.nome.clone(), false, Aba::Estrutura));
                         }
                     }

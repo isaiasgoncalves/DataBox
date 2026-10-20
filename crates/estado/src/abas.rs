@@ -17,7 +17,7 @@
 //! - [`Abas::reiniciar`] (a troca de banco) fecha todas, inclusive as Consultas, e zera o histórico. Os ids nunca
 //!   se repetem. [`Abas::reiniciar_menos`] faz o mesmo mantendo as que a casca escolher (as de arquivo de dados).
 
-use crate::rota::{Navegacao, Parte, Rota};
+use crate::rota::{Navegacao, Rota};
 
 /// Identidade de uma aba aberta. Não se repete enquanto o app roda, nem depois de [`Abas::reiniciar`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -28,11 +28,11 @@ pub struct IdAba(pub u64);
 pub enum ChaveAba {
     Inicio,
     VisaoGeral,
-    /// Uma parte de uma tabela ou visão, sem o tipo: o nome é único entre as duas, e a tela de tabela corrige o
-    /// tipo por `Acao::Substituir`.
-    Parte {
+    /// Uma tabela ou visão, sem o tipo nem a parte (revisão de UI de 19/10/2026: uma aba por objeto; a Estrutura, os
+    /// Índices e a Definição são vistas das Propriedades): o nome é único entre as duas, e a tela de tabela corrige
+    /// o tipo por `Acao::Substituir`.
+    Objeto {
         nome: String,
-        parte: Parte,
     },
     /// A ficha de um arquivo de dados, pela chave do caminho (`prefs::chave_caminho`: sem diferença de caixa nem de
     /// barra): o mesmo arquivo, com qualquer grafia, cai na mesma aba.
@@ -45,9 +45,7 @@ impl ChaveAba {
         match rota {
             Rota::Inicio => Some(ChaveAba::Inicio),
             Rota::Banco => Some(ChaveAba::VisaoGeral),
-            Rota::Tabela { nome, aba, .. } | Rota::Visao { nome, aba, .. } => {
-                Some(ChaveAba::Parte { nome: nome.clone(), parte: *aba })
-            }
+            Rota::Tabela { nome, .. } | Rota::Visao { nome, .. } => Some(ChaveAba::Objeto { nome: nome.clone() }),
             Rota::Arquivo { caminho } => Some(ChaveAba::Arquivo(prefs::chave_caminho(caminho))),
             Rota::Consulta { .. } => None,
         }
@@ -428,7 +426,7 @@ impl<T> Abas<T> {
 #[cfg(test)]
 mod testes {
     use super::*;
-    use crate::rota::{ConsultaDados, LIMITE_HISTORICO};
+    use crate::rota::{ConsultaDados, LIMITE_HISTORICO, Parte};
 
     /// O conteúdo de cada aba é a rota com que ela nasceu: dá para ver que focar e voltar não refazem nada.
     fn criar(_: IdAba, rota: &Rota) -> Rota {
@@ -470,24 +468,24 @@ mod testes {
         assert_eq!(abas.abrir(clientes(), criar), Abertura::Existente(id));
         assert_eq!(ativa(&abas), "#/t/clientes/dados?pagina=3", "a página fica");
         assert_eq!(abas.ativa().conteudo, clientes(), "o conteúdo não foi refeito");
-        // outra parte da mesma tabela é outra aba
+        // outra parte da mesma tabela é a mesma aba (uma aba por objeto)
         let estrutura = abas.abrir(Rota::objeto_na_aba("clientes", false, Parte::Estrutura), criar);
-        assert!(matches!(estrutura, Abertura::Nova(e) if e != id));
-        assert_eq!(abas.len(), 3);
+        assert_eq!(estrutura, Abertura::Existente(id));
+        assert_eq!(abas.len(), 2);
     }
 
     #[test]
     fn visao_e_tabela_com_o_mesmo_nome_sao_a_mesma_chave() {
         let chave = ChaveAba::de(&Rota::objeto("v", true));
         assert_eq!(chave, ChaveAba::de(&Rota::objeto("v", false)));
-        assert_eq!(chave, Some(ChaveAba::Parte { nome: "v".into(), parte: Parte::Dados }));
+        assert_eq!(chave, Some(ChaveAba::Objeto { nome: "v".into() }));
         assert_eq!(ChaveAba::de(&Rota::Inicio), Some(ChaveAba::Inicio));
         assert_eq!(ChaveAba::de(&Rota::Banco), Some(ChaveAba::VisaoGeral));
         assert_eq!(ChaveAba::de(&Rota::Consulta { sql: None }), None);
         let mut abas = Abas::nova(Rota::Banco, criar);
         let a = abas.abrir(Rota::objeto("v", true), criar);
         assert_eq!(abas.abrir(Rota::objeto("v", false), criar), Abertura::Existente(a.id()));
-        assert_eq!(abas.achar(&ChaveAba::Parte { nome: "v".into(), parte: Parte::Dados }), Some(a.id()));
+        assert_eq!(abas.achar(&ChaveAba::Objeto { nome: "v".into() }), Some(a.id()));
     }
 
     #[test]
@@ -604,27 +602,29 @@ mod testes {
         let mut abas = Abas::nova(Rota::Banco, criar);
         let v = abas.abrir(Rota::objeto("v", true), criar).id();
         abas.substituir(v, na_pagina(&Rota::objeto("v", true), 2));
-        // a visão pedida como tabela, na Estrutura: outra chave, outra aba
-        let e = abas.abrir(Rota::objeto_na_aba("v", false, Parte::Estrutura), criar).id();
+        // o mesmo objeto em outra parte (ou pedido como tabela) cai na mesma aba: uma aba por objeto
+        let mesma = abas.abrir(Rota::objeto_na_aba("v", false, Parte::Estrutura), criar).id();
+        assert_eq!(mesma, v);
+        // outro objeto que a tela corrige para "v" (o nome antigo de uma tabela renomeada): as duas viram uma
+        let e = abas.abrir(Rota::objeto("antiga", false), criar).id();
         assert_ne!(e, v);
-        // a tela corrige para a visão na parte Dados, que já tem aba: as duas viram uma
         let fechada = abas.substituir(e, Rota::objeto("v", true));
         assert_eq!(fechada.map(|a| a.id()), Some(e));
         assert_eq!(abas.id_ativa(), v);
         assert_eq!(ativa(&abas), "#/v/v/dados?pagina=2", "a que fica guarda o próprio endereço");
         assert_eq!(abas.len(), 2);
-        // as duas visitas à visão se fundiram
+        // as visitas se fundiram
         assert!(abas.voltar());
         assert_eq!(ativa(&abas), "#/banco");
         assert!(!abas.pode_voltar());
 
         // fora da ativa, a fusão não rouba o foco
-        let e = abas.abrir(Rota::objeto_na_aba("v", false, Parte::Estrutura), criar).id();
+        let e = abas.abrir(Rota::objeto("antiga", false), criar).id();
         abas.abrir(Rota::Banco, criar);
         assert!(abas.substituir(e, Rota::objeto("v", true)).is_some());
         assert_eq!(ativa(&abas), "#/banco");
         // o atualizar funde do mesmo jeito
-        let e = abas.abrir(Rota::objeto_na_aba("v", false, Parte::Estrutura), criar).id();
+        let e = abas.abrir(Rota::objeto("antiga", false), criar).id();
         assert!(abas.atualizar(e, Rota::objeto("v", true)).is_some());
         assert_eq!(abas.id_ativa(), v);
     }

@@ -5,6 +5,31 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- Revisão de UI de 19/10/2026 (o uso do app pelo PO):
+  - **Painéis em docas.** O Explorador, o Histórico e as Propriedades moram cada um numa doca (à esquerda ou à
+    direita) ou numa janela própria do sistema. A doca tem uma fileira de abas no estilo das de documento (só ícone à
+    esquerda, com o nome à direita: "Propriedades · clientes"), as ações do painel na ponta e o "Destacar em janela".
+    Arraste a aba de um painel até a outra doca para prendê-lo lá, ou para fora da janela para abrir a janela própria
+    (Esc cancela); a janela própria tem "Prender de volta" e "Fechar" (o painel volta escondido para a doca). O lugar
+    de cada painel fica guardado.
+  - **Sem a barra de ícones (o trilho):** com só três painéis, ela repetia as abas da doca. O Início ganhou os botões
+    "Painéis" (Explorador, Histórico de consultas, Preferências) e o Exibir ganhou "Início" (Alt+Home).
+  - **Uma aba por objeto.** A aba de uma tabela é só o nome dela ("clientes") e mostra a grade; a Estrutura, os
+    Índices e gatilhos e a Definição SQL viraram vistas das Propriedades, num segmentado no topo do painel (Resumo,
+    Colunas, Índices, SQL; Alt+1 a Alt+4). Na doca, as colunas vão numa lista compacta; na janela própria, na tabela
+    de sempre. A coluna escolhida em Colunas acende na grade. No Explorador, a tabela é uma folha (sem os filhos), e
+    na Visão geral o botão da linha virou "Colunas".
+  - **Menus Banco e Tabela** na barra de menus, com banco aberto e tabela à vista: as manutenções, a cópia de
+    segurança, a exportação, abrir só para leitura e fechar o banco; as vistas, Abrir na Consulta SQL, Exportar,
+    Copiar o nome, Propriedades em janela própria, Nova linha, Nova coluna, Novo índice, Renomear e Excluir a tabela.
+  - **"Todas as abas"** na ponta da faixa de abas, com o menu de todas as abas abertas; a primeira aba encosta na
+    quina do documento.
+  - **Preferências** com o corpo de altura fixa (a janela não muda de tamanho entre as seções) e a fonte do código
+    padrão como "Padrão do sistema (Consolas)". No **Sobre**, os caminhos das preferências e do log são cortados com
+    "…" e têm o Copiar caminho ao lado.
+
 ## [0.2.0] - 2026-10-20
 
 ### Alterado

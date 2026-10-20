@@ -2807,12 +2807,13 @@ fn faixa_de_abas_encolhe_os_nomes_e_rola_ate_a_ativa() {
     let mut h = harness(EstadoAbas { largura: 500.0, ..Default::default() }, abas_de_teste);
     h.run_steps(1);
     let fim = |h: &Harness<'_, EstadoAbas>| h.get(by().role(Role::Tab).label("Consulta 1")).rect().right();
-    let x_faixa = h.get(by().role(Role::Tab).label("exemplo.db · Visão geral")).rect().left() - 10.0;
+    // a primeira aba encosta na quina (`padding-left:0`, revisão de UI de 19/10/2026); à direita, os 10px e o "+"
+    let x_faixa = h.get(by().role(Role::Tab).label("exemplo.db · Visão geral")).rect().left();
     assert!(fim(&h) <= x_faixa + 500.0 - 10.0 - 32.0 + 0.5, "{}", fim(&h));
     // 260px: nem encolhidas elas cabem; a faixa rola e a ativa (a última) fica à vista
     let mut h = harness(EstadoAbas { largura: 260.0, ativa: 2, ..Default::default() }, abas_de_teste);
     h.run_steps(2);
-    let area = egui::Rangef::new(x_faixa + 10.0, x_faixa + 260.0 - 10.0 - 32.0);
+    let area = egui::Rangef::new(x_faixa, x_faixa + 260.0 - 10.0 - 32.0);
     let ultima = h.get(by().role(Role::Tab).label("Consulta 1")).rect();
     assert!(ultima.left() >= area.min - 0.5 && ultima.right() <= area.max + 0.5, "{ultima:?} {area:?}");
     let primeira = h.query(by().role(Role::Tab).label("exemplo.db · Visão geral"));

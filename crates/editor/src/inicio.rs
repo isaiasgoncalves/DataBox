@@ -1,5 +1,6 @@
 //! Início (`#/`, prancheta 4, `Inicio.dc.html:373-497`): a cabeça com o logo de 60, "DataBox" e a frase; os três
-//! cartões de ação (**Abrir pasta**, o primário, Abrir arquivo e Novo banco); o caminho digitado, que pode ser uma
+//! cartões de ação (**Abrir pasta**, o primário, Abrir arquivo e Novo banco); os botões "Painéis" (Explorador,
+//! Histórico de consultas e Preferências: os atalhos do trilho que saiu na revisão de UI de 19/10/2026); o caminho digitado, que pode ser uma
 //! pasta, um banco ou um arquivo de dados, com a caixa "Abrir bancos só para leitura"; e os abertos recentemente,
 //! com o ícone de cada tipo (a pasta, o cilindro, a folha do arquivo).
 //!
@@ -358,6 +359,8 @@ impl TelaInicio {
             }
             self.cartoes(ui, ctx);
             ui.add_space(ESPACO_BLOCOS);
+            paineis(ui, ctx);
+            ui.add_space(ESPACO_BLOCOS);
             self.linha_do_caminho(ui, ctx);
             ui.add_space(ESPACO_BLOCOS);
             self.recentes(ui, ctx);
@@ -600,6 +603,27 @@ impl TelaInicio {
 
 /// A cabeça: o logo de 60 e "DataBox" (24px / 600) lado a lado, centrados na altura (`gap:14px`), e a frase de
 /// 13px em `--t2` (até 680px, `line-height:1.4`), 6px abaixo.
+/// A linha "Painéis" (`gap:8px`): o `.tit` com `margin-right:6px` e os `.btn` Explorador (Ctrl+B), Histórico de
+/// consultas e Preferências (Ctrl+,). Os dois primeiros põem o painel à vista onde ele mora (a doca ou a janela
+/// própria); o terceiro abre a janela Preferências.
+fn paineis(ui: &mut Ui, ctx: &mut Contexto) {
+    let p = paleta(ui);
+    fluxo(ui, 8.0, |ui| {
+        let g = galley(ui, "Painéis", fontes::fonte(11.0, Peso::Medio), p.estudio.t3);
+        let (r, _) = ui.allocate_exact_size(vec2(g.size().x + 6.0, 28.0), Sense::hover());
+        ui.painter().galley(pos2(r.left(), r.center().y - g.size().y / 2.0), g, p.estudio.t3);
+        if ui.add(Botao::new("Explorador").tecla("Ctrl+B")).clicked() {
+            ctx.emitir(Acao::MostrarPainel(estado::PainelCasca::Explorador));
+        }
+        if ui.add(Botao::new("Histórico de consultas")).clicked() {
+            ctx.emitir(Acao::MostrarPainel(estado::PainelCasca::Historico));
+        }
+        if ui.add(Botao::new("Preferências").tecla("Ctrl+,")).clicked() {
+            ctx.emitir(Acao::AbrirPreferencias);
+        }
+    });
+}
+
 fn cabeca(ui: &mut Ui) {
     let e = &paleta(ui).estudio;
     let largura = ui.available_width();

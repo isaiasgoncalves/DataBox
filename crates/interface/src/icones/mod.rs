@@ -401,12 +401,17 @@ pub enum Icone {
     SetaBaixo,
     /// O ✓ dos itens marcados dos menus (`M5 12.5l4.5 4.5L19 7.5`).
     Marcado,
+    /// As duas janelas, a da frente à direita e embaixo (o "Destacar em janela" das docas, revisão de UI de
+    /// 19/10/2026): o contorno da `.sil` de `Dados.dc.html` desenhado em traço.
+    Destacar,
+    /// O [`Icone::Destacar`] espelhado (o "Prender de volta" da janela própria de um painel).
+    Prender,
 }
 
 impl Icone {
     /// Todos, na ordem do enum, com cada variante de [`Icone::Tipo`], [`Icone::Folha`] e [`Icone::Estado`] (o
     /// mostruário e os testes).
-    pub const TODOS: [Icone; 95] = [
+    pub const TODOS: [Icone; 97] = [
         Icone::Voltar,
         Icone::Avancar,
         Icone::Pasta,
@@ -502,6 +507,8 @@ impl Icone {
         Icone::SetaDireita,
         Icone::SetaBaixo,
         Icone::Marcado,
+        Icone::Destacar,
+        Icone::Prender,
     ];
 
     /// O nome do ícone para o leitor de tela (o `aria-label` das pranchetas): o rótulo padrão do
@@ -576,13 +583,21 @@ impl Icone {
             Icone::SetaDireita => "Expandir",
             Icone::SetaBaixo => "Recolher",
             Icone::Marcado => "Marcado",
+            Icone::Destacar => "Destacar em janela",
+            Icone::Prender => "Prender de volta",
         }
     }
 
     /// A família: silhueta (tingida), sólido (cores próprias) ou traço (no pintor).
     pub fn familia(self) -> Familia {
         match self {
-            Icone::Fechar | Icone::Mais | Icone::SetaDireita | Icone::SetaBaixo | Icone::Marcado => Familia::Traco,
+            Icone::Fechar
+            | Icone::Mais
+            | Icone::SetaDireita
+            | Icone::SetaBaixo
+            | Icone::Marcado
+            | Icone::Destacar
+            | Icone::Prender => Familia::Traco,
             Icone::Voltar
             | Icone::Avancar
             | Icone::Pasta
@@ -694,7 +709,13 @@ impl Icone {
             Icone::Tipo(t) => t.chave(),
             Icone::Folha(a) => a.chave(),
             Icone::Estado(e) => e.chave(),
-            Icone::Fechar | Icone::Mais | Icone::SetaDireita | Icone::SetaBaixo | Icone::Marcado => return None,
+            Icone::Fechar
+            | Icone::Mais
+            | Icone::SetaDireita
+            | Icone::SetaBaixo
+            | Icone::Marcado
+            | Icone::Destacar
+            | Icone::Prender => return None,
         };
         Some(chave)
     }
@@ -993,6 +1014,15 @@ fn pintar_traco(painter: &Painter, rect: Rect, icone: Icone, cor: Color32) {
         Icone::SetaDireita => linha(vec![p(9.0, 6.0), p(15.0, 12.0), p(9.0, 18.0)]),
         Icone::SetaBaixo => linha(vec![p(6.0, 9.0), p(12.0, 15.0), p(18.0, 9.0)]),
         Icone::Marcado => linha(vec![p(5.0, 12.5), p(9.5, 17.0), p(19.0, 7.5)]),
+        Icone::Destacar | Icone::Prender => {
+            // a janela de trás (`M3 7a2 2 0 0 1 2-2h9…`), aberta onde a da frente a cobre, e a da frente
+            // (`M10 11a2 2…`) com a barra de título; no Prender, tudo espelhado na vertical do meio
+            let x = |v: f32| if icone == Icone::Prender { 24.0 - v } else { v };
+            linha(vec![p(x(9.0), 18.0), p(x(4.0), 18.0), p(x(4.0), 6.0), p(x(15.0), 6.0), p(x(15.0), 8.0)]);
+            let frente = Rect::from_two_pos(p(x(11.0), 10.0), p(x(20.0), 18.0));
+            painter.rect_stroke(frente, 1.5 * k, traco, egui::StrokeKind::Middle);
+            painter.line_segment([p(x(11.0), 12.2), p(x(20.0), 12.2)], traco);
+        }
         _ => {}
     }
 }
@@ -1245,7 +1275,18 @@ mod testes {
     #[test]
     fn so_os_tracos_ficam_no_pintor() {
         let tracos: Vec<Icone> = Icone::TODOS.iter().copied().filter(|i| i.familia() == Familia::Traco).collect();
-        assert_eq!(tracos, [Icone::Fechar, Icone::Mais, Icone::SetaDireita, Icone::SetaBaixo, Icone::Marcado]);
+        assert_eq!(
+            tracos,
+            [
+                Icone::Fechar,
+                Icone::Mais,
+                Icone::SetaDireita,
+                Icone::SetaBaixo,
+                Icone::Marcado,
+                Icone::Destacar,
+                Icone::Prender
+            ]
+        );
         for icone in Icone::TODOS {
             assert_eq!(icone.familia() == Familia::Traco, icone.pngs().is_empty(), "{icone:?}");
         }

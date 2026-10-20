@@ -20,7 +20,7 @@ use banco::{BancoInfo, ObjetosInfo, ResultadoConsulta};
 use comum::app::NOME;
 use comum::arquivos::{Listagem, Natureza, e_extensao_de_banco};
 use comum::{Codigo, ErroBanco, Resultado};
-use egui::{Align, Key, Layout, Modifiers, Rect, Ui, UiBuilder};
+use egui::{Align, Id, Key, Layout, Modifiers, Pos2, Rect, Ui, UiBuilder};
 use egui::{ViewportCommand, pos2, vec2};
 use estado::{
     Abas, Acao, Anatomia, ChaveAba, Contexto, Estado, FonteDeColunas, IdAba, NoDaPasta, Ofertas, PastaAberta,
@@ -35,19 +35,21 @@ use interface::pecas::barra_status::ALTURA_STATUS;
 use interface::pecas::barra_titulo::ALTURA_TITULO;
 use interface::pecas::cartao::Cartao;
 use interface::pecas::divisoria::{Divisoria, LadoDoPainel, SaidaDivisoria};
+use interface::pecas::doca::{AbaDoca, Arrasto, Doca, FormaAbas};
 use interface::pecas::documento::{Documento as DocumentoPeca, Pagina};
 use interface::pecas::ferramentas::ALTURA_BARRA;
 use interface::pecas::janela::{Confirmacao, Decisao, confirmar_decisao};
+use interface::pecas::painel::Encaixe;
 use interface::pecas::toast::{acao_do_toast, desenhar_toast, toast_atencao, toast_erro};
 use interface::pintura;
 use interface::tema::{self, Tema};
 use prefs::PrefsInfo;
 use servico::{InfoArquivo, Servico};
 
+use crate::casca::docas::{Lado, Lugar, Paineis, Painel};
 use crate::casca::ferramentas::{Barra, EstadoPainel, PedidoBarra};
-use crate::casca::icones::{Paineis, PainelEsquerdo, PedidoIcones};
 use crate::casca::larguras::{self, Corpo, Disposicao, Larguras};
-use crate::casca::menus::{Menus, PedidoMenu};
+use crate::casca::menus::{ItemTabela, MenuTabela, Menus, PedidoMenu};
 use crate::casca::preferencias::{Efeito, Fim, JanelaPreferencias, Secao};
 use crate::casca::sobre::{GanchoAbrir, Sobre};
 use crate::casca::{self, Casca, titulo_da_janela};
@@ -57,17 +59,13 @@ use crate::pedir_caminho::{PedirCaminho, Proposito, SaidaCaminho};
 use crate::recursos::{Dialogador, PedidoDialogo, RespostaDialogo};
 use crate::tela_arquivo::PedidoArquivo;
 use crate::telas::{JanelaExportar, JanelaNovaTabela, JanelaNovoIndice};
-use crate::visao_geral::{Execucao, Resultado as ResultadoDaTela, avisar_resultado};
+use crate::visao_geral::{Execucao, PedidoDoMenu, Resultado as ResultadoDaTela, avisar_resultado};
 
-/// O `padding:8px` e o `gap:8px` do corpo (entre a barra de ícones, o painel da esquerda, o documento e as
-/// Propriedades), a margem dos lados da barra de ferramentas (`margin:6px 8px 0`) e a da barra de status
+/// O `padding:8px` e o `gap:8px` do corpo (entre a doca da esquerda, o documento e a doca da direita), a margem dos lados da barra de ferramentas (`margin:6px 8px 0`) e a da barra de status
 /// (`margin:0 8px 8px`).
 const ESPACO: f32 = 8.0;
 /// O espaço entre a faixa de 30px do alto e a barra de ferramentas (`header.vidro{margin-top:6px}`).
 const MARGEM_BARRA: f32 = 6.0;
-/// A barra de ícones (`nav.vidro{width:52px}`). O painel da esquerda (258px) e as Propriedades (272px) têm a largura
-/// da pessoa, a padrão de [`larguras`].
-const LARGURA_ICONES: f32 = 52.0;
 /// O quanto a página rola no End, até o fim (o Home vai ao começo pelo `ao_topo`): mais que qualquer página, e finito
 /// (o `scroll_with_delta` não aceita o infinito).
 const ROLAR_ATE_O_FIM: f32 = -1.0e7;
@@ -94,6 +92,69 @@ pub struct Partida {
 enum DepoisDaPartida {
     Pasta(PathBuf),
     Arquivo(PathBuf),
+}
+
+/// O toast do Tabela › Copiar o nome.
+pub(crate) const MSG_NOME_COPIADO: &str = "Nome copiado.";
+
+/// O que a pessoa pediu na janela própria de um painel.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum PedidoDaJanela {
+    /// O × do sistema ou o "Fechar" do cabeçalho: o painel volta escondido para a doca.
+    Fechar,
+    /// O "Prender de volta" (None: na doca de onde ele saiu) ou a aba solta em cima de um lado da janela principal.
+    Prender(Option<Lado>),
+    /// A aba foi solta neste ponto da janela própria (quem chama vê se caiu na janela principal).
+    Solta(Pos2),
+}
+
+/// O tamanho com que a janela própria de um painel abre: a das Propriedades na largura da forma larga (a tabela de
+/// colunas, os 720px da prancheta 6); a do Explorador e a do Histórico, na de uma doca larga.
+fn tamanho_da_janela(painel: Painel) -> (f32, f32) {
+    match painel {
+        Painel::Propriedades => (720.0, 480.0),
+        Painel::Explorador => (320.0, 560.0),
+        Painel::Historico => (360.0, 520.0),
+    }
+}
+
+/// O rótulo da divisória de uma doca, pelo painel à vista nela ("Largura do Explorador").
+fn rotulo_da_largura(painel: Option<Painel>) -> &'static str {
+    match painel {
+        Some(Painel::Explorador) | None => "Largura do Explorador",
+        Some(Painel::Historico) => "Largura do Histórico",
+        Some(Painel::Propriedades) => "Largura das Propriedades",
+    }
+}
+
+/// A faixa da beirada do corpo que recebe uma aba arrastada quando a doca daquele lado está escondida.
+const FAIXA_DE_ALVO: f32 = 120.0;
+
+/// Onde cai a aba de painel solta em `ponteiro` (prancheta 2b) e o que acender: fora da janela, a janela própria;
+/// sobre uma doca (ou, com ela escondida, a faixa da beirada do corpo daquele lado), aquela doca; no meio, nada.
+fn destino_do_arrasto(
+    ponteiro: Pos2,
+    janela: Rect,
+    esquerda: Option<Rect>,
+    inicio_direita: Option<f32>,
+    corpo: Rect,
+) -> Option<(Lugar, Rect)> {
+    if !janela.contains(ponteiro) {
+        return Some((Lugar::Janela, janela.shrink(2.0)));
+    }
+    let zona_esquerda =
+        esquerda.unwrap_or_else(|| Rect::from_min_max(corpo.min, pos2(corpo.left() + FAIXA_DE_ALVO, corpo.bottom())));
+    let zona_direita = match inicio_direita {
+        Some(x) => Rect::from_min_max(pos2(x + ESPACO, corpo.top()), corpo.max),
+        None => Rect::from_min_max(pos2(corpo.right() - FAIXA_DE_ALVO, corpo.top()), corpo.max),
+    };
+    if zona_esquerda.contains(ponteiro) {
+        Some((Lugar::Doca(Lado::Esquerda), zona_esquerda))
+    } else if zona_direita.contains(ponteiro) {
+        Some((Lugar::Doca(Lado::Direita), zona_direita))
+    } else {
+        None
+    }
 }
 
 /// prefs::Tema → o Tema da interface (pelo texto: "system" | "light" | "dark").
@@ -434,22 +495,22 @@ enum Situacao {
 /// Onde ficam o painel da esquerda, a seção do documento (a faixa de abas e o `.doc`) e as Propriedades, e o estado
 /// do botão Painel de propriedades (o mesmo no menu Exibir).
 struct Medidas {
-    painel: Option<Rect>,
+    /// A doca da esquerda, se está à vista.
+    esquerda: Option<Rect>,
     secao: Rect,
-    /// Onde a seção do documento termina (as Propriedades começam `ESPACO` depois).
+    /// Onde a seção do documento termina (a doca da direita começa `ESPACO` depois).
     direita: f32,
-    com_propriedades: bool,
+    /// A doca da direita está à vista (a pessoa a quer, ela tem aba e cabe).
+    com_direita: bool,
     botao_do_painel: EstadoPainel,
     /// As larguras dos painéis neste quadro e até onde as divisórias os levam.
     disposicao: Disposicao,
 }
 
-/// Qual dos painéis laterais a divisória redimensiona.
+/// Qual das docas a divisória redimensiona.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PainelLateral {
-    /// O Explorador ou o Histórico.
     Esquerdo,
-    /// As Propriedades.
     Direito,
 }
 
@@ -526,7 +587,8 @@ pub struct Editor {
     /// quando ela não veio de uma Consulta.
     consulta_da_transacao: Option<IdAba>,
     casca: Casca,
-    /// O painel da esquerda à vista (o Explorador, o Histórico ou nenhum) e as Propriedades: só na sessão.
+    /// Onde mora cada painel (as docas e as janelas próprias; o lugar fica nas preferências) e o que está à vista
+    /// (só na sessão).
     paineis: Paineis,
     /// As larguras dos painéis laterais que a pessoa escolheu (as divisórias; ficam nas preferências) e as que já
     /// estão guardadas.
@@ -536,6 +598,9 @@ pub struct Editor {
     gravando_larguras: bool,
     /// Como o corpo se repartiu no último quadro.
     disposicao: Option<Disposicao>,
+    /// Onde abrir a janela própria do painel que a pessoa arrastou para fora (no ponto em que soltou a aba, em
+    /// coordenadas da tela), no quadro em que ela abre.
+    posicao_da_janela: Option<(Painel, Pos2)>,
     /// O verbo do atalho do quadro anterior (o F5), para o documento executar antes de se desenhar, depois de a
     /// edição em curso gravar.
     verbo_pendente: Option<Verbo>,
@@ -634,6 +699,7 @@ impl Editor {
             larguras_guardadas: Larguras::default(),
             gravando_larguras: false,
             disposicao: None,
+            posicao_da_janela: None,
             verbo_pendente: None,
             rect_documento: None,
             propriedades_a_vista: false,
@@ -699,17 +765,52 @@ impl Editor {
         self
     }
 
-    /// As larguras do Explorador e das Propriedades que a casca desenhou no último quadro (a escolha da pessoa já
+    /// Com os lugares dos painéis que a pessoa escolheu nas sessões de antes (`prefs.lugares()`, lidos pelo
+    /// executável antes da janela; o que nunca foi mudado fica no padrão).
+    pub fn com_lugares(mut self, lugares: prefs::LugaresPaineis) -> Editor {
+        self.paineis = Paineis::de_prefs(lugares);
+        self
+    }
+
+    /// Onde mora o painel ("Explorador", "Histórico" ou "Propriedades") agora: `"esquerda"`, `"direita"` ou
+    /// `"janela"`.
+    #[doc(hidden)]
+    pub fn lugar_do_painel(&self, nome: &str) -> Option<&'static str> {
+        let painel = Painel::TODOS.into_iter().find(|p| p.nome() == nome)?;
+        Some(match self.paineis.lugar(painel) {
+            Lugar::Doca(Lado::Esquerda) => "esquerda",
+            Lugar::Doca(Lado::Direita) => "direita",
+            Lugar::Janela => "janela",
+        })
+    }
+
+    /// A vista das Propriedades da tabela à vista ("Resumo", "Colunas", "Índices", "SQL"); None fora de uma tabela.
+    #[doc(hidden)]
+    pub fn vista_da_tabela(&self) -> Option<&'static str> {
+        match &self.abas.ativa().conteudo {
+            Documento::Tabela(t) => Some(t.vista().rotulo(false)),
+            _ => None,
+        }
+    }
+
+    /// O painel está à vista (a aba ativa de uma doca à vista, ou a janela própria aberta).
+    #[doc(hidden)]
+    pub fn painel_a_vista(&self, nome: &str) -> bool {
+        let tem = matches!(self.situacao, Situacao::Pronta) && self.abas.ativa().conteudo.tem_propriedades();
+        Painel::TODOS.into_iter().find(|p| p.nome() == nome).is_some_and(|p| self.paineis.a_vista(p, tem))
+    }
+
+    /// As larguras das docas da esquerda e da direita que a casca desenhou no último quadro (a escolha da pessoa já
     /// limitada e, numa janela estreita, encolhida); `None` antes do primeiro quadro.
     #[doc(hidden)]
     pub fn larguras_desenhadas(&self) -> Option<(f32, f32)> {
-        self.disposicao.map(|d| (d.explorador, d.propriedades))
+        self.disposicao.map(|d| (d.esquerda, d.direita))
     }
 
-    /// A escolha da pessoa para o Explorador e as Propriedades (a que vai para as preferências).
+    /// A escolha da pessoa para as docas da esquerda e da direita (a que vai para as preferências).
     #[doc(hidden)]
     pub fn larguras_escolhidas(&self) -> (f32, f32) {
-        (self.larguras.explorador, self.larguras.propriedades)
+        (self.larguras.esquerda, self.larguras.direita)
     }
 
     /// Nos testes: o "abrir a pasta das preferências" e o "abrir o log" da janela "Sobre o DataBox" chamam `f` com o
@@ -989,6 +1090,9 @@ impl Editor {
         }
         let mut erro = self.erro_para(&rota);
         let de_teste = self.editor_de_teste.clone();
+        // a tabela pedida em outra parte (a Estrutura, os Índices, a Definição): a aba do objeto, com a parte à vista
+        // nas Propriedades (revisão de UI de 19/10/2026)
+        let parte = rota.aba().filter(|&p| p != estado::Parte::Dados);
         self.abas.abrir(rota, |id, r| {
             let editor = match (r, de_teste.as_deref()) {
                 (Rota::Arquivo { caminho }, Some(f)) => f(caminho).map(|e| Documento::de_arquivo_com(caminho, e)),
@@ -999,6 +1103,62 @@ impl Editor {
         // o Início já aberto não leva o erro: ele espera o próximo
         if erro.is_some() {
             self.erro_inicial = erro;
+        }
+        if let Some(parte) = parte
+            && let Documento::Tabela(t) = &mut self.abas.ativa_mut().conteudo
+        {
+            t.mostrar_parte(parte);
+            self.paineis.mostrar(Painel::Propriedades);
+        }
+    }
+
+    /// Um item do menu Tabela, para a tabela à vista (revisão de UI de 19/10/2026): as vistas e os pedidos à Estrutura
+    /// põem as Propriedades à vista; o resto vira a ação de sempre.
+    fn item_da_tabela(&mut self, ctx: &egui::Context, item: ItemTabela) {
+        let Documento::Tabela(t) = &mut self.abas.ativa_mut().conteudo else { return };
+        let nome = t.nome().to_string();
+        match item {
+            ItemTabela::Vista(parte) => {
+                t.mostrar_parte(parte);
+                self.paineis.mostrar(Painel::Propriedades);
+            }
+            ItemTabela::NovaColuna | ItemTabela::Renomear | ItemTabela::Excluir => {
+                t.pedir(match item {
+                    ItemTabela::NovaColuna => estado::PedidoTabela::NovaColuna,
+                    ItemTabela::Renomear => estado::PedidoTabela::Renomear,
+                    _ => estado::PedidoTabela::Excluir,
+                });
+                self.paineis.mostrar(Painel::Propriedades);
+            }
+            ItemTabela::AbrirNaConsulta => {
+                let [sql, _] = estado::consultas_da_tabela(&nome);
+                self.pendentes.push((None, Acao::Navegar(Rota::consulta_com(sql))));
+            }
+            ItemTabela::Exportar => {
+                if let Some(pedido) = t.pedido_exportacao() {
+                    self.pendentes.push((None, Acao::AbrirExportacao(pedido)));
+                }
+            }
+            ItemTabela::CopiarNome => {
+                ctx.copy_text(nome);
+                interface::pecas::toast::toast_concluido(ctx, MSG_NOME_COPIADO);
+            }
+            ItemTabela::PropriedadesEmJanela => self.mover_painel(ctx, Painel::Propriedades, Lugar::Janela),
+            ItemTabela::NovoIndice => {
+                self.pendentes.push((None, Acao::AbrirNovoIndice { tabela: nome, colunas: Vec::new() }));
+            }
+        }
+        ctx.request_repaint();
+    }
+
+    /// Põe a Visão geral à vista e passa a ela o pedido do menu Banco (sem banco, nada).
+    fn pedir_a_visao_geral(&mut self, pedido: PedidoDoMenu) {
+        if !self.estado.tem_banco() {
+            return;
+        }
+        self.navegar(Rota::Banco);
+        if let Documento::Banco(t) = &mut self.abas.ativa_mut().conteudo {
+            t.pedir(pedido);
         }
     }
 
@@ -1326,7 +1486,7 @@ impl Editor {
         }
         let ativa = self.abas.id_ativa();
         let sumiu = |a: &estado::AbaAberta<Documento>| match a.chave() {
-            Some(ChaveAba::Parte { nome, .. }) => sumidos.contains(nome),
+            Some(ChaveAba::Objeto { nome }) => sumidos.contains(nome),
             _ => false,
         };
         // a ativa que ainda mostra as linhas da tabela que sumiu relê (e mostra o card de inexistente)
@@ -2440,6 +2600,14 @@ impl Editor {
                     let promessa = self.tarefa(ctx, move |s, _| s.gravar_prefs(Some(t), None));
                     self.tarefas.push(Tarefa::Tema { promessa, limpou_historico: false });
                 }
+                Acao::MostrarPainel(painel) => {
+                    self.paineis.mostrar(Painel::from(painel));
+                    ctx.request_repaint();
+                }
+                Acao::DestacarPainel(painel) => self.mover_painel(ctx, Painel::from(painel), Lugar::Janela),
+                Acao::AbrirPreferencias => self.abrir_preferencias(ctx, Secao::Geral),
+                Acao::ManutencaoDoBanco(m) => self.pedir_a_visao_geral(PedidoDoMenu::Manutencao(m)),
+                Acao::CopiaDeSeguranca => self.pedir_a_visao_geral(PedidoDoMenu::Copia),
                 Acao::AbrirExportacao(pedido) => {
                     self.janelas.pedido_exportar = Some(pedido.clone());
                     self.janelas.exportar = Some(JanelaExportar::nova(pedido));
@@ -2498,6 +2666,8 @@ impl Editor {
         }
         let valem = casca::atalhos::Valem {
             campo_de_texto: ctx.text_edit_focused(),
+            tabela: matches!(self.situacao, Situacao::Pronta)
+                && matches!(self.abas.ativa().conteudo, Documento::Tabela(_)),
             atualizar: ofertas.ligado(Verbo::Atualizar),
             propriedades: painel.ligado(),
             buscar: ofertas.ligado(Verbo::Buscar),
@@ -2507,10 +2677,10 @@ impl Editor {
         };
         let a = casca::atalhos::ler(ctx, valem);
         if a.explorador {
-            self.paineis.alternar_explorador();
+            self.paineis.alternar(Painel::Explorador);
         }
         if a.propriedades {
-            self.paineis.alternar_propriedades();
+            self.paineis.alternar(Painel::Propriedades);
         }
         if a.buscar {
             self.focar_busca(ctx);
@@ -2522,6 +2692,13 @@ impl Editor {
         }
         if a.atualizar {
             self.verbo_pendente = Some(Verbo::Atualizar);
+        }
+        if a.inicio {
+            self.pendentes.push((None, Acao::Navegar(Rota::Inicio)));
+        }
+        if let Some(n) = a.vista {
+            let parte = estado::Parte::DA_TABELA[usize::from(n - 1)];
+            self.item_da_tabela(ctx, ItemTabela::Vista(parte));
         }
         if a.abrir {
             casca::menus::fechar_todos(ui);
@@ -2861,69 +3038,343 @@ impl Editor {
 
     // ------------------------------------------------------------------ o quadro
 
-    /// As larguras do corpo com os painéis que a pessoa quer agora, nas larguras dela ([`larguras::dispor`]): numa
-    /// janela estreita os painéis encolhem até [`larguras::MINIMA`] e, se o documento ainda ficaria com menos de 560px
-    /// (`flex:999 1 560px`), as Propriedades somem (sem mudar a escolha dela), como no Início.
-    fn medidas(&self, corpo: Rect, rect_icones: Rect) -> Medidas {
+    /// As larguras do corpo com as docas que a pessoa quer agora, nas larguras dela ([`larguras::dispor`]): numa
+    /// janela estreita as docas encolhem até [`larguras::MINIMA`] e, se o documento ainda ficaria com menos de 560px
+    /// (`flex:999 1 560px`), a da direita some (sem mudar a escolha dela), como no Início quando ela só tem as
+    /// Propriedades.
+    fn medidas(&self, corpo: Rect) -> Medidas {
         let pronta = matches!(self.situacao, Situacao::Pronta);
         let tem_propriedades = pronta && self.abas.ativa().conteudo.tem_propriedades();
-        let largura = Corpo {
-            janela: corpo.width() + 2.0 * ESPACO,
-            largura: corpo.width(),
-            icones: LARGURA_ICONES,
-            espaco: ESPACO,
-        };
-        let disposicao = larguras::dispor(
-            &largura,
-            self.larguras,
-            self.paineis.esquerdo.is_some(),
-            self.paineis.propriedades && tem_propriedades,
-        );
-        let painel = self.paineis.esquerdo.map(|_| {
-            Rect::from_min_size(
-                pos2(rect_icones.right() + ESPACO, corpo.top()),
-                vec2(disposicao.explorador, corpo.height()),
-            )
-        });
-        let esquerda = painel.map_or(rect_icones.right(), |r| r.right()) + ESPACO;
-        let com_propriedades = disposicao.com_propriedades;
-        let direita = if com_propriedades { corpo.right() - disposicao.propriedades - ESPACO } else { corpo.right() };
-        let secao = Rect::from_min_max(pos2(esquerda, corpo.top()), pos2(direita.max(esquerda), corpo.bottom()));
-        let botao_do_painel = match (tem_propriedades, self.paineis.propriedades, com_propriedades) {
+        let largura = Corpo { janela: corpo.width() + 2.0 * ESPACO, largura: corpo.width(), espaco: ESPACO };
+        let com_esquerda = self.paineis.doca_a_vista(Lado::Esquerda, tem_propriedades);
+        let quer_direita = self.paineis.doca_a_vista(Lado::Direita, tem_propriedades);
+        let disposicao = larguras::dispor(&largura, self.larguras, com_esquerda, quer_direita);
+        let esquerda = com_esquerda.then(|| Rect::from_min_size(corpo.min, vec2(disposicao.esquerda, corpo.height())));
+        let inicio = esquerda.map_or(corpo.left(), |r| r.right() + ESPACO);
+        let com_direita = disposicao.com_direita;
+        let direita = if com_direita { corpo.right() - disposicao.direita - ESPACO } else { corpo.right() };
+        let secao = Rect::from_min_max(pos2(inicio, corpo.top()), pos2(direita.max(inicio), corpo.bottom()));
+        let botao_do_painel = if !tem_propriedades {
             // o Início (e o quadro antes de o estado chegar): o botão desligado, sem mudar a escolha da pessoa
-            (false, _, _) => EstadoPainel::SemPainel,
-            (true, false, _) => EstadoPainel::Escondido,
-            (true, true, true) => EstadoPainel::AVista,
-            (true, true, false) => EstadoPainel::SemLargura,
+            EstadoPainel::SemPainel
+        } else if !self.paineis.a_vista(Painel::Propriedades, true) {
+            EstadoPainel::Escondido
+        } else if self.paineis.lugar(Painel::Propriedades) == Lugar::Doca(Lado::Direita) && !com_direita {
+            EstadoPainel::SemLargura
+        } else {
+            EstadoPainel::AVista
         };
-        Medidas { painel, secao, direita, com_propriedades, botao_do_painel, disposicao }
+        Medidas { esquerda, secao, direita, com_direita, botao_do_painel, disposicao }
     }
 
-    /// A divisória de um painel acabou de pedir `largura` (o arrasto, as setas, o duplo clique). O que a pessoa vê
-    /// passa a ser a escolha dela: o outro painel, se está à vista, guarda a largura com que foi desenhado. Quando o
+    /// A divisória de uma doca acabou de pedir `largura` (o arrasto, as setas, o duplo clique). O que a pessoa vê
+    /// passa a ser a escolha dela: a outra doca, se está à vista, guarda a largura com que foi desenhada. Quando o
     /// gesto termina, a escolha nova vai para as preferências (só o que mudou, numa tarefa).
-    fn largura_pedida(&mut self, ctx: &egui::Context, painel: PainelLateral, saida: &SaidaDivisoria, d: &Disposicao) {
+    fn largura_pedida(
+        &mut self,
+        ctx: &egui::Context,
+        painel: PainelLateral,
+        saida: &SaidaDivisoria,
+        d: &Disposicao,
+        com_esquerda: bool,
+    ) {
         if saida.mudou {
             match painel {
                 PainelLateral::Esquerdo => {
-                    self.larguras.explorador = saida.largura;
-                    if d.com_propriedades {
-                        self.larguras.propriedades = d.propriedades;
+                    self.larguras.esquerda = saida.largura;
+                    if d.com_direita {
+                        self.larguras.direita = d.direita;
                     }
                 }
                 PainelLateral::Direito => {
-                    self.larguras.propriedades = saida.largura;
-                    if self.paineis.esquerdo.is_some() {
-                        self.larguras.explorador = d.explorador;
+                    self.larguras.direita = saida.largura;
+                    if com_esquerda {
+                        self.larguras.esquerda = d.esquerda;
                     }
                 }
             }
-            // o painel e o documento deste quadro já foram medidos: o quadro seguinte os desenha na largura nova
+            // a doca e o documento deste quadro já foram medidos: o quadro seguinte os desenha na largura nova
             ctx.request_repaint();
         }
         if saida.concluiu {
             self.guardar_larguras(ctx);
         }
+    }
+
+    /// Uma doca no retângulo dela (revisão de UI de 19/10/2026): a fileira de abas (só ícone à esquerda, com o nome à
+    /// direita), o painel à vista no corpo e o que a pessoa fez nela. O clique numa aba a põe à vista; o "Destacar em
+    /// janela" leva o painel à vista para a janela própria. Devolve a aba arrastada, se há uma, com o painel dela.
+    #[allow(clippy::too_many_arguments)]
+    fn doca(
+        &mut self,
+        raiz: &mut Ui,
+        lado: Lado,
+        rect: Rect,
+        frame: Option<&eframe::Frame>,
+        fontes: &[Arc<dyn FonteDeColunas>],
+        rota: &Rota,
+        acoes: &mut Vec<(Option<IdAba>, Acao)>,
+    ) -> Option<(Painel, Arrasto)> {
+        let ctx = raiz.ctx().clone();
+        let tem_propriedades = self.abas.ativa().conteudo.tem_propriedades();
+        let paineis = self.paineis.abas(lado, tem_propriedades);
+        let ativo = self.paineis.ativo(lado, tem_propriedades)?;
+        // a aba das Propriedades leva o objeto do documento à vista ("Propriedades · clientes")
+        let objeto = {
+            let a = self.abas.ativa();
+            a.conteudo.titulo(a.rota(), a.numero_consulta(), &self.estado).0
+        };
+        let itens: Vec<AbaDoca<'_>> = paineis
+            .iter()
+            .map(|&p| AbaDoca::new(p.icone(), p.nome()).sub((p == Painel::Propriedades).then_some(objeto.as_str())))
+            .collect();
+        let forma = match lado {
+            Lado::Esquerda => FormaAbas::SoIcone,
+            Lado::Direita => FormaAbas::ComNome,
+        };
+        let indice = paineis.iter().position(|&p| p == ativo).unwrap_or(0);
+        let mut ui_doca = raiz
+            .new_child(UiBuilder::new().id_salt(("doca", lado)).max_rect(rect).layout(Layout::top_down(Align::Min)));
+        let r = Doca::new(("doca", lado), lado.rotulo(), &itens).ativa(indice).forma(forma).mostrar(&mut ui_doca);
+        if let Some(p) = r.clicada.and_then(|i| paineis.get(i)) {
+            self.paineis.focar(*p);
+            ctx.request_repaint();
+        }
+        let arrasto = r.arrasto.and_then(|a| paineis.get(a.aba).map(|p| (*p, a)));
+        let mut ui_corpo = ui_doca.new_child(
+            UiBuilder::new().id_salt(("doca-corpo", lado)).max_rect(r.corpo).layout(Layout::top_down(Align::Min)),
+        );
+        ui_corpo.set_clip_rect(r.corpo.intersect(raiz.clip_rect()));
+        self.conteudo_do_painel(&mut ui_corpo, ativo, Encaixe::doca(r.acoes), frame, fontes, rota, acoes);
+        if r.destacar {
+            self.mover_painel(&ctx, ativo, Lugar::Janela);
+        }
+        arrasto
+    }
+
+    /// O corpo de um painel (o Explorador, o Histórico, as Propriedades do documento à vista) no espaço de `ui`, com
+    /// as ações dele em `lugar_acoes` (a fileira da doca, ou o rodapé da janela própria).
+    #[allow(clippy::too_many_arguments)]
+    fn conteudo_do_painel(
+        &mut self,
+        ui: &mut Ui,
+        painel: Painel,
+        lugar_acoes: Encaixe,
+        frame: Option<&eframe::Frame>,
+        fontes: &[Arc<dyn FonteDeColunas>],
+        rota: &Rota,
+        acoes: &mut Vec<(Option<IdAba>, Acao)>,
+    ) {
+        let ctx = ui.ctx().clone();
+        let (versao, trocando) = (self.versao, self.troca.is_some());
+        match painel {
+            Painel::Explorador => {
+                let mut emitidas = Vec::new();
+                let consulta = self.nome_da_consulta_da_transacao();
+                let (estado, falha) = (&self.estado, self.falha_objetos.as_deref());
+                self.casca.explorador(ui, lugar_acoes, estado, versao, rota, falha, &consulta, &mut emitidas);
+                acoes.extend(emitidas.into_iter().map(|a| (None, a)));
+                // etapa 4, passo 9: o "Mostrar na pasta" do menu de contexto do Explorador
+                if let Some(caminho) = self.casca.revelar_do_explorador() {
+                    self.revelar(&ctx, caminho);
+                }
+            }
+            Painel::Historico => {
+                let mut emitidas = Vec::new();
+                let Editor { servico, estado, casca, .. } = self;
+                let mut contexto = Contexto::novo(servico, estado, frame, &mut emitidas).com_casca(versao, trocando);
+                casca.historico.mostrar(ui, lugar_acoes, &mut contexto);
+                acoes.extend(emitidas.into_iter().map(|a| (None, a)));
+            }
+            Painel::Propriedades => {
+                let id_ativa = self.abas.id_ativa();
+                let mut das_propriedades = Vec::new();
+                let Editor { servico, estado, casca, abas, .. } = self;
+                let mut contexto = Contexto::novo(servico, estado, frame, &mut das_propriedades)
+                    .com_casca(versao, trocando)
+                    .com_fontes(fontes);
+                casca.propriedades(ui, lugar_acoes, &mut abas.ativa_mut().conteudo, id_ativa, &mut contexto);
+                acoes.extend(das_propriedades.into_iter().map(|a| (Some(id_ativa), a)));
+            }
+        }
+    }
+
+    /// As janelas próprias dos painéis (revisão de UI de 19/10/2026, prancheta 6): uma janela do sistema, não modal,
+    /// para cada painel que mora nela com a janela aberta (as Propriedades, só quando o documento à vista as tem). O
+    /// fechar da janela (o × do sistema ou o "Fechar" do cabeçalho) devolve o painel escondido para a doca; o "Prender
+    /// de volta" e a aba arrastada até a janela principal o prendem na doca, à vista.
+    fn janelas_dos_paineis(
+        &mut self,
+        ctx: &egui::Context,
+        frame: Option<&eframe::Frame>,
+        fontes: &[Arc<dyn FonteDeColunas>],
+        rota: &Rota,
+        acoes: &mut Vec<(Option<IdAba>, Acao)>,
+        principal: Rect,
+    ) {
+        let tem_propriedades =
+            matches!(self.situacao, Situacao::Pronta) && self.abas.ativa().conteudo.tem_propriedades();
+        let raiz = ctx.input(|i| i.viewport().inner_rect);
+        for painel in Painel::TODOS {
+            if !self.paineis.janela_aberta(painel) || (painel == Painel::Propriedades && !tem_propriedades) {
+                continue;
+            }
+            let (largura, altura) = tamanho_da_janela(painel);
+            let mut construtor = egui::ViewportBuilder::default()
+                .with_title(format!("{} · {}", painel.nome(), comum::app::NOME))
+                .with_inner_size([largura, altura])
+                .with_min_inner_size([260.0, 220.0]);
+            if let Some(icone) = interface::marca::icone_janela() {
+                construtor = construtor.with_icon(Arc::new(icone));
+            }
+            if let Some((p, pos)) = self.posicao_da_janela
+                && p == painel
+            {
+                construtor = construtor.with_position(pos);
+                self.posicao_da_janela = None;
+            }
+            let id = egui::ViewportId::from_hash_of(("janela-do-painel", painel));
+            let mut pedido = None;
+            ctx.show_viewport_immediate(id, construtor, |ui, _| {
+                pedido = self.janela_do_painel(ui, painel, frame, fontes, rota, acoes);
+                if ui.input(|i| i.viewport().close_requested()) {
+                    pedido = Some(PedidoDaJanela::Fechar);
+                }
+                // a aba solta fora da janela própria: em cima da janela principal, prende na doca daquele lado
+                if let Some(PedidoDaJanela::Solta(ponteiro)) = pedido {
+                    let tela = ui.input(|i| i.viewport().inner_rect).map_or(ponteiro, |r| r.min + ponteiro.to_vec2());
+                    let alvo = raiz.unwrap_or(principal);
+                    pedido = alvo.contains(tela).then(|| {
+                        let lado = if tela.x < alvo.center().x { Lado::Esquerda } else { Lado::Direita };
+                        PedidoDaJanela::Prender(Some(lado))
+                    });
+                }
+            });
+            match pedido {
+                Some(PedidoDaJanela::Fechar) => {
+                    let mudou = self.paineis.fechar_janela(painel);
+                    self.depois_de_mover(ctx, mudou);
+                }
+                Some(PedidoDaJanela::Prender(Some(lado))) => self.mover_painel(ctx, painel, Lugar::Doca(lado)),
+                Some(PedidoDaJanela::Prender(None)) => self.prender_painel(ctx, painel),
+                Some(PedidoDaJanela::Solta(_)) | None => {}
+            }
+        }
+    }
+
+    /// O conteúdo da janela própria de um painel (prancheta 6): o cabeçalho de 50px com a aba do painel encostada
+    /// embaixo (arrastá-la de volta prende), o "Prender de volta" (a silhueta espelhada) e o "Fechar"; o corpo do
+    /// painel e, no Explorador, o rodapé de 58px com as ações dele.
+    #[allow(clippy::too_many_arguments)]
+    fn janela_do_painel(
+        &mut self,
+        ui: &mut Ui,
+        painel: Painel,
+        frame: Option<&eframe::Frame>,
+        fontes: &[Arc<dyn FonteDeColunas>],
+        rota: &Rota,
+        acoes: &mut Vec<(Option<IdAba>, Acao)>,
+    ) -> Option<PedidoDaJanela> {
+        use interface::pecas::janela::{ALTURA_CABECALHO, ALTURA_RODAPE};
+        let p = tema::paleta(ui);
+        let e = &p.estudio;
+        let rect = ui.available_rect_before_wrap();
+        pintura::pintar_fundo(ui.painter(), p, rect);
+        let cab = Rect::from_min_size(rect.min, vec2(rect.width(), ALTURA_CABECALHO));
+        let com_rodape = painel == Painel::Explorador;
+        let rodape = Rect::from_min_max(pos2(rect.left(), rect.bottom() - ALTURA_RODAPE), rect.max);
+        let corpo = Rect::from_min_max(
+            pos2(rect.left(), cab.bottom()),
+            pos2(rect.right(), if com_rodape { rodape.top() } else { rect.bottom() }),
+        );
+        ui.painter().rect_filled(corpo, 0.0, e.painel);
+        ui.painter().hline(cab.x_range(), cab.bottom() - 0.5, egui::Stroke::new(1.0, e.vidrob));
+        if com_rodape {
+            ui.painter().hline(rodape.x_range(), rodape.top() + 0.5, egui::Stroke::new(1.0, e.vidrob));
+        }
+        let mut pedido = None;
+        // a aba (`padding:0 10px 0 12px`), com o objeto das Propriedades
+        let objeto = {
+            let a = self.abas.ativa();
+            a.conteudo.titulo(a.rota(), a.numero_consulta(), &self.estado).0
+        };
+        let aba = AbaDoca::new(painel.icone(), painel.nome())
+            .sub((painel == Painel::Propriedades).then_some(objeto.as_str()));
+        let (_, arrasto) = interface::pecas::doca::aba_da_janela(
+            ui,
+            ("janela-do-painel", painel),
+            &aba,
+            pos2(cab.left() + 12.0, cab.bottom()),
+        );
+        if let Some(a) = arrasto
+            && a.solto
+        {
+            pedido = Some(PedidoDaJanela::Solta(a.ponteiro));
+        }
+        // o Prender de volta e o Fechar, à direita (`gap:2px`)
+        let dica_prender = match self.paineis.origem(painel) {
+            Lado::Esquerda => "Prender de volta na doca da esquerda",
+            Lado::Direita => "Prender de volta na doca da direita",
+        };
+        let botoes =
+            Rect::from_min_max(pos2(cab.right() - 10.0 - 62.0, cab.top()), pos2(cab.right() - 10.0, cab.bottom()));
+        let mut ui_botoes = ui.new_child(
+            UiBuilder::new()
+                .id_salt(("janela-do-painel-botoes", painel))
+                .max_rect(botoes)
+                .layout(Layout::right_to_left(Align::Center)),
+        );
+        ui_botoes.spacing_mut().item_spacing.x = 2.0;
+        let fechar = interface::pecas::botao::Botao::icone(interface::icones::Icone::Fechar)
+            .rotulo("Fechar")
+            .dica("Fechar (o painel volta escondido para a doca)");
+        if ui_botoes.add(fechar).clicked() {
+            pedido = Some(PedidoDaJanela::Fechar);
+        }
+        let prender = interface::pecas::botao::Botao::icone(interface::icones::Icone::Prender)
+            .rotulo("Prender de volta")
+            .dica(dica_prender);
+        if ui_botoes.add(prender).clicked() {
+            pedido = Some(PedidoDaJanela::Prender(None));
+        }
+        let lugar_acoes = if com_rodape {
+            // as ações no rodapé (`padding:0 14px 0 16px`), com os botões de 20px no meio da altura
+            let meio = rodape.center().y;
+            Rect::from_min_max(pos2(rodape.left() + 16.0, meio - 10.0), pos2(rodape.right() - 14.0, meio + 10.0))
+        } else {
+            Rect::NOTHING
+        };
+        let mut ui_corpo = ui.new_child(
+            UiBuilder::new()
+                .id_salt(("janela-do-painel-corpo", painel))
+                .max_rect(corpo)
+                .layout(Layout::top_down(Align::Min)),
+        );
+        ui_corpo.set_clip_rect(corpo);
+        self.conteudo_do_painel(&mut ui_corpo, painel, Encaixe::janela(lugar_acoes), frame, fontes, rota, acoes);
+        ui.allocate_rect(rect, egui::Sense::hover());
+        pedido
+    }
+
+    /// Muda um painel de lugar (uma doca, a janela própria) e grava o lugar novo nas preferências, numa tarefa.
+    fn mover_painel(&mut self, ctx: &egui::Context, painel: Painel, destino: Lugar) {
+        let mudou = self.paineis.mover(painel, destino);
+        self.depois_de_mover(ctx, mudou);
+    }
+
+    /// Prende de volta, na doca de onde saiu, o painel da janela própria.
+    fn prender_painel(&mut self, ctx: &egui::Context, painel: Painel) {
+        let mudou = self.paineis.prender(painel);
+        self.depois_de_mover(ctx, mudou);
+    }
+
+    fn depois_de_mover(&mut self, ctx: &egui::Context, mudou: bool) {
+        if mudou {
+            let mudanca = prefs::Mudanca::lugares(self.paineis.para_prefs());
+            let promessa = self.tarefa(ctx, move |s, _| s.gravar_preferencias(mudanca).map(|_| ()));
+            self.tarefas.push(Tarefa::Gravar(promessa));
+        }
+        ctx.request_repaint();
     }
 
     /// Grava nas preferências as larguras escolhidas que ainda não estão lá (só as que mudaram), numa tarefa. Uma
@@ -2936,8 +3387,8 @@ impl Editor {
         }
         let (agora, antes) = (self.larguras, self.larguras_guardadas);
         let mudanca = prefs::Mudanca::paineis(prefs::MudancaLarguraPaineis {
-            explorador: (agora.explorador != antes.explorador).then_some(agora.explorador),
-            propriedades: (agora.propriedades != antes.propriedades).then_some(agora.propriedades),
+            explorador: (agora.esquerda != antes.esquerda).then_some(agora.esquerda),
+            propriedades: (agora.direita != antes.direita).then_some(agora.direita),
         });
         self.larguras_guardadas = agora;
         self.gravando_larguras = true;
@@ -2978,8 +3429,8 @@ impl Editor {
         };
 
         // as medidas, de cima para baixo: a barra de título de 30px, a barra de ferramentas (`margin:6px 8px 0`,
-        // 44px) e o corpo (`padding:8px; gap:8px`), até a barra de status (`margin:0 8px 8px`): a barra de ícones, o
-        // painel da esquerda, a seção do documento (a faixa de abas e o `.doc`) e as Propriedades
+        // 44px) e o corpo (`padding:8px; gap:8px`), até a barra de status (`margin:0 8px 8px`): a doca da esquerda, a
+        // seção do documento (a faixa de abas e o `.doc`) e a doca da direita
         let janela = ctx.content_rect();
         let topo = Rect::from_min_size(janela.min, vec2(janela.width(), ALTURA_TITULO));
         let rect_barra = Rect::from_min_size(
@@ -2994,14 +3445,13 @@ impl Editor {
             pos2(janela.left() + ESPACO, rect_barra.bottom() + ESPACO),
             pos2(janela.right() - ESPACO, rect_status.top() - ESPACO),
         );
-        let rect_icones = Rect::from_min_size(corpo.min, vec2(LARGURA_ICONES, corpo.height()));
         let pronta = matches!(self.situacao, Situacao::Pronta);
 
         // os atalhos: o F5 só com o Atualizar da aba ligado e o Ctrl+Alt+B só com o botão das Propriedades ligado
         // (uma vez por quadro: o que o documento oferece não muda até ele se desenhar; as ofertas dos Dados clonavam
         // as chaves marcadas a cada chamada)
         let ofertas = if pronta { self.abas.ativa().conteudo.ofertas(&self.estado) } else { Ofertas::default() };
-        let painel_agora = self.medidas(corpo, rect_icones).botao_do_painel;
+        let painel_agora = self.medidas(corpo).botao_do_painel;
         let verbo_do_atalho = self.atalhos_de_teclado(&ctx, ui, &ofertas, painel_agora);
         self.pedido_de_fechar(&ctx);
         // as origens de colunas das abas abertas (o "Trazer colunas"), uma `Arc` por aba, no `Contexto` de todas
@@ -3026,8 +3476,18 @@ impl Editor {
             tem_pasta: self.estado.tem_pasta(),
             pode_fechar_aba: pronta && !so_o_inicio,
             paineis: self.paineis,
-            propriedades: self.medidas(corpo, rect_icones).botao_do_painel,
+            tem_propriedades: pronta && self.abas.ativa().conteudo.tem_propriedades(),
+            propriedades: self.medidas(corpo).botao_do_painel,
             tema: self.tema,
+            banco: self.estado.banco.as_ref(),
+            tabela: match (pronta, &self.abas.ativa().conteudo) {
+                (true, Documento::Tabela(t)) => Some(MenuTabela {
+                    nome: t.nome(),
+                    e_visao: t.tabela_aberta().map_or(matches!(rota_ativa, Rota::Visao { .. }), |a| a.e_visao),
+                    editavel: t.editavel(self.estado.somente_leitura()),
+                }),
+                _ => None,
+            },
         };
         let mut ui_topo = raiz
             .new_child(UiBuilder::new().id_salt("barra-titulo").max_rect(topo).layout(Layout::top_down(Align::Min)));
@@ -3036,9 +3496,8 @@ impl Editor {
         match faixa.pedido {
             Some(PedidoMenu::Acao(a)) => acoes.push((None, a)),
             Some(PedidoMenu::Verbo(v)) => verbo = Some(v),
-            Some(PedidoMenu::Explorador) => self.paineis.alternar_explorador(),
-            Some(PedidoMenu::Propriedades) => self.paineis.alternar_propriedades(),
-            Some(PedidoMenu::Historico) => self.paineis.alternar_historico(),
+            Some(PedidoMenu::Painel(painel)) => self.paineis.alternar(painel),
+            Some(PedidoMenu::Tabela(item)) => self.item_da_tabela(&ctx, item),
             Some(PedidoMenu::Atalhos) => self.janelas.atalhos = true,
             Some(PedidoMenu::Sobre) => {
                 self.janelas.sobre.get_or_insert_with(Sobre::default);
@@ -3047,17 +3506,17 @@ impl Editor {
             None => {}
         }
 
-        // a barra de ferramentas, antes da barra de ícones (é a ordem do Tab) e do documento: o verbo clicado (ou o
+        // a barra de ferramentas, antes das docas (é a ordem do Tab) e do documento: o verbo clicado (ou o
         // F5 do quadro anterior) é executado no documento antes de ele se desenhar, e a busca da barra é o texto que o
         // documento empresta (o que acontece nela também vai ao documento antes do conteúdo); os pedidos da casca
         // valem no quadro seguinte, depois de a edição em curso gravar. O botão das Propriedades é medido com os
-        // painéis de agora (o clique na barra de ícones, logo depois, pede outro quadro)
+        // painéis de agora (o clique numa aba de doca, logo depois, pede outro quadro)
         let barra = Barra {
             ofertas: &ofertas,
             pode_voltar: pronta && self.abas.pode_voltar(),
             pode_avancar: pronta && self.abas.pode_avancar(),
             tem_banco: self.estado.tem_banco(),
-            painel: self.medidas(corpo, rect_icones).botao_do_painel,
+            painel: self.medidas(corpo).botao_do_painel,
             aba: self.abas.id_ativa().0,
         };
         let mut ui_barra = raiz.new_child(UiBuilder::new().id_salt("barra-ferramentas").max_rect(rect_barra));
@@ -3070,7 +3529,7 @@ impl Editor {
             }
             Some(PedidoBarra::Verbo(v)) => verbo = Some(v),
             Some(PedidoBarra::AlternarPropriedades) => {
-                self.paineis.alternar_propriedades();
+                self.paineis.alternar(Painel::Propriedades);
                 ctx.request_repaint();
             }
             None => {}
@@ -3099,66 +3558,32 @@ impl Editor {
             acoes.extend(emitidas.into_iter().map(|a| (Some(id), a)));
         }
 
-        let no_inicio = pronta && matches!(self.abas.ativa().conteudo, Documento::Inicio(_));
-        let pedido_icones = casca::icones::barra(&mut raiz, rect_icones, no_inicio, self.paineis);
-        match pedido_icones {
-            Some(PedidoIcones::Inicio) => acoes.push((None, Acao::Navegar(Rota::Inicio))),
-            Some(PedidoIcones::Explorador) => self.paineis.alternar_explorador(),
-            Some(PedidoIcones::Historico) => self.paineis.alternar_historico(),
-            Some(PedidoIcones::Preferencias) => self.abrir_preferencias(&ctx, Secao::Geral),
-            None => {}
-        }
-        if pedido_icones.is_some() {
-            ctx.request_repaint();
-        }
-
-        // as larguras, com os painéis que a pessoa quer agora
-        let Medidas { painel: rect_painel, secao, direita, com_propriedades, botao_do_painel, disposicao } =
-            self.medidas(corpo, rect_icones);
-        self.propriedades_a_vista = com_propriedades;
+        // as larguras, com as docas que a pessoa quer agora
+        let Medidas { esquerda: rect_esquerda, secao, direita, com_direita, botao_do_painel, disposicao } =
+            self.medidas(corpo);
+        let tem_propriedades = pronta && self.abas.ativa().conteudo.tem_propriedades();
+        self.propriedades_a_vista = match self.paineis.lugar(Painel::Propriedades) {
+            Lugar::Doca(Lado::Direita) => com_direita && self.paineis.a_vista(Painel::Propriedades, tem_propriedades),
+            _ => self.paineis.a_vista(Painel::Propriedades, tem_propriedades),
+        };
         self.disposicao = Some(disposicao);
         // o documento tem Propriedades, mas o painel não está à vista (escondido ou sem largura): nas telas de
         // rolagem de página, as seções vão para o fim do documento (decisão 4, `estado::propriedades_no_fim`)
         let propriedades_no_fim = matches!(botao_do_painel, EstadoPainel::Escondido | EstadoPainel::SemLargura);
 
-        if let (Some(painel), Some(r)) = (self.paineis.esquerdo, rect_painel) {
-            let mut ui_painel = raiz.new_child(
-                UiBuilder::new().id_salt("painel-esquerdo").max_rect(r).layout(Layout::top_down(Align::Min)),
-            );
-            let mut emitidas = Vec::new();
-            match painel {
-                PainelEsquerdo::Explorador => {
-                    let consulta = self.nome_da_consulta_da_transacao();
-                    let (estado, versao) = (&self.estado, self.versao);
-                    let falha = self.falha_objetos.as_deref();
-                    let rota = &rota_ativa;
-                    self.casca.explorador(&mut ui_painel, estado, versao, rota, falha, &consulta, &mut emitidas);
-                    // etapa 4, passo 9: o "Mostrar na pasta" do menu de contexto do Explorador
-                    if let Some(caminho) = self.casca.revelar_do_explorador() {
-                        self.revelar(&ctx, caminho);
-                    }
-                }
-                PainelEsquerdo::Historico => {
-                    let (versao, trocando) = (self.versao, self.troca.is_some());
-                    let Editor { servico, estado, casca, .. } = self;
-                    let mut contexto =
-                        Contexto::novo(servico, estado, frame, &mut emitidas).com_casca(versao, trocando);
-                    casca.historico.mostrar(&mut ui_painel, &mut contexto);
-                }
-            }
-            da_casca(&mut acoes, emitidas);
-            // a divisória no vão entre o painel e o documento (logo depois do painel, na ordem do Tab)
-            let rotulo = match painel {
-                PainelEsquerdo::Explorador => "Largura do Explorador",
-                PainelEsquerdo::Historico => "Largura do Histórico",
-            };
+        // a doca da esquerda, antes do documento (é a ordem do Tab)
+        let mut arrasto = None;
+        if let Some(r) = rect_esquerda {
+            arrasto = self.doca(&mut raiz, Lado::Esquerda, r, frame, &fontes, &rota_ativa, &mut acoes);
+            // a divisória no vão entre a doca e o documento (logo depois dela, na ordem do Tab)
+            let rotulo = rotulo_da_largura(self.paineis.ativo(Lado::Esquerda, tem_propriedades));
             let vao = Rect::from_min_max(pos2(r.right(), r.top()), pos2(r.right() + ESPACO, r.bottom()));
             let saida =
-                Divisoria::new("painel-esquerdo", rotulo, vao, LadoDoPainel::Esquerda, disposicao.limites_explorador())
+                Divisoria::new("painel-esquerdo", rotulo, vao, LadoDoPainel::Esquerda, disposicao.limites_esquerda())
                     .mostrar(&mut raiz);
-            self.largura_pedida(&ctx, PainelLateral::Esquerdo, &saida, &disposicao);
+            self.largura_pedida(&ctx, PainelLateral::Esquerdo, &saida, &disposicao, true);
         }
-        if self.paineis.esquerdo != Some(PainelEsquerdo::Historico) {
+        if !self.paineis.a_vista(Painel::Historico, tem_propriedades) {
             self.casca.historico.esconder();
         }
 
@@ -3305,32 +3730,42 @@ impl Editor {
             }
         }
 
-        // as Propriedades do documento à vista (depois de ele se desenhar neste quadro: a tabela já lida); o que elas
-        // pedem vem marcado com a aba
-        if com_propriedades {
+        // a doca da direita, depois de o documento se desenhar neste quadro (as Propriedades da tabela já lida); o que
+        // o painel pede vem marcado com a aba
+        if com_direita {
             let r = Rect::from_min_max(pos2(direita + ESPACO, corpo.top()), corpo.max);
-            // a divisória no vão entre o documento e o painel (antes dele, na ordem do Tab)
+            // a divisória no vão entre o documento e a doca (antes dela, na ordem do Tab)
             let vao = Rect::from_min_max(pos2(direita, r.top()), pos2(r.left(), r.bottom()));
-            let saida = Divisoria::new(
-                "propriedades",
-                "Largura das Propriedades",
-                vao,
-                LadoDoPainel::Direita,
-                disposicao.limites_propriedades(),
-            )
-            .mostrar(&mut raiz);
-            self.largura_pedida(&ctx, PainelLateral::Direito, &saida, &disposicao);
-            let mut ui_propriedades = raiz
-                .new_child(UiBuilder::new().id_salt("propriedades").max_rect(r).layout(Layout::top_down(Align::Min)));
-            let (versao, trocando) = (self.versao, self.troca.is_some());
-            let Editor { servico, estado, casca, abas, .. } = self;
-            let mut das_propriedades = Vec::new();
-            let mut contexto = Contexto::novo(servico, estado, frame, &mut das_propriedades)
-                .com_casca(versao, trocando)
-                .com_fontes(&fontes);
-            casca.propriedades(&mut ui_propriedades, &mut abas.ativa_mut().conteudo, id_ativa, &mut contexto);
-            acoes.extend(das_propriedades.into_iter().map(|a| (Some(id_ativa), a)));
+            let rotulo = rotulo_da_largura(self.paineis.ativo(Lado::Direita, tem_propriedades));
+            let saida =
+                Divisoria::new("propriedades", rotulo, vao, LadoDoPainel::Direita, disposicao.limites_direita())
+                    .mostrar(&mut raiz);
+            self.largura_pedida(&ctx, PainelLateral::Direito, &saida, &disposicao, rect_esquerda.is_some());
+            if let Some(a) = self.doca(&mut raiz, Lado::Direita, r, frame, &fontes, &rota_ativa, &mut acoes) {
+                arrasto = Some(a);
+            }
         }
+        // a aba de painel arrastada: acende o destino e, solta, muda o painel de lugar
+        if let Some((painel, a)) = arrasto {
+            let destino = destino_do_arrasto(a.ponteiro, janela, rect_esquerda, com_direita.then_some(direita), corpo);
+            if let Some((lugar, alvo)) = destino {
+                if a.solto {
+                    if lugar == Lugar::Janela {
+                        // a janela abre onde a aba foi solta (o ponteiro, na tela)
+                        let tela =
+                            ctx.input(|i| i.viewport().inner_rect).map_or(a.ponteiro, |r| r.min + a.ponteiro.to_vec2());
+                        self.posicao_da_janela = Some((painel, tela));
+                    }
+                    self.mover_painel(&ctx, painel, lugar);
+                } else {
+                    interface::pecas::doca::pintar_alvo(&raiz, Id::new("alvo-da-doca"), alvo);
+                }
+            }
+            ctx.request_repaint();
+        }
+
+        // as janelas próprias dos painéis (depois do documento: as Propriedades da tabela já lida)
+        self.janelas_dos_paineis(&ctx, frame, &fontes, &rota_ativa, &mut acoes, janela);
 
         // a barra de status, com o que o documento à vista diz de si (depois de ele se desenhar neste quadro)
         let do_status = self.documento().and_then(|d| d.status(&self.estado));
@@ -3758,7 +4193,9 @@ mod testes {
         let amb = estado::apoio_testes::Ambiente::exemplo("objetos_sumidos");
         let mut e = editor_pronto(&amb);
         e.navegar(Rota::objeto("clientes", false));
+        // a mesma aba (uma aba por objeto): a parte vira a vista das Propriedades
         e.navegar(Rota::objeto_na_aba("clientes", false, estado::Parte::Estrutura));
+        e.navegar(Rota::objeto("produtos", false));
         e.navegar(Rota::objeto("pedidos", false));
         let pedidos = e.abas.id_ativa();
         e.navegar(Rota::objeto("fantasma", false));
@@ -3769,10 +4206,10 @@ mod testes {
         // a lista igual não fecha nada (nem a aba de um nome que nunca existiu)
         e.trocar_objetos(&ctx, objetos.clone());
         assert_eq!(e.abas.len(), 5);
-        objetos.tabelas.retain(|t| t.nome != "clientes" && t.nome != "pedidos");
+        objetos.tabelas.retain(|t| t.nome != "clientes" && t.nome != "produtos" && t.nome != "pedidos");
         e.trocar_objetos(&ctx, objetos);
         let ids: Vec<IdAba> = e.abas.iter().map(|a| a.id()).collect();
-        assert_eq!(ids.len(), 3, "as duas de clientes fecharam");
+        assert_eq!(ids.len(), 3, "a de clientes e a de produtos fecharam");
         assert!(ids.contains(&pedidos), "a ativa fica, com o card de que não existe mais");
         assert!(ids.contains(&fantasma));
     }

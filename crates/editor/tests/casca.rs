@@ -123,10 +123,10 @@ fn inicio_sem_banco() {
     assert!(existe(&h, Role::Button, "Abrir pasta") && existe(&h, Role::Button, "Novo banco"));
     assert!(existe(&h, Role::TextInput, "Caminho da pasta ou do arquivo") && tem_texto(&h, "Abertos recentemente"));
     assert!(tem_texto(&h, "Nenhum item aberto ainda. As pastas, os bancos e os arquivos que você abrir aparecem aqui"));
-    // a barra de ícones (o Início e o Explorador ligados), o Explorador vazio e a barra de status sem banco; o
-    // trilho da topbar e a lateral de antes saíram
-    assert!(ligado(&h, Role::Button, "Início") && ligado(&h, Role::Button, "Explorador"));
-    assert!(!ligado(&h, Role::Button, "Histórico de consultas"));
+    // o Início e o Explorador à vista na doca da esquerda, o Explorador vazio e a barra de status sem banco (o
+    // trilho saiu na revisão de UI de 19/10/2026)
+    assert!((h.state().rota() == &Rota::Inicio) && painel_a_vista(&h, "Explorador"));
+    assert!(!painel_a_vista(&h, "Histórico"));
     // o Explorador sem pasta nem banco (prancheta 4): o "Abrir pasta" no meio dele
     assert!(tem_texto_exato(&h, "Nenhuma pasta aberta."));
     assert!(tem_texto(&h, "Abra uma pasta para ver os bancos, planilhas e textos que ela tem."));
@@ -166,7 +166,7 @@ fn abrir_por_caminho_digitado() {
     assert!(recentes.iter().any(|r| r.nome == "exemplo.db"), "{recentes:?}");
     // o banco no Explorador, com a Visão geral marcada, e a Nova consulta ligada (na barra e no "+" da faixa)
     assert!(ligado(&h, Role::Link, "exemplo.db"));
-    assert!(!ligado(&h, Role::Button, "Início"));
+    assert!(!(h.state().rota() == &Rota::Inicio));
     let novas: Vec<bool> = ["Nova consulta", "Nova consulta SQL"]
         .iter()
         .flat_map(|&r| h.query_all(by().role(Role::Button).label(r)).map(|n| n.accesskit_node().is_disabled()))
@@ -302,7 +302,7 @@ fn recentes_abrem_removem_e_mostram_o_que_sumiu() {
 fn ir_para_o_banco_pelo_aviso_do_inicio() {
     let amb = Ambiente::exemplo("aviso_inicio");
     let mut h = harness(&amb);
-    clicar_botao(&mut h, "Início");
+    ir_ao_inicio(&mut h);
     assentar(&mut h);
     assert_eq!(h.state().rota(), &Rota::Inicio);
     clicar_link(&mut h, "Ir para o banco");
@@ -342,7 +342,8 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
     for t in TABELAS {
         assert!(h.query(by().role(Role::Button).label(t)).is_some(), "{t} na tabela da visão geral");
     }
-    assert_eq!(quantos(&h, "Estrutura"), 7);
+    // o botão de cada linha abre a vista Colunas da tabela (revisão de UI de 19/10/2026)
+    assert_eq!(h.query_all(by().role(Role::Button).label("Colunas")).count(), 7);
     assert!(tem_texto(&h, "virtual") && tem_texto(&h, "sem rowid"));
     // o cabeçalho de antes saiu: a Nova tabela e o Exportar são os da barra
     assert!(h.query(by().role(Role::Button).label("Exportar o banco")).is_none());
@@ -389,15 +390,17 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
     assert!(!tem_texto(&h, "Cópia salva em"), "sem a caixa de antes");
     capturar(&mut h, "banco-copia-claro.png");
 
-    // o nome abre a tabela; "Estrutura" abre a aba Estrutura
+    // o nome abre a tabela; "Colunas" abre a tabela com a vista Colunas nas Propriedades
     h.get(by().role(Role::Button).label("pedidos")).click();
     h.run_steps(2);
     assert_eq!(h.state().rota(), &Rota::objeto("pedidos", false));
     h.state_mut().ir(Rota::Banco);
     assentar(&mut h);
-    h.query_all_by_label("Estrutura").next().expect("Estrutura").click();
+    h.query_all(by().role(Role::Button).label("Colunas")).next().expect("Colunas").click();
     h.run_steps(2);
-    assert_eq!(h.state().rota(), &Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
+    assentar(&mut h);
+    assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
+    assert_eq!(h.state().vista_da_tabela(), Some("Colunas"));
 }
 
 #[test]
@@ -733,11 +736,11 @@ fn menu_exibir_mostra_e_esconde_os_paineis() {
     abrir_menu(&mut h, "Exibir");
     clicar(&mut h, Role::CheckBox, "Explorador");
     assert!(!menu_aberto(&h.ctx), "o item fecha o menu");
-    assert!(!ligado(&h, Role::Button, "Explorador"), "a barra de ícones mostra o mesmo");
+    assert!(!painel_a_vista(&h, "Explorador"), "a doca mostra o mesmo");
     assert!(h.query(by().role(Role::Link).label("clientes")).is_none());
     abrir_menu(&mut h, "Exibir");
     clicar(&mut h, Role::CheckBox, "Histórico de consultas");
-    assert!(ligado(&h, Role::Button, "Histórico de consultas"));
+    assert!(painel_a_vista(&h, "Histórico"));
     esperar_texto(&mut h, "Nenhuma consulta ainda.");
     abrir_menu(&mut h, "Exibir");
     assert!(ligado(&h, Role::CheckBox, "Histórico de consultas") && !ligado(&h, Role::CheckBox, "Explorador"));
@@ -750,7 +753,7 @@ fn menu_exibir_mostra_e_esconde_os_paineis() {
 
     // numa janela estreita as Propriedades somem e o item fica desligado, como o botão da barra
     let amb = Ambiente::exemplo("menu_exibir_estreita");
-    let mut h = harness_com(&amb, Tema::Claro, egui::vec2(1024.0, 700.0), Partida::default(), |_| None);
+    let mut h = harness_com(&amb, Tema::Claro, egui::vec2(980.0, 700.0), Partida::default(), |_| None);
     assert!(!h.state().propriedades_a_vista());
     abrir_menu(&mut h, "Exibir");
     assert!(!item_ligado(&h, "Propriedades"));
@@ -822,7 +825,7 @@ fn fechar_aba_e_fechar_banco_pelo_menu_arquivo() {
     let mut h = harness(&amb);
     clicar_link(&mut h, "clientes");
     assentar(&mut h);
-    assert_eq!(rotulos_das_abas(&h).0, s(&["exemplo.db · Visão geral", "clientes · Dados"]));
+    assert_eq!(rotulos_das_abas(&h).0, s(&["exemplo.db · Visão geral", "clientes"]));
     abrir_menu_arquivo(&mut h);
     clicar_item(&mut h, "Fechar aba");
     h.run_steps(2);
@@ -1389,7 +1392,7 @@ fn casca_explorador_e_status() {
     clicar_link(&mut h, "Visões");
     assert!(h.query(by().role(Role::Link).label("v_pedidos_por_cliente")).is_some());
     // a barra de ícones: o Explorador ligado, o Início não
-    assert!(ligado(&h, Role::Button, "Explorador") && !ligado(&h, Role::Button, "Início"));
+    assert!(painel_a_vista(&h, "Explorador") && !(h.state().rota() == &Rota::Inicio));
     // a barra de status: o banco, o modo (a frase da nota de antes vai na dica), o SQLite e a codificação; o
     // tamanho do arquivo não vai nela, nem na Visão geral (D1, opção B: ele fica nos cartões e nas Propriedades)
     assert!(existe(&h, Role::Label, "exemplo.db"));
@@ -1431,51 +1434,45 @@ fn casca_explorador_e_status() {
 }
 
 #[test]
-fn explorador_abre_as_partes_marca_a_aba_e_recolhe() {
+fn explorador_abre_o_objeto_marca_a_aba_e_recolhe() {
     let amb = Ambiente::exemplo("explorador");
     let mut h = harness(&amb);
-    // a tabela fechada: o clique no nome abre a aba de Dados e o nó, com as quatro partes
-    assert!(h.query(by().role(Role::Link).label("clientes · Estrutura")).is_none());
+    // a tabela é uma folha (revisão de UI de 19/10/2026): o clique abre a aba dela, sem filhos no Explorador
     clicar_link(&mut h, "clientes");
     assentar(&mut h);
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Dados");
+    assert_eq!(rotulos_das_abas(&h).1, "clientes");
     for parte in ["Dados", "Estrutura", "Índices e gatilhos", "Definição SQL"] {
-        assert!(h.query(by().role(Role::Link).label(&format!("clientes · {parte}"))).is_some(), "{parte}");
+        assert!(h.query(by().role(Role::Link).label(&format!("clientes · {parte}"))).is_none(), "{parte}");
     }
-    assert!(ligado(&h, Role::Link, "clientes · Dados") && !ligado(&h, Role::Link, "exemplo.db"));
-    // a parte abre a aba dela, que fica marcada
-    clicar_link(&mut h, "clientes · Estrutura");
-    assentar(&mut h);
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Estrutura");
-    assert!(ligado(&h, Role::Link, "clientes · Estrutura") && !ligado(&h, Role::Link, "clientes · Dados"));
+    assert!(ligado(&h, Role::Link, "clientes") && !ligado(&h, Role::Link, "exemplo.db"));
     capturar(&mut h, "explorador-expandido-claro.png");
-    // a visão só tem Dados e Definição SQL
+    // a visão também é uma folha, e fica marcada com a aba dela à vista
     clicar_link(&mut h, "Visões");
     clicar_link(&mut h, "v_pedidos_por_cliente");
     assentar(&mut h);
-    assert!(h.query(by().role(Role::Link).label("v_pedidos_por_cliente · Definição SQL")).is_some());
-    assert!(h.query(by().role(Role::Link).label("v_pedidos_por_cliente · Estrutura")).is_none());
+    assert!(ligado(&h, Role::Link, "v_pedidos_por_cliente") && !ligado(&h, Role::Link, "clientes"));
+    assert!(h.query(by().role(Role::Link).label("v_pedidos_por_cliente · Definição SQL")).is_none());
     // Recolher tudo fecha a árvore; outra aba à vista abre os pais dela de novo
     clicar_botao(&mut h, "Recolher tudo");
     assert!(h.query(by().role(Role::Link).label("clientes")).is_none());
-    clicar_aba(&mut h, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
     assentar(&mut h);
-    assert!(ligado(&h, Role::Link, "clientes · Dados"));
+    assert!(ligado(&h, Role::Link, "clientes"));
     assert!(h.query(by().role(Role::Link).label("v_pedidos_por_cliente")).is_none(), "as Visões ficam fechadas");
     // o banco foca a Visão geral
     clicar_link(&mut h, "exemplo.db");
     assentar(&mut h);
     assert_eq!(h.state().rota(), &Rota::Banco);
-    // Ctrl+B esconde e o botão da barra de ícones mostra; o AltGr+B (Ctrl+Alt) não mexe
+    // Ctrl+B esconde e o Exibir mostra; o AltGr+B (Ctrl+Alt) não mexe
     h.key_press_modifiers(CTRL, Key::B);
     h.run_steps(2);
     assert!(h.query(by().role(Role::Link).label("clientes")).is_none());
-    assert!(!ligado(&h, Role::Button, "Explorador"));
+    assert!(!painel_a_vista(&h, "Explorador"));
     h.key_press_modifiers(Modifiers { alt: true, ..CTRL }, Key::B);
     h.run_steps(2);
-    assert!(!ligado(&h, Role::Button, "Explorador"));
-    clicar_botao(&mut h, "Explorador");
-    assert!(ligado(&h, Role::Button, "Explorador"));
+    assert!(!painel_a_vista(&h, "Explorador"));
+    exibir(&mut h, "Explorador");
+    assert!(painel_a_vista(&h, "Explorador"));
     assert!(h.query(by().role(Role::Link).label("clientes")).is_some());
 }
 
@@ -1483,7 +1480,7 @@ fn explorador_abre_as_partes_marca_a_aba_e_recolhe() {
 fn historico_vazio() {
     let amb = Ambiente::exemplo("historico_vazio");
     let mut h = harness(&amb);
-    clicar_botao(&mut h, "Histórico de consultas");
+    exibir(&mut h, "Histórico de consultas");
     assentar(&mut h);
     // N5: o relógio de 48px, o texto em `--t2` e a explicação em `--t3`
     assert!(tem_texto(&h, "Nenhuma consulta ainda."));
@@ -1502,10 +1499,10 @@ fn duplo_clique(h: &mut H, rect: egui::Rect) {
 fn historico_clique_seleciona_e_duplo_clique_abre() {
     let amb = Ambiente::exemplo("historico");
     let mut h = harness(&amb);
-    clicar_botao(&mut h, "Histórico de consultas");
+    exibir(&mut h, "Histórico de consultas");
     assentar(&mut h);
     // no lugar do Explorador
-    assert!(ligado(&h, Role::Button, "Histórico de consultas") && !ligado(&h, Role::Button, "Explorador"));
+    assert!(painel_a_vista(&h, "Histórico") && !painel_a_vista(&h, "Explorador"));
     assert!(h.query(by().role(Role::Link).label("clientes")).is_none());
     assert!(tem_texto(&h, "Nenhuma consulta ainda."));
     // dois comandos executados (o serviço os guarda no histórico do banco): a resposta de uma Consulta relê a lista
@@ -1537,13 +1534,13 @@ fn historico_clique_seleciona_e_duplo_clique_abre() {
     assert_eq!(rotulos_das_abas(&h).1, "Consulta 2");
     assert_eq!(h.state().rota(), &Rota::consulta_com("SELECT 1 AS um"));
     // clicar de novo esconde; o Explorador volta pelo botão dele
-    clicar_botao(&mut h, "Histórico de consultas");
-    assert!(!ligado(&h, Role::Button, "Histórico de consultas") && !ligado(&h, Role::Button, "Explorador"));
+    exibir(&mut h, "Histórico de consultas");
+    assert!(!painel_a_vista(&h, "Histórico") && !painel_a_vista(&h, "Explorador"));
     assert!(h.query(by().role(Role::Button).label("SELECT 1 AS um")).is_none());
-    clicar_botao(&mut h, "Explorador");
+    exibir(&mut h, "Explorador");
     assert!(h.query(by().role(Role::Link).label("clientes")).is_some());
     // sem banco
-    clicar_botao(&mut h, "Histórico de consultas");
+    exibir(&mut h, "Histórico de consultas");
     abrir_menu_arquivo(&mut h);
     clicar_botao(&mut h, "Fechar banco");
     esperar(&mut h, "o banco fechar", |h| !h.state().estado().tem_banco());
@@ -1558,7 +1555,7 @@ fn historico_clique_seleciona_e_duplo_clique_abre() {
 fn historico_guarda_a_consulta_que_falhou() {
     let amb = Ambiente::exemplo("historico_falhou");
     let mut h = harness(&amb);
-    clicar_botao(&mut h, "Histórico de consultas");
+    exibir(&mut h, "Histórico de consultas");
     assentar(&mut h);
     let id = amb.estado.banco_id();
     amb.servico.sql(&id, "SELECT * FROM fantasma", 10).expect("um");
@@ -1616,44 +1613,40 @@ fn navega_para_tabela_troca_de_aba_volta_e_avanca() {
     assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
     assert!(tem_texto(&h, "60 linhas · 7 colunas"));
     assert!(botao_ligado(&h, "Exportar"), "o Exportar da barra");
-    for aba in ["Dados", "Estrutura", "Índices e gatilhos", "Definição SQL"] {
-        assert!(existe(&h, Role::Link, &format!("clientes · {aba}")), "a parte {aba} no Explorador");
-    }
-    assert!(ligado(&h, Role::Link, "clientes · Dados"), "a parte à vista marcada no Explorador");
+    assert!(ligado(&h, Role::Link, "clientes"), "o objeto à vista marcado no Explorador");
+    assert_eq!(h.state().vista_da_tabela(), Some("Resumo"));
 
-    // as partes pelo Explorador (os Dados no formato de documento não têm mais as abas da tela)
-    for (rotulo, aba) in [
-        ("Estrutura", Aba::Estrutura),
-        ("Índices e gatilhos", Aba::Indices),
-        ("Definição SQL", Aba::Definicao),
-        ("Dados", Aba::Dados),
-    ] {
-        clicar_link(&mut h, &format!("clientes · {rotulo}"));
-        assentar(&mut h);
-        assert_eq!(h.state().rota(), &Rota::objeto_na_aba("clientes", false, aba));
-        assert!(ligado(&h, Role::Link, &format!("clientes · {rotulo}")));
+    // as partes viram vistas das Propriedades (revisão de UI de 19/10/2026): Alt+2 a Alt+4 e Alt+1, sem trocar de aba
+    for (n, vista) in [(2, "Colunas"), (3, "Índices"), (4, "SQL"), (1, "Resumo")] {
+        vista_da_tabela(&mut h, n);
+        assert_eq!(h.state().vista_da_tabela(), Some(vista));
+        assert_eq!(h.state().rota(), &Rota::objeto("clientes", false), "a aba é a mesma: {vista}");
     }
+    // a rota de uma parte (o "Colunas" da Visão geral) abre a aba do objeto com a vista
+    h.state_mut().emitir(estado::Acao::Navegar(Rota::objeto_na_aba("clientes", false, Aba::Estrutura)));
+    assentar(&mut h);
+    assert_eq!(h.state().vista_da_tabela(), Some("Colunas"));
+    assert_eq!(rotulos_das_abas(&h).0, s(&["exemplo.db · Visão geral", "clientes"]));
 
-    // Alt+← e Alt+→
+    // Alt+← e Alt+→, entre as abas
+    clicar_link(&mut h, "pedidos");
+    assentar(&mut h);
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowLeft);
     assentar(&mut h);
-    assert_eq!(h.state().rota(), &Rota::objeto_na_aba("clientes", false, Aba::Definicao));
+    assert_eq!(h.state().rota().nome_objeto(), Some("clientes"));
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowRight);
     assentar(&mut h);
-    assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
+    assert_eq!(h.state().rota(), &Rota::objeto("pedidos", false));
 
     // os botões laterais do mouse
-    for (botao, esperado) in [
-        (PointerButton::Extra1, Rota::objeto_na_aba("clientes", false, Aba::Definicao)),
-        (PointerButton::Extra2, Rota::objeto("clientes", false)),
-    ] {
+    for (botao, esperado) in [(PointerButton::Extra1, "clientes"), (PointerButton::Extra2, "pedidos")] {
         let pos = egui::pos2(800.0, 600.0);
         for pressed in [true, false] {
             h.event(egui::Event::PointerButton { pos, button: botao, pressed, modifiers: Modifiers::NONE });
         }
         h.step();
         assentar(&mut h);
-        assert_eq!(h.state().rota(), &esperado);
+        assert_eq!(h.state().rota().nome_objeto(), Some(esperado));
     }
 
     // a aba da Visão geral (a trilha saiu com o cabeçalho dos Dados)
@@ -1661,14 +1654,12 @@ fn navega_para_tabela_troca_de_aba_volta_e_avanca() {
     assentar(&mut h);
     assert_eq!(h.state().rota(), &Rota::Banco);
 
-    // uma Consulta SQL pelo "+" da faixa e o Início pela barra de ícones (o trilho da topbar saiu)
+    // uma Consulta SQL pelo "+" da faixa e o Início pelo Alt+Home (o trilho saiu)
     clicar_primeiro(&mut h, Role::Button, "Nova consulta");
     assert_eq!(h.state().rota(), &Rota::Consulta { sql: None });
     assert_eq!(rotulos_das_abas(&h).1, "Consulta 1");
-    clicar_botao(&mut h, "Início");
+    ir_ao_inicio(&mut h);
     assert_eq!(h.state().rota(), &Rota::Inicio);
-    h.run_steps(1);
-    assert!(ligado(&h, Role::Button, "Início"));
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowLeft);
     h.run_steps(2);
     assert_eq!(h.state().rota(), &Rota::Consulta { sql: None });
@@ -1728,10 +1719,14 @@ fn visao_tem_so_dados_e_definicao() {
     clicar_link(&mut h, "v_pedidos_por_cliente");
     assentar(&mut h);
     assert_eq!(h.state().rota(), &Rota::objeto("v_pedidos_por_cliente", true));
-    // as partes da visão no Explorador: Dados e Definição SQL, sem Estrutura
-    assert!(existe(&h, Role::Link, "v_pedidos_por_cliente · Dados"));
-    assert!(existe(&h, Role::Link, "v_pedidos_por_cliente · Definição SQL"));
-    assert!(!existe(&h, Role::Link, "v_pedidos_por_cliente · Estrutura"));
+    // a visão é uma folha no Explorador; nas Propriedades, só o Resumo e o SQL (o Alt+2 não vale)
+    assert!(existe(&h, Role::Link, "v_pedidos_por_cliente"));
+    assert!(existe(&h, Role::Button, "Resumo") && existe(&h, Role::Button, "SQL"));
+    assert!(!existe(&h, Role::Button, "Colunas"));
+    vista_da_tabela(&mut h, 2);
+    assert_eq!(h.state().vista_da_tabela(), Some("Resumo"));
+    vista_da_tabela(&mut h, 4);
+    assert_eq!(h.state().vista_da_tabela(), Some("SQL"));
     assert!(tem_texto(&h, "· visão"), "o status diz visão");
     assert!(tem_texto(&h, "Visões"));
     capturar(&mut h, "visao-dados-claro.png");
@@ -1803,24 +1798,18 @@ fn abas_do_inicio_ao_banco_e_as_partes_da_tabela() {
     assentar(&mut h);
     assert_eq!(abas(&h), [("exemplo.db · Visão geral".to_string(), true)]);
 
-    // a tabela pela lateral e outra parte dela pelo Explorador: uma aba para cada
+    // a tabela pelo Explorador e outra parte dela (o "Colunas" da Visão geral): uma aba só, por objeto (revisão de
+    // UI de 19/10/2026), com a parte à vista nas Propriedades
     clicar_link(&mut h, "clientes");
     assentar(&mut h);
-    clicar_link(&mut h, "clientes · Estrutura");
+    h.state_mut().emitir(estado::Acao::Navegar(Rota::objeto_na_aba("clientes", false, Aba::Estrutura)));
     assentar(&mut h);
     let (rotulos, ativa) = rotulos_das_abas(&h);
-    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes · Dados", "clientes · Estrutura"]));
-    assert_eq!(ativa, "clientes · Estrutura");
-    assert_eq!(h.state().rota(), &Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
+    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes"]));
+    assert_eq!(ativa, "clientes");
+    assert_eq!(h.state().rota(), &Rota::objeto("clientes", false), "o endereço da aba fica o dos Dados");
+    assert_eq!(h.state().vista_da_tabela(), Some("Colunas"));
     capturar(&mut h, "casca-abas-claro.png");
-    // a aba de Dados pela faixa, e de novo a Estrutura pelo Explorador: foca a que já está aberta
-    clicar_aba(&mut h, "clientes · Dados");
-    assentar(&mut h);
-    assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
-    clicar_link(&mut h, "clientes · Estrutura");
-    assentar(&mut h);
-    assert_eq!(abas(&h).len(), 3);
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Estrutura");
 }
 
 /// Reabrir a mesma parte foca a aba que já está aberta, com a busca que ela tinha.
@@ -1853,15 +1842,15 @@ fn fechar_abas_pelo_x_pelo_meio_e_pelo_ctrl_w() {
     // Ctrl+W fecha a ativa e volta à usada antes dela
     h.key_press_modifiers(CTRL, Key::W);
     h.run_steps(3);
-    assert_eq!(rotulos_das_abas(&h).1, "pedidos · Dados");
+    assert_eq!(rotulos_das_abas(&h).1, "pedidos");
     // o AltGr do ABNT2 (Ctrl+Alt) não fecha
     h.key_press_modifiers(Modifiers { alt: true, ..CTRL }, Key::W);
     h.run_steps(3);
     assert_eq!(abas(&h).len(), 3);
     // o clique do meio e o ×
-    h.get(by().role(Role::Tab).label("pedidos · Dados")).click_button(PointerButton::Middle);
+    h.get(by().role(Role::Tab).label("pedidos")).click_button(PointerButton::Middle);
     h.run_steps(3);
-    fechar_aba(&mut h, "clientes · Dados");
+    fechar_aba(&mut h, "clientes");
     assert_eq!(abas(&h), [("exemplo.db · Visão geral".to_string(), true)]);
     // fechar a última abre o Início, que sozinho não fecha
     h.key_press_modifiers(CTRL, Key::W);
@@ -1884,9 +1873,9 @@ fn ctrl_tab_da_a_volta_e_o_historico_pula_a_aba_fechada() {
     let ctrl_shift = Modifiers { shift: true, ..CTRL };
     for (teclas, esperada) in [
         (CTRL, "exemplo.db · Visão geral"),
-        (CTRL, "clientes · Dados"),
+        (CTRL, "clientes"),
         (ctrl_shift, "exemplo.db · Visão geral"),
-        (ctrl_shift, "pedidos · Dados"),
+        (ctrl_shift, "pedidos"),
     ] {
         h.key_press_modifiers(teclas, Key::Tab);
         h.run_steps(3);
@@ -1898,12 +1887,12 @@ fn ctrl_tab_da_a_volta_e_o_historico_pula_a_aba_fechada() {
     assert_eq!(rotulos_das_abas(&h).1, "exemplo.db · Visão geral");
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowRight);
     h.run_steps(3);
-    assert_eq!(rotulos_das_abas(&h).1, "pedidos · Dados");
+    assert_eq!(rotulos_das_abas(&h).1, "pedidos");
     // fechada a de clientes, voltar não para nela
     h.state_mut().ir(Rota::objeto("clientes", false));
     h.state_mut().ir(Rota::objeto("pedidos", false));
     h.run_steps(2);
-    fechar_aba(&mut h, "clientes · Dados");
+    fechar_aba(&mut h, "clientes");
     h.key_press_modifiers(Modifiers::ALT, Key::ArrowLeft);
     h.run_steps(3);
     assert_eq!(rotulos_das_abas(&h).1, "exemplo.db · Visão geral");
@@ -2071,21 +2060,17 @@ fn banco_reaberto_por_fora_no_mesmo_arquivo_mantem_as_abas() {
     let id = h.state().estado().banco_id();
     amb.servico.fechar_banco(&id, true).expect("fechar");
     amb.servico.abrir_banco(&amb.caminho_banco(), false, false).expect("reabrir");
-    h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
+    h.state_mut().ir(Rota::objeto("pedidos", false));
     esperar(&mut h, "ressincronizar", |h| h.state().estado().banco_id() != id);
     assentar(&mut h);
     let (rotulos, ativa) = rotulos_das_abas(&h);
-    assert_eq!(
-        rotulos,
-        s(&["exemplo.db · Visão geral", "clientes · Dados", "Consulta 1", "clientes · Estrutura"]),
-        "as abas ficam"
-    );
-    assert_eq!(ativa, "clientes · Estrutura");
+    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes", "Consulta 1", "pedidos"]), "as abas ficam");
+    assert_eq!(ativa, "pedidos");
     // cada documento foi refeito: a Consulta com o texto, a tabela relida com o id novo
     clicar_aba(&mut h, "Consulta 1");
     assentar(&mut h);
     assert!(tem_texto(&h, "SELECT 42"), "{:?}", textos(&h));
-    clicar_aba(&mut h, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
     assentar(&mut h);
     assert!(h.state().tabela_aberta().is_some_and(|t| t.nome == "clientes"));
     assert_eq!(h.state().estado().banco_id(), amb.servico.estado().expect("estado").banco.expect("banco").id);
@@ -2101,16 +2086,11 @@ fn renomear_ou_excluir_fecha_as_abas_da_tabela_fora_de_vista() {
         .sql(&id, "CREATE TABLE velha (a); CREATE TABLE excluida (a); CREATE TABLE ativa (a);", 10)
         .expect("criar");
     let mut h = harness(&amb);
-    for rota in [
-        Rota::objeto("velha", false),
-        Rota::objeto_na_aba("velha", false, Aba::Estrutura),
-        Rota::objeto("excluida", false),
-        Rota::objeto("ativa", false),
-    ] {
+    for rota in [Rota::objeto("velha", false), Rota::objeto("excluida", false), Rota::objeto("ativa", false)] {
         h.state_mut().ir(rota);
         assentar(&mut h);
     }
-    assert_eq!(abas(&h).len(), 5);
+    assert_eq!(abas(&h).len(), 4);
     // renomeada uma, excluídas duas (uma delas na aba à vista): a lista nova de objetos fecha as abas delas, menos a
     // ativa, que mostra que a tabela não existe mais
     amb.servico
@@ -2119,8 +2099,8 @@ fn renomear_ou_excluir_fecha_as_abas_da_tabela_fora_de_vista() {
     h.state_mut().emitir(estado::Acao::RecarregarObjetos);
     esperar(&mut h, "as abas fecharem", |h| h.state().abas_abertas().len() == 2);
     let (rotulos, ativa) = rotulos_das_abas(&h);
-    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "ativa · Dados"]));
-    assert_eq!(ativa, "ativa · Dados");
+    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "ativa"]));
+    assert_eq!(ativa, "ativa");
 }
 
 #[test]
@@ -2129,16 +2109,19 @@ fn mudar_a_estrutura_rele_as_outras_abas_da_tabela() {
     let mut h = harness(&amb);
     h.state_mut().ir(Rota::objeto("clientes", false));
     assentar(&mut h);
-    h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
-    assentar(&mut h);
-    let estrutura = h.state().id_aba_ativa();
-    // a aba Estrutura muda a tabela (como o "+ Nova coluna") e avisa a casca
-    amb.servico.sql(&amb.estado.banco_id(), "ALTER TABLE clientes ADD COLUMN apelido TEXT;", 10).expect("coluna");
-    h.state_mut().emitir_de(estrutura, estado::Acao::RecarregarObjetos);
+    let clientes = h.state().id_aba_ativa();
+    h.state_mut().emitir(estado::Acao::NovaConsulta { sql: None });
     h.run_steps(2);
     assentar(&mut h);
-    // a de Dados relê quando aparece
-    clicar_aba(&mut h, "clientes · Dados");
+    let consulta = h.state().id_aba_ativa();
+    assert_ne!(clientes, consulta);
+    // outra aba muda a tabela (como um ALTER TABLE na Consulta) e avisa a casca
+    amb.servico.sql(&amb.estado.banco_id(), "ALTER TABLE clientes ADD COLUMN apelido TEXT;", 10).expect("coluna");
+    h.state_mut().emitir_de(consulta, estado::Acao::RecarregarObjetos);
+    h.run_steps(2);
+    assentar(&mut h);
+    // a da tabela relê quando aparece
+    clicar_aba(&mut h, "clientes");
     esperar(&mut h, "a tabela relida", |h| {
         h.state().tabela_aberta().is_some_and(|t| t.info().colunas.iter().any(|c| c.nome == "apelido"))
     });
@@ -2182,7 +2165,7 @@ fn trocar_de_aba_com_celula_em_edicao_grava_antes() {
         assert!(estado::esperar_tarefas(std::time::Duration::from_secs(10)), "a gravação terminou");
         let sql = format!("SELECT count(*) FROM clientes WHERE email = '{valor}'");
         assert_eq!(ler_texto(&amb.caminho_banco(), &sql), "Inteiro(1)", "o valor foi gravado ({trocar})");
-        clicar_aba(&mut h, "clientes · Dados");
+        clicar_aba(&mut h, "clientes");
         assentar(&mut h);
         h.remove_cursor();
         h.run_steps(2);
@@ -2475,16 +2458,17 @@ fn banco_trocado_por_outro_lugar_ressincroniza() {
     amb.servico.abrir_banco(&outro, false, false).expect("reabrir");
     clicar_ligado(&mut h, "Exportar");
     assert!(h.state().janela_aberta(), "a janela Exportar aberta");
-    h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
+    // um pedido com o id velho (a releitura dos objetos) volta `BancoTrocado`
+    h.state_mut().emitir(estado::Acao::RecarregarObjetos);
     esperar(&mut h, "ressincronizar no mesmo arquivo", |h| h.state().estado().banco_id() != id);
     assentar(&mut h);
     assert!(!h.state().janela_aberta(), "a ressincronização fecha as janelas");
-    assert_eq!(h.state().rota(), &Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
+    assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
 
     // e sem banco nenhum: o Início
     let id = h.state().estado().banco_id();
     amb.servico.fechar_banco(&id, true).expect("fechar");
-    h.state_mut().ir(Rota::objeto("clientes", false));
+    h.state_mut().emitir(estado::Acao::RecarregarObjetos);
     esperar(&mut h, "ressincronizar sem banco", |h| !h.state().estado().tem_banco());
     assentar(&mut h);
     assert_eq!(h.state().rota(), &Rota::Inicio);
@@ -2559,7 +2543,7 @@ fn janelas_globais_abrem_pelas_acoes() {
     h.key_press(Key::Escape);
     h.run_steps(3);
     assert!(!h.state().janela_aberta());
-    assert!(ligado(&h, Role::Button, "Explorador"));
+    assert!(painel_a_vista(&h, "Explorador"));
 }
 
 // ---- barra de ferramentas e Propriedades ----------------------------------------------------------------------
@@ -2719,7 +2703,7 @@ fn verbos_de_cada_aba_e_os_da_casca() {
     assert!(botao_ligado(&h, "Executar") && !botao_ligado(&h, "Exportar") && !botao_ligado(&h, "Atualizar"));
 
     // o Início: nada da aba
-    clicar_botao(&mut h, "Início");
+    ir_ao_inicio(&mut h);
     assentar(&mut h);
     for rotulo in ["Novo", "Atualizar", "Exportar", "Executar"] {
         assert!(!botao_ligado(&h, rotulo), "{rotulo} no Início");
@@ -2800,7 +2784,7 @@ fn propriedades_de_cada_aba_e_o_botao_do_painel() {
     assert!(ligado(&h, Role::Button, "Painel de propriedades"));
     let t = textos_das_propriedades(&h);
     // as seções têm rótulo próprio ("Seção Arquivo"): o menu Arquivo é o único "Arquivo"
-    for item in ["Propriedades", "Seção Arquivo", caminho.as_str(), "UTF-8", "Seção Manutenção"] {
+    for item in ["Propriedades · exemplo.db", "Seção Arquivo", caminho.as_str(), "UTF-8", "Seção Manutenção"] {
         assert!(t.iter().any(|x| x == item), "{item} nas Propriedades: {t:?}");
     }
     assert_eq!(h.query_all(by().role(Role::Button).label("Arquivo")).count(), 1, "o rótulo do menu não se repete");
@@ -2853,7 +2837,7 @@ fn propriedades_de_cada_aba_e_o_botao_do_painel() {
     }
 
     // o Início não tem Propriedades: o painel não aparece e o botão fica desligado, sem a marca
-    clicar_botao(&mut h, "Início");
+    ir_ao_inicio(&mut h);
     assentar(&mut h);
     assert!(!h.state().propriedades_a_vista());
     assert!(!ligado(&h, Role::Button, "Painel de propriedades") && !botao_ligado(&h, "Painel de propriedades"));
@@ -2865,7 +2849,7 @@ fn propriedades_de_cada_aba_e_o_botao_do_painel() {
     h.key_press(Key::Escape);
     h.run_steps(2);
     for (i, quem) in ["o botão", "o Ctrl+Alt+B"].into_iter().enumerate() {
-        clicar_botao(&mut h, "Início");
+        ir_ao_inicio(&mut h);
         assentar(&mut h);
         if i == 0 {
             clicar_botao(&mut h, "Painel de propriedades");
@@ -2933,10 +2917,11 @@ fn layout_em_janela_estreita(largura: f32, altura: f32, sufixo: &str) {
     let mut h = harness_com(&amb, Tema::Claro, egui::vec2(largura, altura), Partida::default(), |_| None);
     assert_eq!(h.state().rota(), &Rota::Banco);
 
-    // o corpo: 8 + a barra de ícones (52) + 8 + o Explorador (258) + 8 e o documento até 8px da borda; as Propriedades
-    // (272 + 8) deixariam o documento com menos de 560px e somem, com o botão desligado e a dica de alargar
+    // o corpo: 8 + a doca da esquerda (258) + 8 e o documento até 8px da borda; a da direita (as Propriedades, 272 +
+    // 8), nem encolhidas as duas até 200, deixaria o documento com menos de 560px e some, com o botão desligado e a
+    // dica de alargar
     let doc = documento(&h);
-    assert_eq!((doc.left(), doc.right()), (8.0 + 52.0 + 8.0 + 258.0 + 8.0, largura - 8.0), "{doc:?}");
+    assert_eq!((doc.left(), doc.right()), (8.0 + 258.0 + 8.0, largura - 8.0), "{doc:?}");
     assert!(!h.state().propriedades_a_vista());
     assert!(!botao_ligado(&h, "Painel de propriedades"));
     let dica = ler_dica(&mut h, Role::Button, "Painel de propriedades");
@@ -2950,7 +2935,7 @@ fn layout_em_janela_estreita(largura: f32, altura: f32, sufixo: &str) {
 
     // Visão geral: a lista cabe na moldura, sem rolar na horizontal, e as seções das Propriedades vão para o fim do
     // documento, depois da lista, na largura dele
-    for b in h.query_all_by_label("Estrutura") {
+    for b in h.query_all_by_label("Colunas") {
         assert!(b.rect().right() <= direita + 0.5, "{:?}", b.rect());
     }
     let ultima = rect_de(&h, Role::Button, "Tabela com espaço");
@@ -2987,7 +2972,7 @@ fn layout_em_janela_estreita(largura: f32, altura: f32, sufixo: &str) {
     h.run_steps(3);
     assert!(h.state().propriedades_a_vista());
     let doc = documento(&h);
-    assert_eq!((doc.left(), doc.right()), (8.0 + 52.0 + 8.0, largura - 8.0 - 272.0 - 8.0), "{doc:?}");
+    assert_eq!((doc.left(), doc.right()), (8.0, largura - 8.0 - 272.0 - 8.0), "{doc:?}");
     assert!(doc.width() >= 560.0);
     assert!(ligado(&h, Role::Button, "Painel de propriedades"));
     capturar(&mut h, &format!("casca-{sufixo}-propriedades-claro.png"));
@@ -3002,8 +2987,26 @@ fn layout_em_janela_estreita_960() {
 }
 
 #[test]
-fn layout_em_janela_estreita_1024() {
-    layout_em_janela_estreita(1024.0, 700.0, "1024");
+fn layout_em_janela_estreita_990() {
+    layout_em_janela_estreita(990.0, 700.0, "990");
+}
+
+/// A 1024px (sem o trilho, desde a revisão de UI de 19/10/2026), as duas docas cabem encolhidas, na proporção do que
+/// cada uma tem acima de 200, e o documento fica com pelo menos 560px.
+#[test]
+fn layout_em_janela_de_1024_encolhe_as_docas() {
+    let amb = Ambiente::exemplo("estreita_1024");
+    let mut h = harness_com(&amb, Tema::Claro, egui::vec2(1024.0, 700.0), Partida::default(), |_| None);
+    assert_eq!(h.state().rota(), &Rota::Banco);
+    assert!(h.state().propriedades_a_vista());
+    assert!(botao_ligado(&h, "Painel de propriedades"));
+    let (esquerda, direita) = h.state().larguras_desenhadas().expect("as larguras");
+    assert!(esquerda < 258.0 && direita < 272.0 && esquerda >= 200.0 && direita >= 200.0, "{esquerda} {direita}");
+    let doc = documento(&h);
+    assert_eq!(doc.left(), 8.0 + esquerda + 8.0, "{doc:?}");
+    assert_eq!(doc.right(), 1024.0 - 8.0 - direita - 8.0, "{doc:?}");
+    assert!(doc.width() >= 560.0, "{doc:?}");
+    capturar(&mut h, "casca-1024-docas-claro.png");
 }
 
 #[test]
@@ -3447,15 +3450,15 @@ fn cena_da_visao_geral_com_tres_abas_e_o_tema() {
     clicar_aba(&mut h, "exemplo.db · Visão geral");
     assentar(&mut h);
     let ativa = "exemplo.db · Visão geral".to_string();
-    assert_eq!(rotulos_das_abas(&h), (s(&["exemplo.db · Visão geral", "clientes · Dados", "Consulta 1"]), ativa));
+    assert_eq!(rotulos_das_abas(&h), (s(&["exemplo.db · Visão geral", "clientes", "Consulta 1"]), ativa));
     abrir_menu(&mut h, "Exibir");
     abrir_submenu(&mut h, "Tema");
     assert!(ligado(&h, Role::RadioButton, "Escuro"));
     capturar(&mut h, "casca-visao-geral-escuro.png");
 }
 
-/// A prancheta 2: a aba clientes · Dados escura, com o filtro "ativo igual a 1", entre a Visão geral, a Estrutura
-/// e uma Consulta.
+/// A prancheta 2: a aba clientes escura, com o filtro "ativo igual a 1" e a vista Colunas nas Propriedades, entre a
+/// Visão geral e uma Consulta.
 #[test]
 #[cfg_attr(not(feature = "telas"), ignore = "as cenas das pranchetas precisam das telas de verdade")]
 fn cena_dos_dados_com_filtro_entre_as_abas() {
@@ -3466,18 +3469,18 @@ fn cena_dos_dados_com_filtro_entre_as_abas() {
         .com_dados(estado::ConsultaDados { filtros: vec![filtro], ..Default::default() });
     h.state_mut().ir(filtrada.clone());
     assentar(&mut h);
-    h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
-    assentar(&mut h);
     h.state_mut().emitir(estado::Acao::NovaConsulta { sql: None });
     h.run_steps(2);
     assentar(&mut h);
-    clicar_aba(&mut h, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
     assentar(&mut h);
+    vista_da_tabela(&mut h, 2);
     let (rotulos, ativa) = rotulos_das_abas(&h);
-    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes · Dados", "clientes · Estrutura", "Consulta 1"]));
-    assert_eq!(ativa, "clientes · Dados");
+    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes", "Consulta 1"]));
+    assert_eq!(ativa, "clientes");
     assert_eq!(h.state().rota(), &filtrada, "o filtro ficou na aba");
-    assert!(ligado(&h, Role::Link, "clientes · Dados"));
+    assert_eq!(h.state().vista_da_tabela(), Some("Colunas"));
+    assert!(ligado(&h, Role::Link, "clientes"));
     assert!(existe(&h, Role::Label, "clientes · 60 linhas · 7 colunas"), "{:?}", textos(&h));
     capturar(&mut h, "casca-dados-abas-escuro.png");
 }
@@ -3513,17 +3516,17 @@ fn cena_da_consulta_com_o_historico() {
          SELECT * FROM tabela_que_nao_existe;",
     );
     esperar_texto(&mut h, "A execução parou neste comando");
-    clicar_botao(&mut h, "Histórico de consultas");
+    exibir(&mut h, "Histórico de consultas");
     assentar(&mut h);
     let (rotulos, ativa) = rotulos_das_abas(&h);
-    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes · Dados", "Consulta 1", "Consulta 2"]));
+    assert_eq!(rotulos, s(&["exemplo.db · Visão geral", "clientes", "Consulta 1", "Consulta 2"]));
     assert_eq!(ativa, "Consulta 2");
     assert!(h.query(by().role(Role::Button).label("PRAGMA integrity_check")).is_some(), "{:?}", textos(&h));
     capturar(&mut h, "casca-consulta-2-escuro.png");
 }
 
-/// A prancheta 6: a Estrutura de clientes clara com a transação aberta (o aviso no documento e o modo na barra de
-/// status).
+/// A prancheta 6: clientes clara, com a vista Colunas e a transação aberta (o aviso no documento e o modo na barra
+/// de status).
 #[test]
 #[cfg_attr(not(feature = "telas"), ignore = "as cenas das pranchetas precisam das telas de verdade")]
 fn cena_da_estrutura_com_a_transacao_aberta() {
@@ -3534,20 +3537,19 @@ fn cena_da_estrutura_com_a_transacao_aberta() {
         .expect("begin");
     assert!(r.transacao_aberta);
     let mut h = harness(&amb);
-    h.state_mut().ir(Rota::objeto("clientes", false));
-    assentar(&mut h);
     h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
     assentar(&mut h);
     h.state_mut().emitir(estado::Acao::NovaConsulta { sql: None });
     h.run_steps(2);
     assentar(&mut h);
-    clicar_aba(&mut h, "clientes · Estrutura");
+    clicar_aba(&mut h, "clientes");
     assentar(&mut h);
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Estrutura");
+    assert_eq!(rotulos_das_abas(&h).1, "clientes");
+    assert_eq!(h.state().vista_da_tabela(), Some("Colunas"));
     // a Consulta 1 viu a transação aberta por fora (o BEGIN veio pelo serviço): é a dela
     esperar_texto(&mut h, "Há uma transação aberta na Consulta 1.");
     assert!(existe(&h, Role::Label, "Transação aberta"));
-    assert!(ligado(&h, Role::Link, "clientes · Estrutura"));
+    assert!(ligado(&h, Role::Link, "clientes"));
     // o banco no Explorador também avisa, com o ícone Atenção (a dica dele se soma ao modo da barra de status)
     assert!(existe(&h, Role::Image, "Transação aberta"));
     assert_eq!(dica_do_estado_do_banco(&mut h), frase_da_transacao("Consulta 1"), "a dica é o aviso inteiro");
@@ -3584,8 +3586,8 @@ fn tabela_a_vista_rele_depois_da_consulta_escondida() {
     let outro = OutroPrograma::prender(&amb.caminho_banco());
     executando(&mut h, "INSERT INTO clientes (nome) VALUES ('Revisao');");
     // a pessoa volta à aba de Dados (já lida) enquanto a Consulta espera o outro programa
-    clicar_aba(&mut h, "clientes · Dados");
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
+    assert_eq!(rotulos_das_abas(&h).1, "clientes");
     outro.soltar();
     esperar(&mut h, "a grade à vista reler com a linha nova", |h| tem_texto(h, "Linhas 1–61 de 61"));
     assert_eq!(ler_texto(&amb.caminho_banco(), "SELECT count(*) FROM clientes"), "Inteiro(61)");
@@ -3605,7 +3607,7 @@ fn celula_em_edicao_grava_antes_da_releitura_pedida_por_outra_aba() {
     assentar(&mut h);
     let outro = OutroPrograma::prender(&amb.caminho_banco());
     executando(&mut h, "INSERT INTO clientes (nome) VALUES ('Revisao');");
-    clicar_aba(&mut h, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
     esperar(&mut h, "a grade", |h| h.query_by_label("Grade").is_some());
     // uma célula da coluna email em edição, no meio da grade
     let valor = "releitura@example.test";
@@ -3648,7 +3650,7 @@ fn tabela_a_vista_rele_depois_da_execucao_solta() {
     executando(&mut h, "INSERT INTO clientes (nome) VALUES ('Revisao');");
     h.key_press_modifiers(CTRL, Key::W);
     h.run_steps(3);
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Dados", "a Consulta fechou executando");
+    assert_eq!(rotulos_das_abas(&h).1, "clientes", "a Consulta fechou executando");
     outro.soltar();
     esperar(&mut h, "a grade à vista reler com a linha nova", |h| tem_texto(h, "Linhas 1–61 de 61"));
 }
@@ -3670,13 +3672,13 @@ fn tabela_excluida_por_consulta_escondida_mostra_o_card() {
     assentar(&mut h);
     let outro = OutroPrograma::prender(&amb.caminho_banco());
     executando(&mut h, "DROP TABLE efemera;");
-    clicar_aba(&mut h, "efemera · Dados");
+    clicar_aba(&mut h, "efemera");
     outro.soltar();
     esperar_texto(&mut h, "A tabela efemera não existe mais neste banco.");
     assentar(&mut h);
     assert!(!tem_texto(&h, "Linhas 1–3 de 3"));
     assert!(h.state().estado().objetos.as_ref().is_some_and(|o| !o.tabelas.iter().any(|t| t.nome == "efemera")));
-    assert_eq!(rotulos_das_abas(&h).1, "efemera · Dados", "a ativa fica, com o card");
+    assert_eq!(rotulos_das_abas(&h).1, "efemera", "a ativa fica, com o card");
 }
 
 /// A Visão geral escondida no meio de uma manutenção não perde o resultado quando outra aba muda o banco (antes, o
@@ -3697,12 +3699,12 @@ fn visao_geral_escondida_avisa_o_resultado_da_manutencao_num_toast() {
     // na Visão geral, a verificação de integridade (espera a Consulta soltar a conexão); depois, outra aba
     clicar_aba(&mut h, "exemplo.db · Visão geral");
     clicar_botao(&mut h, "Verificar integridade");
-    clicar_aba(&mut h, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
     outro.soltar();
     esperar(&mut h, "o toast da verificação", |h| {
         toast_atual(&h.ctx).is_some_and(|t| t.contains("O banco passou na verificação de integridade."))
     });
-    assert_eq!(rotulos_das_abas(&h).1, "clientes · Dados", "a Visão geral continuou escondida");
+    assert_eq!(rotulos_das_abas(&h).1, "clientes", "a Visão geral continuou escondida");
     esperar(&mut h, "a grade reler com a linha nova", |h| tem_texto(h, "Linhas 1–61 de 61"));
     // de volta à Visão geral, o resultado não está no painel (era o aviso de antes): só o toast, que já passou
     clicar_aba(&mut h, "exemplo.db · Visão geral");
@@ -4059,35 +4061,40 @@ fn cada_aba_guarda_a_propria_busca() {
     clicar_aba(&mut h, "exemplo.db · Visão geral");
     assentar(&mut h);
     assert_eq!(campo_da_busca(&h, "Buscar tabelas").value().as_deref(), Some("PRODU"));
-    clicar_aba(&mut h, "clientes · Dados");
+    clicar_aba(&mut h, "clientes");
     assentar(&mut h);
     assert_eq!(campo_da_busca(&h, "Buscar em clientes").value().as_deref(), Some("Recife"));
-    // a Estrutura busca as colunas
-    h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
-    assentar(&mut h);
-    digitar(&mut h, "Buscar colunas", "cid");
-    h.run_steps(2);
-    assert!(h.query(by().role(Role::Button).label("cidade")).is_some(), "{:?}", textos(&h));
-    assert!(h.query(by().role(Role::Button).label("email")).is_none());
+    // a vista Colunas das Propriedades não troca a busca da barra: continua a dos Dados
+    vista_da_tabela(&mut h, 2);
+    assert_eq!(campo_da_busca(&h, "Buscar em clientes").value().as_deref(), Some("Recife"));
 }
 
 #[test]
-fn busca_desligada_no_inicio_e_na_definicao() {
+#[cfg_attr(not(feature = "telas"), ignore = "precisa da busca da aba Dados de verdade (tela_dados)")]
+fn busca_desligada_no_inicio_e_ligada_na_tabela_em_qualquer_vista() {
     let amb = Ambiente::exemplo("busca_desligada");
     let mut h = harness(&amb);
-    for rota in [
-        Rota::Inicio,
-        Rota::objeto_na_aba("v_pedidos_por_cliente", true, Aba::Definicao),
-        Rota::objeto_na_aba("clientes", false, Aba::Indices),
+    let ligada = |h: &mut H, rotulo: &str| {
+        let desligada = campo_da_busca(h, rotulo).accesskit_node().is_disabled();
+        abrir_menu(h, "Editar");
+        let no_menu = item_ligado(h, "Buscar");
+        h.key_press(Key::Escape);
+        h.run_steps(2);
+        assert_eq!(!desligada, no_menu, "a barra e o menu dizem o mesmo");
+        !desligada
+    };
+    h.state_mut().ir(Rota::Inicio);
+    assentar(&mut h);
+    assert!(!ligada(&mut h, "Buscar"), "a busca desligada no Início");
+    // a tabela é sempre a grade dos Dados (revisão de UI de 19/10/2026): a busca fica, em qualquer vista das
+    // Propriedades
+    for (rota, rotulo) in [
+        (Rota::objeto_na_aba("v_pedidos_por_cliente", true, Aba::Definicao), "Buscar em v_pedidos_por_cliente"),
+        (Rota::objeto_na_aba("clientes", false, Aba::Indices), "Buscar em clientes"),
     ] {
         h.state_mut().ir(rota.clone());
         assentar(&mut h);
-        let busca = campo_da_busca(&h, "Buscar");
-        assert!(busca.accesskit_node().is_disabled(), "a busca desligada em {rota:?}");
-        abrir_menu(&mut h, "Editar");
-        assert!(!item_ligado(&h, "Buscar"), "o Buscar do menu também, em {rota:?}");
-        h.key_press(Key::Escape);
-        h.run_steps(2);
+        assert!(ligada(&mut h, rotulo), "a busca ligada em {rota:?}");
     }
 }
 
@@ -4111,23 +4118,23 @@ fn icone_pintado_em(h: &H, icone: interface::icones::Icone, lado: f32, dentro: e
 }
 
 #[test]
-fn trilho_com_os_solidos_e_o_explorador_on() {
+fn docas_com_os_solidos_e_o_explorador_on() {
     use interface::icones::Icone;
-    let amb = Ambiente::exemplo("trilho_solidos");
+    let amb = Ambiente::exemplo("docas_solidos");
     let mut h = harness(&amb);
     assentar(&mut h);
-    assert!(ligado(&h, Role::Button, "Explorador"), "o Explorador à vista, ligado");
-    assert!(!ligado(&h, Role::Button, "Histórico de consultas"));
-    // o trilho B: os sólidos de 22 no meio dos `.rail` de 36
-    for (icone, rotulo) in
-        [(Icone::Inicio, "Início"), (Icone::Explorador, "Explorador"), (Icone::Historico, "Histórico de consultas")]
-    {
-        let botao = rect_de(&h, Role::Button, rotulo);
-        assert_eq!(botao.size(), egui::vec2(36.0, 36.0), "{rotulo}");
-        let r = icone_pintado_em(&h, icone, 22.0, botao).unwrap_or_else(|| panic!("o sólido de 22 em {rotulo}"));
-        assert_eq!(r.size(), egui::vec2(22.0, 22.0), "{rotulo}");
-        assert!((r.center() - botao.center()).length() <= 0.75, "{rotulo}: {r:?} em {botao:?}");
+    assert!(painel_a_vista(&h, "Explorador"), "o Explorador à vista, a aba ativa da doca");
+    assert!(!painel_a_vista(&h, "Histórico"));
+    // a doca da esquerda (revisão de UI de 19/10/2026): as abas só ícone (`.aba.so-ic`, 38 × 34) com os sólidos de 16
+    for (icone, rotulo) in [(Icone::Explorador, "Explorador"), (Icone::Historico, "Histórico")] {
+        let aba = rect_de(&h, Role::Tab, rotulo);
+        assert_eq!(aba.size(), egui::vec2(38.0, 34.0), "{rotulo}");
+        let r = icone_pintado_em(&h, icone, 16.0, aba).unwrap_or_else(|| panic!("o sólido de 16 em {rotulo}"));
+        assert!((r.center() - aba.center()).length() <= 0.75, "{rotulo}: {r:?} em {aba:?}");
     }
+    assert!(aba_do_painel_ativa(&h, "Explorador") && !aba_do_painel_ativa(&h, "Histórico"));
+    // a da direita, com o nome e o objeto
+    assert!(aba_do_painel_ativa(&h, "Propriedades · exemplo.db"));
     // o Explorador pelo tipo do objeto: o banco, a tabela sem rowid (produtos) e a virtual (notas)
     let explorador = h.get(by().role(Role::Link).label("produtos")).rect();
     assert!(icone_pintado_em(&h, Icone::TabelaSemRowid, 16.0, explorador.expand2(egui::vec2(60.0, 0.0))).is_some());
@@ -4137,9 +4144,7 @@ fn trilho_com_os_solidos_e_o_explorador_on() {
     // a aba da tabela sem rowid leva a mesma ficha
     clicar_link(&mut h, "produtos");
     assentar(&mut h);
-    let aba = h
-        .query_all(by().role(Role::Tab))
-        .find(|n| n.accesskit_node().label().is_some_and(|l| l.starts_with("produtos")));
+    let aba = h.query_all(by().role(Role::Tab)).find(|n| n.accesskit_node().label().is_some_and(|l| l == "produtos"));
     let aba = aba.expect("a aba de produtos").rect();
     assert!(icone_pintado_em(&h, Icone::TabelaSemRowid, 16.0, aba).is_some(), "a ficha anil na aba");
 }
@@ -4225,7 +4230,7 @@ fn prefs_lidas(amb: &Ambiente) -> prefs::Preferencias {
 }
 
 #[test]
-fn preferencias_abrem_pelo_menu_pelo_atalho_e_pelo_trilho() {
+fn preferencias_abrem_pelo_menu_pelo_atalho_e_pelo_inicio() {
     let amb = Ambiente::exemplo("pref_abrir");
     let mut h = harness(&amb);
     assert!(!preferencias_abertas(&h));
@@ -4253,16 +4258,8 @@ fn preferencias_abrem_pelo_menu_pelo_atalho_e_pelo_trilho() {
     h.run_steps(3);
     assert!(!preferencias_abertas(&h));
 
-    // o botão do pé da barra de ícones: a engrenagem dupla de 22, "Preferências (Ctrl+,)" na dica, empurrado para baixo
-    let botao = rect_de(&h, Role::Button, "Preferências");
-    assert_eq!(botao.size(), egui::vec2(36.0, 36.0));
-    let pe = rect_de(&h, Role::Button, "Início");
-    assert!(botao.left() == pe.left() && botao.top() > pe.top() + 200.0, "no pé da barra: {botao:?}");
-    assert!(
-        icone_pintado_em(&h, interface::icones::Icone::Preferencias, 22.0, botao).is_some(),
-        "o sólido de 22 no botão"
-    );
-    assert!(ler_dica(&mut h, Role::Button, "Preferências").contains("Preferências (Ctrl+,)"));
+    // o botão "Preferências" dos Painéis do Início (o do pé do trilho saiu na revisão de UI de 19/10/2026)
+    ir_ao_inicio(&mut h);
     clicar_botao(&mut h, "Preferências");
     h.run_steps(3);
     assert_eq!(h.state().preferencias_aberta(), Some("Geral"));
@@ -4280,19 +4277,32 @@ fn preferencias_abrem_pelo_menu_pelo_atalho_e_pelo_trilho() {
 }
 
 #[test]
-fn preferencias_do_trilho_nunca_ficam_on() {
-    let amb = Ambiente::exemplo("pref_trilho");
+fn inicio_tem_os_botoes_dos_paineis() {
+    let amb = Ambiente::exemplo("inicio_paineis");
     let mut h = harness(&amb);
-    let ligado_agora = |h: &H| h.get(by().role(Role::Button).label("Preferências")).accesskit_node().toggled();
-    assert_eq!(ligado_agora(&h), None, "não é um botão de alternar");
+    ir_ao_inicio(&mut h);
+    // os atalhos do trilho que saiu: o Explorador (Ctrl+B) e o Histórico põem o painel à vista onde ele mora
+    assert!(tem_texto(&h, "Painéis"));
+    h.key_press_modifiers(CTRL, Key::B);
+    h.run_steps(2);
+    assert!(!painel_a_vista(&h, "Explorador"));
+    clicar_botao(&mut h, "Explorador");
+    assentar(&mut h);
+    assert!(painel_a_vista(&h, "Explorador"));
+    clicar_botao(&mut h, "Histórico de consultas");
+    assentar(&mut h);
+    assert!(painel_a_vista(&h, "Histórico") && !painel_a_vista(&h, "Explorador"));
+    // o Preferências abre a janela e não fica ligado
+    let estado = |h: &H| {
+        h.query_all(by().role(Role::Button).label("Preferências"))
+            .map(|n| n.accesskit_node().toggled())
+            .next()
+            .flatten()
+    };
+    assert_eq!(estado(&h), None, "não é um botão de alternar");
     clicar_botao(&mut h, "Preferências");
     h.run_steps(3);
     assert!(preferencias_abertas(&h));
-    // a janela aberta (o botão do pé fica sob o véu) e depois de fechada: nunca `on`
-    h.key_press(Key::Escape);
-    h.run_steps(3);
-    assert_eq!(ligado_agora(&h), None);
-    assert!(ligado(&h, Role::Button, "Explorador"), "os outros continuam como eram");
 }
 
 #[test]
@@ -4575,7 +4585,11 @@ fn fonte_do_codigo_troca_e_volta() {
     assert_eq!(codigo::atual(&h.ctx).familia.as_deref(), Some(outra));
     assert!(salvar_ligado(&h));
     // voltar à padrão pelo próprio select desliga o Salvar
-    escolher_opcao(&mut h, "Família da fonte do código", fontes::FAMILIA_MONO_PADRAO);
+    escolher_opcao(
+        &mut h,
+        "Família da fonte do código",
+        &format!("Padrão do sistema ({})", fontes::FAMILIA_MONO_PADRAO),
+    );
     assentar(&mut h);
     assert_eq!(fontes::mono_escolhida(&h.ctx), None);
     assert!(!salvar_ligado(&h));
@@ -4741,7 +4755,7 @@ fn nenhum_botao_com_reticencias() {
     for rotulo in ["Abrir arquivo", "Novo banco"] {
         assert!(existe(&h, Role::Button, rotulo), "{rotulo} no Início: {:?}", textos(&h));
     }
-    // a Visão geral e as quatro partes de uma tabela
+    // a Visão geral e as quatro vistas de uma tabela
     h.state_mut().ir(Rota::Banco);
     assentar(&mut h);
     sem_reticencias(&h, "na Visão geral");
@@ -4753,7 +4767,7 @@ fn nenhum_botao_com_reticencias() {
     ] {
         h.state_mut().ir(Rota::objeto_na_aba("clientes", false, parte));
         assentar(&mut h);
-        sem_reticencias(&h, &format!("na parte {nome}"));
+        sem_reticencias(&h, &format!("na vista {nome}"));
     }
     // a Consulta SQL, com um resultado e o Histórico
     clicar_primeiro(&mut h, Role::Button, "Nova consulta");
@@ -4761,7 +4775,7 @@ fn nenhum_botao_com_reticencias() {
     executar(&mut h, "SELECT id, nome FROM clientes LIMIT 3");
     sem_reticencias(&h, "na Consulta SQL");
     // os menus
-    for menu in ["Arquivo", "Editar", "Exibir", "Ajuda"] {
+    for menu in ["Arquivo", "Editar", "Exibir", "Banco", "Ajuda"] {
         abrir_menu(&mut h, menu);
         sem_reticencias(&h, &format!("no menu {menu}"));
         h.key_press(Key::Escape);
@@ -4775,10 +4789,11 @@ fn nenhum_botao_com_reticencias() {
     assert!(h.state().janela_aberta(), "a janela Exportar");
     sem_reticencias(&h, "na janela Exportar");
     fechar_janela(&mut h);
-    h.state_mut().ir(Rota::objeto_na_aba("clientes", false, Aba::Estrutura));
-    assentar(&mut h);
-    // a Nova coluna é um diálogo da própria tela de Estrutura (não conta em `janela_aberta`)
-    clicar_primeiro(&mut h, Role::Button, "Nova coluna");
+    // o menu Tabela (com a tabela à vista) e a Nova coluna dele: um diálogo da Estrutura, nas Propriedades (não conta
+    // em `janela_aberta`)
+    abrir_menu(&mut h, "Tabela");
+    sem_reticencias(&h, "no menu Tabela");
+    clicar_item(&mut h, "Nova coluna");
     esperar(&mut h, "o diálogo Nova coluna", |h| existe(h, Role::Dialog, "Nova coluna"));
     sem_reticencias(&h, "na janela Nova coluna");
     h.key_press(Key::Escape);
@@ -4902,31 +4917,22 @@ fn botao_marcado_diz_que_esta_pressionado() {
     assert_eq!(estado_de(&h, "Painel de propriedades"), Some(Toggled::False), "escondido: não pressionado");
     clicar_botao(&mut h, "Painel de propriedades");
     assert_eq!(estado_de(&h, "Painel de propriedades"), Some(Toggled::True));
-    // o botão do pé do trilho não alterna
-    assert_eq!(estado_de(&h, "Preferências"), None);
 }
 
 #[test]
-fn trilho_diz_qual_esta_a_vista() {
-    use egui::accesskit::{AriaCurrent, Toggled};
-    let amb = Ambiente::exemplo("trilho_a_vista");
+fn abas_das_docas_dizem_qual_esta_a_vista() {
+    let amb = Ambiente::exemplo("docas_a_vista");
     let mut h = harness(&amb);
     h.state_mut().ir(Rota::Banco);
     assentar(&mut h);
-    let no = |h: &H, rotulo: &str| {
-        let n = h.get(by().role(Role::Button).label(rotulo));
-        (n.accesskit_node().toggled(), n.accesskit_node().aria_current())
-    };
-    // a Visão geral à vista, com o Explorador: o Explorador é o atual e está pressionado; o Início e o Histórico não
-    assert_eq!(no(&h, "Explorador"), (Some(Toggled::True), Some(AriaCurrent::True)));
-    assert_eq!(no(&h, "Início"), (Some(Toggled::False), None));
-    assert_eq!(no(&h, "Histórico de consultas"), (Some(Toggled::False), None));
-    // o Início à vista: a página atual
-    h.state_mut().ir(Rota::Inicio);
+    // a Visão geral à vista, com o Explorador: a aba dele é a escolhida; a do Histórico não
+    assert!(aba_do_painel_ativa(&h, "Explorador") && !aba_do_painel_ativa(&h, "Histórico"));
+    // o clique na aba do Histórico o põe à vista na mesma doca
+    clicar_aba_do_painel(&mut h, "Histórico");
     assentar(&mut h);
-    assert_eq!(no(&h, "Início"), (Some(Toggled::True), Some(AriaCurrent::Page)));
-    // o Histórico no lugar do Explorador
-    clicar_botao(&mut h, "Histórico de consultas");
-    assert_eq!(no(&h, "Histórico de consultas"), (Some(Toggled::True), Some(AriaCurrent::True)));
-    assert_eq!(no(&h, "Explorador"), (Some(Toggled::False), None));
+    assert!(aba_do_painel_ativa(&h, "Histórico") && !aba_do_painel_ativa(&h, "Explorador"));
+    assert!(painel_a_vista(&h, "Histórico") && !painel_a_vista(&h, "Explorador"));
+    // pelo Exibir, de volta ao Explorador
+    exibir(&mut h, "Explorador");
+    assert!(aba_do_painel_ativa(&h, "Explorador"));
 }

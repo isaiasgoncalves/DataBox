@@ -271,6 +271,8 @@ pub struct AbaDados {
 
     ganchos: Ganchos,
     substituidas: usize,
+    /// A coluna escolhida nas Propriedades (a vista Colunas, revisão de UI de 19/10/2026), acesa na grade.
+    destacada: Option<String>,
 }
 
 impl Drop for AbaDados {
@@ -368,6 +370,7 @@ impl AbaDados {
             em_vista: false,
             ganchos: Ganchos::default(),
             substituidas: 0,
+            destacada: None,
         }
     }
 
@@ -1170,6 +1173,7 @@ impl AbaDados {
             agora,
             larguras: &self.larguras_quadro,
             altura_cabecalho: grade.nucleo.altura_do_cabecalho(),
+            destacada: self.destacada.as_deref(),
             ordenar: None,
             abrir: None,
             marcar: None,
@@ -2368,6 +2372,12 @@ impl AbaDados {
 impl estado::ParteTabela for AbaDados {
     fn anatomia(&self) -> Anatomia {
         Anatomia::default().com_faixa().com_rodape().rolagem_propria()
+    }
+
+    fn destacar_coluna(&mut self, coluna: Option<&str>) {
+        if self.destacada.as_deref() != coluna {
+            self.destacada = coluna.map(str::to_string);
+        }
     }
 
     fn faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto, tabela: &mut TabelaAberta) {

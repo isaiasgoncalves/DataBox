@@ -115,18 +115,19 @@ fn valor(h: &H, rotulo: &str) -> (f64, f64, f64) {
 fn as_divisorias_ficam_no_vao_com_nome_valor_e_limites() {
     let amb = Ambiente::exemplo("paineis_vao");
     let h = harness(&amb);
-    // 8 + a barra de ícones (52) + 8 + o Explorador (258) + 8 e o documento até as Propriedades (272 + 8)
+    // 8 + a doca da esquerda (258) + 8 e o documento até a da direita (272 + 8); sem o trilho desde a revisão de UI
+    // de 19/10/2026
     assert_eq!(desenhadas(&h), (258.0, 272.0));
     let doc = documento(&h);
-    assert_eq!((doc.left(), doc.right()), (334.0, 1152.0));
+    assert_eq!((doc.left(), doc.right()), (274.0, 1152.0));
     let e = vao(&h, EXPLORADOR);
     let p = vao(&h, PROPRIEDADES);
-    assert_eq!((e.left(), e.right()), (326.0, 334.0), "o vão entre o Explorador e o documento");
+    assert_eq!((e.left(), e.right()), (266.0, 274.0), "o vão entre o Explorador e o documento");
     assert_eq!((p.left(), p.right()), (1152.0, 1160.0), "o vão entre o documento e as Propriedades");
     assert_eq!(e.top(), doc.top() - 34.0, "do alto ao pé do corpo");
     // o valor em pontos, o mínimo de 200 e o máximo (o documento mínimo de 560 desconta o outro painel)
-    assert_eq!(valor(&h, EXPLORADOR), (258.0, 200.0, 516.0));
-    assert_eq!(valor(&h, PROPRIEDADES), (272.0, 200.0, 530.0));
+    assert_eq!(valor(&h, EXPLORADOR), (258.0, 200.0, 576.0));
+    assert_eq!(valor(&h, PROPRIEDADES), (272.0, 200.0, 590.0));
     // o leitor de tela ouve o papel de divisória e o valor
     let no = h.get(by().role(Role::Splitter).label(EXPLORADOR));
     assert_eq!(no.accesskit_node().value().as_deref(), Some("258 pontos"));
@@ -143,8 +144,8 @@ fn arrastar_o_explorador_muda_a_largura_ao_vivo_e_grava_ao_soltar() {
     arrastar_ate(&mut h, de, de + vec2(40.0, 0.0));
     // ao vivo: o documento já anda com o ponteiro, e nada foi gravado ainda
     assert_eq!(desenhadas(&h), (298.0, 272.0));
-    assert_eq!(documento(&h).left(), 374.0);
-    assert_eq!(vao(&h, EXPLORADOR).center().x, 374.0 - 4.0);
+    assert_eq!(documento(&h).left(), 314.0);
+    assert_eq!(vao(&h, EXPLORADOR).center().x, 314.0 - 4.0);
     assert!(!texto_das_prefs(&amb).contains("larguras_paineis"), "gravar a cada quadro do arrasto seria demais");
     assert_eq!(h.state().larguras_escolhidas(), (298.0, 272.0));
     soltar(&mut h, de + vec2(40.0, 0.0));
@@ -176,23 +177,23 @@ fn arrastar_as_propriedades_para_a_esquerda_alarga_o_painel() {
 fn a_largura_fica_entre_o_minimo_e_o_maximo() {
     let amb = Ambiente::exemplo("paineis_limites");
     let mut h = harness(&amb);
-    // o máximo do Explorador a 1440: 788 (o que cabe sem o documento ficar abaixo de 560) menos as Propriedades
+    // o máximo do Explorador a 1440: 848 (o que cabe sem o documento ficar abaixo de 560) menos as Propriedades
     arrastar(&mut h, EXPLORADOR, 2000.0);
-    assert_eq!(desenhadas(&h), (516.0, 272.0));
-    assert_eq!(documento(&h).width(), 1152.0 - (68.0 + 516.0 + 8.0), "o documento ficou com o mínimo de 560");
+    assert_eq!(desenhadas(&h), (576.0, 272.0));
+    assert_eq!(documento(&h).width(), 1152.0 - (8.0 + 576.0 + 8.0), "o documento ficou com o mínimo de 560");
     assert_eq!(documento(&h).width(), 560.0);
     arrastar(&mut h, EXPLORADOR, -2000.0);
     assert_eq!(desenhadas(&h).0, 200.0);
     assert_eq!(prefs_lidas(&amb).explorador, Some(200.0));
-    // as Propriedades: o mesmo, de 200 ao que sobra com o Explorador de 200 (788 − 200)
+    // as Propriedades: o mesmo, de 200 ao que sobra com o Explorador de 200 (848 − 200, que é também o teto de 45%)
     arrastar(&mut h, PROPRIEDADES, -2000.0);
-    assert_eq!(desenhadas(&h), (200.0, 588.0));
+    assert_eq!(desenhadas(&h), (200.0, 648.0));
     assert_eq!(documento(&h).width(), 560.0);
     arrastar(&mut h, PROPRIEDADES, 2000.0);
     assert_eq!(desenhadas(&h), (200.0, 200.0));
     // a divisória diz o intervalo de agora: o máximo de um depende do outro
-    assert_eq!(valor(&h, EXPLORADOR), (200.0, 200.0, 588.0));
-    assert_eq!(valor(&h, PROPRIEDADES), (200.0, 200.0, 588.0));
+    assert_eq!(valor(&h, EXPLORADOR), (200.0, 200.0, 648.0));
+    assert_eq!(valor(&h, PROPRIEDADES), (200.0, 200.0, 648.0));
     // numa janela larga o teto é de 45% da janela
     let amb = Ambiente::exemplo("paineis_limites_larga");
     let mut h = harness_com(&amb, Tema::Claro, vec2(2400.0, 900.0), Partida::default(), |_| None);
@@ -237,7 +238,7 @@ fn setas_mudam_16_pontos_e_gravam() {
     h.key_press(Key::ArrowLeft);
     h.run_steps(3);
     assert_eq!(desenhadas(&h).0, 274.0);
-    assert_eq!(documento(&h).left(), 68.0 + 274.0 + 8.0);
+    assert_eq!(documento(&h).left(), 8.0 + 274.0 + 8.0);
     assert_eq!(valor(&h, EXPLORADOR).0, 274.0);
     // o foco ficou na divisória (as setas não o levaram ao vizinho)
     assert!(h.get(by().role(Role::Splitter).label(EXPLORADOR)).is_focused());
@@ -248,7 +249,7 @@ fn setas_mudam_16_pontos_e_gravam() {
     assert_eq!(desenhadas(&h).0, 200.0);
     h.key_press(Key::End);
     h.run_steps(3);
-    assert_eq!(desenhadas(&h).0, 516.0);
+    assert_eq!(desenhadas(&h).0, 576.0);
     h.key_press(Key::Enter);
     h.run_steps(3);
     assert_eq!(desenhadas(&h).0, 258.0);
@@ -328,7 +329,7 @@ fn a_escolha_volta_na_proxima_abertura() {
     let h = harness_com_prefs(&amb, Tema::Claro, TAMANHO);
     assert_eq!(desenhadas(&h), (328.0, 242.0));
     assert_eq!(h.state().larguras_escolhidas(), (328.0, 242.0));
-    assert_eq!(documento(&h).left(), 68.0 + 328.0 + 8.0);
+    assert_eq!(documento(&h).left(), 8.0 + 328.0 + 8.0);
     assert_eq!(valor(&h, EXPLORADOR).0, 328.0);
     // sem a chave, as larguras padrão (e o arquivo continua sem ela)
     let amb = Ambiente::exemplo("paineis_sem_chave");
@@ -348,21 +349,21 @@ fn a_escolha_volta_na_proxima_abertura() {
         .expect("larguras");
     let h = harness_com_prefs(&amb, Tema::Claro, TAMANHO);
     assert_eq!(h.state().larguras_escolhidas(), (1900.0, 130.0));
-    // 1900 vira o teto de 45% (648) e encolhe para o documento ficar com 560 (788 − 200); 130 vira o mínimo
-    assert_eq!(desenhadas(&h), (588.0, 200.0));
+    // 1900 vira o teto de 45% (648), que cabe com o documento de 560 (848 − 200); 130 vira o mínimo
+    assert_eq!(desenhadas(&h), (648.0, 200.0));
 }
 
 #[test]
 fn janela_estreita_encolhe_os_paineis_antes_de_esconder_as_propriedades() {
-    // com as larguras padrão as Propriedades cabem até 1052 de janela (antes sumiam abaixo de 1182): os painéis
-    // encolhem e o documento fica com 560
+    // com as larguras padrão as Propriedades cabem até 992 de janela (as docas encolhem abaixo de 1122) e o
+    // documento fica com 560
     let amb = Ambiente::exemplo("paineis_estreita_1100");
     let mut h = harness_com(&amb, Tema::Claro, vec2(1100.0, 700.0), Partida::default(), |_| None);
     assert!(h.state().propriedades_a_vista());
     let (e, p) = desenhadas(&h);
     assert!((200.0..258.0).contains(&e) && (200.0..272.0).contains(&p), "{e} {p}");
     let doc = documento(&h);
-    assert_eq!((doc.left(), doc.right()), (68.0 + e + 8.0, 1100.0 - 8.0 - p - 8.0));
+    assert_eq!((doc.left(), doc.right()), (8.0 + e + 8.0, 1100.0 - 8.0 - p - 8.0));
     assert!(doc.width() >= 560.0, "{doc:?}");
     // a escolha da pessoa não mudou
     assert_eq!(h.state().larguras_escolhidas(), (258.0, 272.0));
@@ -371,20 +372,20 @@ fn janela_estreita_encolhe_os_paineis_antes_de_esconder_as_propriedades() {
     capturar(&mut h, "paineis-estreitos-1100-claro.png");
 
     // no mínimo exato os dois painéis ficam de 200
-    let amb = Ambiente::exemplo("paineis_estreita_1052");
-    let h = harness_com(&amb, Tema::Claro, vec2(1052.0, 700.0), Partida::default(), |_| None);
+    let amb = Ambiente::exemplo("paineis_estreita_992");
+    let h = harness_com(&amb, Tema::Claro, vec2(992.0, 700.0), Partida::default(), |_| None);
     assert!(h.state().propriedades_a_vista());
     assert_eq!(desenhadas(&h), (200.0, 200.0));
     assert_eq!(documento(&h).width(), 560.0);
     // um pixel menos e as Propriedades somem, o Explorador volta ao que a pessoa pediu e as seções vão para o fim
     // do documento (a decisão 4)
-    let amb = Ambiente::exemplo("paineis_estreita_1051");
-    let h = harness_com(&amb, Tema::Claro, vec2(1051.0, 700.0), Partida::default(), |_| None);
+    let amb = Ambiente::exemplo("paineis_estreita_991");
+    let h = harness_com(&amb, Tema::Claro, vec2(991.0, 700.0), Partida::default(), |_| None);
     assert!(!h.state().propriedades_a_vista());
     assert_eq!(desenhadas(&h).0, 258.0);
     assert!(h.query(by().role(Role::Splitter).label(PROPRIEDADES)).is_none(), "sem painel, sem divisória");
     assert!(h.query_by_label("Seção Arquivo").is_some(), "as seções no fim do documento");
-    assert_eq!(documento(&h).right(), 1051.0 - 8.0);
+    assert_eq!(documento(&h).right(), 991.0 - 8.0);
 
     // Propriedades mais estreitas deixam o Explorador inteiro por mais tempo (a 1110 só cabem os dois como estão)
     let amb = Ambiente::exemplo("paineis_estreita_estreitas");
@@ -412,10 +413,10 @@ fn arrastar_numa_janela_apertada_acompanha_o_ponteiro() {
     let (e1, p1) = desenhadas(&h);
     assert!(e1 <= e0 + 2.0 && p1 == p0, "{e0} {p0} -> {e1} {p1}");
     // encolher vale, e o outro painel guarda o que se via (a pessoa mexeu no que via)
-    arrastar(&mut h, EXPLORADOR, -30.0);
+    arrastar(&mut h, EXPLORADOR, -80.0);
     assert_eq!(desenhadas(&h).0, 200.0);
     assert_eq!(h.state().larguras_escolhidas().1, p0);
-    assert_eq!(documento(&h).width(), 1100.0 - 16.0 - 52.0 - 24.0 - 200.0 - p0);
+    assert_eq!(documento(&h).width(), 1100.0 - 16.0 - 16.0 - 200.0 - p0);
 }
 
 #[test]
@@ -424,23 +425,19 @@ fn historico_e_explorador_dividem_a_largura() {
     let mut h = harness(&amb);
     arrastar(&mut h, EXPLORADOR, 50.0);
     assert_eq!(desenhadas(&h).0, 308.0);
-    // o Histórico toma o lugar do Explorador, na mesma largura, com a divisória dele
-    clicar_botao(&mut h, "Histórico de consultas");
+    // o Histórico toma o lugar do Explorador na doca, na mesma largura, com a divisória dele
+    clicar_aba_do_painel(&mut h, "Histórico");
     assentar(&mut h);
     assert_eq!(desenhadas(&h).0, 308.0);
     assert!(h.query(by().role(Role::Splitter).label(EXPLORADOR)).is_none());
-    assert_eq!(valor(&h, "Largura do Histórico"), (308.0, 200.0, 516.0));
-    assert_eq!(
-        valor(&h, PROPRIEDADES),
-        (272.0, 200.0, 480.0),
-        "o máximo das Propriedades desconta o painel da esquerda"
-    );
-    assert_eq!(documento(&h).left(), 68.0 + 308.0 + 8.0);
-    // sem o painel da esquerda, não há divisória nem largura reservada
-    clicar_botao(&mut h, "Histórico de consultas");
+    assert_eq!(valor(&h, "Largura do Histórico"), (308.0, 200.0, 576.0));
+    assert_eq!(valor(&h, PROPRIEDADES), (272.0, 200.0, 540.0), "o máximo das Propriedades desconta a doca da esquerda");
+    assert_eq!(documento(&h).left(), 8.0 + 308.0 + 8.0);
+    // sem a doca da esquerda, não há divisória nem largura reservada
+    exibir(&mut h, "Histórico de consultas");
     assert!(h.query(by().role(Role::Splitter).label("Largura do Histórico")).is_none());
     assert!(h.query(by().role(Role::Splitter).label(EXPLORADOR)).is_none());
-    assert_eq!(documento(&h).left(), 68.0);
+    assert_eq!(documento(&h).left(), 8.0);
 }
 
 #[test]
@@ -481,7 +478,7 @@ fn o_conteudo_dos_paineis_acompanha_a_largura() {
     conferir_conteudo_dos_paineis(&h, "a Visão geral");
     for (rota, tela) in [
         (Rota::objeto("clientes", false), "os Dados de clientes"),
-        (Rota::objeto_na_aba("clientes", false, Parte::Estrutura), "a Estrutura de clientes"),
+        (Rota::objeto_na_aba("clientes", false, Parte::Estrutura), "a vista Colunas de clientes"),
         (Rota::Consulta { sql: None }, "a Consulta SQL"),
     ] {
         h.state_mut().ir(rota);
@@ -496,10 +493,10 @@ fn o_conteudo_dos_paineis_acompanha_a_largura() {
     }
 }
 
-/// Nos painéis de 200px, quem começa dentro de um painel termina dentro dele e o título do cabeçalho segue a faixa.
+/// Nas docas de 200px, quem começa dentro de uma doca termina dentro dela, e a aba das Propriedades fica na quina.
 fn conferir_conteudo_dos_paineis(h: &H, tela: &str) {
     let doc = documento(h);
-    let explorador = Rect::from_min_max(pos2(68.0, doc.top() - 34.0), pos2(68.0 + 200.0, doc.bottom()));
+    let explorador = Rect::from_min_max(pos2(8.0, doc.top() - 34.0), pos2(8.0 + 200.0, doc.bottom()));
     let propriedades = Rect::from_min_max(pos2(doc.right() + 8.0, doc.top() - 34.0), pos2(1432.0, doc.bottom()));
     let nos: Vec<(Role, String, Rect)> = h
         .query_all_by(|_| true)
@@ -531,16 +528,14 @@ fn conferir_conteudo_dos_paineis(h: &H, tela: &str) {
             "{tela}: {papel:?} {texto:?} passa da borda das Propriedades: {r:?}"
         );
     }
-    // o título do cabeçalho segue a faixa (7px da borda do painel e 12px até o título)
-    let titulo = h
-        .query_all(by().role(Role::Label).label("Propriedades"))
+    // a aba das Propriedades na fileira da doca: a primeira, na quina, e dentro da doca
+    let aba = h
+        .query_all(by().role(Role::Tab))
+        .filter(|n| n.accesskit_node().label().is_some_and(|l| l.starts_with("Propriedades")))
         .map(|n| n.rect())
         .find(|r| r.left() > doc.right())
-        .expect("o título das Propriedades");
-    assert!(
-        titulo.left() >= propriedades.left() + 7.0 + 12.0 - 0.5 && titulo.right() <= propriedades.right(),
-        "{tela}: {titulo:?}"
-    );
+        .expect("a aba das Propriedades");
+    assert!((aba.left() - propriedades.left()).abs() <= 0.5 && aba.right() <= propriedades.right(), "{tela}: {aba:?}");
 }
 
 /// Gera a captura com o ponteiro sobre uma divisória (o fio de destaque aparece).

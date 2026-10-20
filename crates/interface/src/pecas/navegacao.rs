@@ -18,7 +18,7 @@ use crate::fontes::{self, Peso};
 use crate::icones::{self, Icone};
 use crate::pecas::ajuda::ajuda;
 use crate::pecas::botao::{EstadoVolume, Volume, pintar_volume, pintor_de_fora, realce_curvo};
-use crate::pecas::texto::{galley, galley_quebrado};
+use crate::pecas::texto::{galley, galley_cortado, galley_quebrado};
 use crate::pintura::{self, Preenchimento};
 use crate::tema::{Paleta, duracao_transicao, paleta};
 
@@ -64,10 +64,16 @@ const RECUO_SEG: f32 = 3.0;
 /// linha `disponivel` dividida em partes iguais, quando a maior cabe nela.
 fn largura_das_partes(maior: f32, n: usize, disponivel: Option<f32>) -> f32 {
     match disponivel {
-        Some(d) if n > 0 => maior.max((d - 2.0 * RECUO_SEG) / n as f32),
+        // o trilho cheio nunca passa da linha: sem espaço, as partes dividem o que há e o texto corta (com "…")
+        Some(d) if n > 0 => ((d - 2.0 * RECUO_SEG) / n as f32).max(MINIMO_DA_PARTE),
         _ => maior,
     }
 }
+
+/// A menor parte de um trilho cheio apertado (abaixo disto, ele passa da linha).
+const MINIMO_DA_PARTE: f32 = 28.0;
+/// O `padding` lateral que sobra numa parte apertada, com o texto cortado.
+const PADDING_APERTADO: f32 = 4.0;
 
 /// O `.seg button.on`: o volume neutro sem a sombra interna de baixo (`inset 0 1px 0 --btluz, --btsomb`), sem
 /// halo e sem brilho (o `:hover` vem antes no CSS e perde para o `.on`).
@@ -280,7 +286,12 @@ fn desenhar_trilho(
             } else {
                 pintura::misturar(e.t2, e.t, hover)
             };
-            let g = galley(ui, parte.texto, fontes::fonte(12.0, peso_de(i)), cor);
+            // a parte apertada (o trilho cheio numa doca estreita) corta o texto, com o nome inteiro na dica
+            let cabe = (largura - 2.0 - 2.0 * PADDING_APERTADO - largura_nota(ui, parte)).max(8.0);
+            let g = galley_cortado(ui, parte.texto, fontes::fonte(12.0, peso_de(i)), cor, cabe);
+            if g.elided && item.hovered() {
+                item.clone().on_hover_text(parte.texto);
+            }
             let gn = parte.nota.map(|n| galley(ui, n, fonte_nota.clone(), e.t3));
             let largura_icone = if parte.icone.is_some() { LADO_ICONE_PARTE + GAP_NOTA } else { 0.0 };
             let total_texto = largura_icone + g.size().x + gn.as_ref().map_or(0.0, |gn| GAP_NOTA + gn.size().x);
@@ -696,8 +707,9 @@ mod testes {
         assert_eq!(largura_das_partes(106.0, 3, None), 106.0);
         // cheio: a linha de 460px menos a borda e o `padding:2px` dos dois lados, em três partes iguais
         assert_eq!(largura_das_partes(106.0, 3, Some(460.0)), (460.0 - 6.0) / 3.0);
-        // a linha estreita demais não espreme as partes: ficam com a largura da maior
-        assert_eq!(largura_das_partes(106.0, 3, Some(200.0)), 106.0);
+        // a linha estreita demais: as partes dividem o que há (o texto corta com "…"), até o mínimo
+        assert_eq!(largura_das_partes(106.0, 3, Some(200.0)), (200.0 - 6.0) / 3.0);
+        assert_eq!(largura_das_partes(106.0, 3, Some(60.0)), MINIMO_DA_PARTE);
         assert_eq!(largura_das_partes(0.0, 0, Some(200.0)), 0.0);
     }
 

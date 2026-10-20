@@ -380,3 +380,48 @@ pub fn criar_banco(caminho: &Path, sql: &str) {
     let _ = std::fs::remove_file(caminho.with_extension("prefs.json"));
     let _ = std::fs::remove_file(caminho.with_extension("prefs.json.lock"));
 }
+
+// ---- docas (revisão de UI de 19/10/2026) ---------------------------------------------------------------------------
+
+/// O Alt do teclado.
+pub const ALT: egui::Modifiers =
+    egui::Modifiers { alt: true, ctrl: false, shift: false, mac_cmd: false, command: false };
+
+/// O painel ("Explorador", "Histórico", "Propriedades") está à vista: a aba ativa de uma doca à vista, ou a janela
+/// própria aberta.
+pub fn painel_a_vista(h: &H, nome: &str) -> bool {
+    h.state().painel_a_vista(nome)
+}
+
+/// Clica na aba de um painel numa doca ("Explorador", "Histórico", "Propriedades · clientes").
+pub fn clicar_aba_do_painel(h: &mut H, rotulo: &str) {
+    clicar(h, Role::Tab, rotulo);
+    h.run_steps(2);
+}
+
+/// A aba de painel com este rótulo existe numa doca e é a ativa dela.
+pub fn aba_do_painel_ativa(h: &H, rotulo: &str) -> bool {
+    h.query_all(by().role(Role::Tab).label(rotulo)).any(|n| n.accesskit_node().is_selected() == Some(true))
+}
+
+/// Vai ao Início (Alt+Home, o Exibir › Início).
+pub fn ir_ao_inicio(h: &mut H) {
+    h.key_press_modifiers(ALT, egui::Key::Home);
+    h.run_steps(2);
+    assentar(h);
+}
+
+/// Põe uma vista nas Propriedades da tabela à vista (Alt+1 a Alt+4: Resumo, Colunas, Índices, SQL).
+pub fn vista_da_tabela(h: &mut H, n: u8) {
+    let tecla = [egui::Key::Num1, egui::Key::Num2, egui::Key::Num3, egui::Key::Num4][usize::from(n - 1)];
+    h.key_press_modifiers(ALT, tecla);
+    h.run_steps(2);
+    assentar(h);
+}
+
+/// Mostra ou esconde um painel pelo Exibir ("Explorador", "Propriedades", "Histórico de consultas").
+pub fn exibir(h: &mut H, item: &str) {
+    abrir_menu(h, "Exibir");
+    clicar(h, Role::CheckBox, item);
+    h.run_steps(2);
+}
