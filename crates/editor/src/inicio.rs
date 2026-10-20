@@ -46,7 +46,10 @@ pub(crate) const VAZIO_RECENTES: &str = "Nenhum item aberto ainda. As pastas, os
 pub(crate) const MSG_CAMINHO_VAZIO: &str = "Digite o caminho completo da pasta ou do arquivo.";
 /// O nome do campo do caminho para o leitor de tela (`aria-label`) e a dica dele (`placeholder`).
 pub(crate) const ROTULO_CAMINHO: &str = "Caminho da pasta ou do arquivo";
+#[cfg(windows)]
 const DICA_CAMINHO: &str = "C:\\pasta ou C:\\pasta\\arquivo.db";
+#[cfg(not(windows))]
+const DICA_CAMINHO: &str = "/home/você/pasta ou /home/você/pasta/arquivo.db";
 /// A caixa da linha do caminho (vale para os bancos: pasta e arquivo de dados não têm modo só leitura).
 pub(crate) const ROTULO_SO_LEITURA: &str = "Abrir bancos só para leitura";
 

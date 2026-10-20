@@ -10,7 +10,8 @@
 //!   Lucida Console), com [`trocar_mono`] (o arquivo é lido por quem chama, com [`ler_familia_mono`], fora da
 //!   thread da interface) e [`restaurar_mono`].
 //! - O "i" do balão de ajuda: Georgia itálico negrito, senão a itálica da interface.
-//! - Símbolos que a fonte da interface não tem (✕, ▸, ▾, ▲, ▼, →): Segoe UI Symbol e, por último, as do egui.
+//! - Símbolos que a fonte da interface não tem (✕, ▸, ▾, ▲, ▼, →): Segoe UI Symbol (fora do Windows, DejaVu Sans
+//!   ou Noto Sans Symbols2) e, por último, as do egui.
 //!
 //! As fontes são lidas uma vez, por [`instalar`], que o [`crate::tema::aplicar`] chama antes do primeiro quadro.
 
@@ -175,7 +176,8 @@ fn ler_fontes_do_sistema() -> FontesDoSistema {
             "DejaVuSansMono.ttf",
         ])),
         ajuda: ler_primeira(&candidatos(&["georgiaz.ttf"])),
-        simbolos: ler_primeira(&candidatos(&["seguisym.ttf"])),
+        // fora do Windows não há Segoe UI Symbol: a DejaVu Sans tem as setas e triângulos que a Noto Sans não tem
+        simbolos: ler_primeira(&candidatos(&["seguisym.ttf", "DejaVuSans.ttf", "NotoSansSymbols2-Regular.ttf"])),
     }
 }
 

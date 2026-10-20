@@ -13,6 +13,16 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   rodaram quando o roteiro tem mais de um; a dica traz a mensagem do erro. No item selecionado, a pílula de erro
   fica só no contorno. O `preferencias.json` da 0.1.x continua abrindo (os itens antigos ficam sem pílula).
 
+### Corrigido
+
+- Linux: as setas e os triângulos (ordenação da grade, "Alt+← e Alt+→" nos Atalhos do teclado) apareciam como
+  quadrados vazios. A fonte de símbolos agora tem reservas fora do Windows (DejaVu Sans, Noto Sans Symbols2).
+- Um arquivo de texto sem nenhuma quebra de linha mostrava "Fim de linha: CRLF" fora do Windows; agora vale o fim de
+  linha do sistema (CRLF no Windows, LF nos outros).
+- Linux: as dicas dos campos de caminho (Início, Abrir arquivo, Novo banco, Salvar como) mostravam `C:\pasta`;
+  agora seguem o jeito de escrever caminho do sistema.
+- Ctrl+Home e Ctrl+End na grade dos Dados e do CSV vão à primeira e à última linha (antes não faziam nada).
+
 ## [0.1.2] - 2026-10-19
 
 ### Adicionado
