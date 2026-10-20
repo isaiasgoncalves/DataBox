@@ -99,7 +99,8 @@
 //!   / [`formato::partes_bytes`] ("1,2 MB"), [`formato::formatar_bytes_em`], [`formato::formatar_data`]
 //!   ("22/09/2026 10:31"), [`formato::formatar_ms`] ("320 ms", o `tempo()` da Consulta SQL),
 //!   [`formato::formatar_segundos`] ("4,6 s", o `segundos()` da aba Dados), [`formato::plural`]
-//!   ("60 linhas"), [`formato::nome_do_caminho`], [`formato::real_js`] (o `String(número)` do JavaScript:
+//!   ("60 linhas"), [`formato::contagem_linhas`] ("Linhas 1–41 de 41", o rodapé das grades),
+//!   [`formato::contagem_filtrada`] ("41 de 60 linhas", a contagem dos filtros), [`formato::nome_do_caminho`], [`formato::real_js`] (o `String(número)` do JavaScript:
 //!   `17051.0` → "17051", `1e-7` → "1e-7"); variantes `_opt` devolvem "—" para `None`; [`formato::sem_acento`] (a
 //!   chave das buscas e dos filtros: sem acento e em minúsculas) e [`formato::letra_sem_acento`] (uma letra, sem
 //!   mudar a caixa das outras).
@@ -208,6 +209,12 @@
 //!     embaixo; seis colunas ou 3 + 3 pelo conteúdo; parada: sem a animação de hover, pedido de 17/10/2026).
 //!   - [`pecas::popover::Popover`]`::new(id, ancora).largura(…).mostrar(ctx, |ui| …)` (o vidro fosco preso embaixo de
 //!     uma âncora, por cima do documento; fecha com o Esc ou o clique fora: a condição de filtro dos Dados).
+//!   - [`pecas::filtros`]: os filtros das grades, iguais nos Dados e no CSV (revisão de UI de 19/10/2026) —
+//!     [`pecas::filtros::filtros`]`(ui, &[EtiquetaFiltro], &ContagemFiltros) -> RespostaFiltros { abrir, tirar,
+//!     limpar, nova_condicao }` ("Filtros", as etiquetas, "+ Condição", a contagem e "Limpar filtros"),
+//!     [`pecas::filtros::barra_filtros`] (a `.barra-filtros` de 38px do CSV) e
+//!     [`pecas::filtros::popover_condicao`]`(ctx, id, &mut CondicaoEmEdicao, colunas, operadores, sem_valor) ->
+//!     Option<FimCondicao>` (Coluna, Operador, Valor, Cancelar e Aplicar).
 //!   - [`pecas::divisoria::Divisoria`] (a alça dos painéis laterais da casca; ver "Mudanças de API").
 //!   - [`pecas::detalhes::detalhes`]`(ui, |d| d.linha(…) / d.linha_texto(…) / d.titulo_grupo(…))` (o `.det`:
 //!     rótulo `--t3` em 112px · valor `--t`, `gap:7px 10px`; o texto do `linha_texto` é selecionável;
@@ -301,7 +308,8 @@
 //!   `--t3`, chip de BLOB, "…" do texto cortado em `--acct`, números à direita, reais como o JavaScript escreve),
 //!   [`grade::pintar_celula_chave`] (`td.chave`: `--acct` 600), [`grade::pintar_numero_linha`] (`td.lin`: `--t3`
 //!   à direita), [`grade::pintar_cabecalho_coluna`] com [`grade::Th`] (nome em 11.5/600 `--t2`, `--t` com
-//!   `realce`; seta de ordem em `--acct`; o tipo à direita em 10px `--t3`, o `.tp`), [`grade::pintar_fundo_cabecalho`]
+//!   `realce`; a seta de ordem desenhada em `--acct`, a `.seta-ord` de [`grade::pintar_seta_ordem`]; o tipo à
+//!   direita em 10px `--t3`, o `.tp`), [`grade::pintar_fundo_cabecalho`]
 //!   (o degradê `Cabecalho` com as riscas e o fio `--btb`; serve também à tabela), [`grade::pintar_celula_ativa`]
 //!   (contorno de 2px `--acc` e o brilho interno `--brilho`), [`grade::texto_exibicao`], [`grade::texto_celula`]
 //!   (o `textoCelula`: o texto da edição no lugar e da cópia), [`grade::dica_celula`], [`grade::coluna_numerica`],

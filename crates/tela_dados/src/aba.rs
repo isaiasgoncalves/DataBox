@@ -19,13 +19,15 @@ use interface::formato::{formatar_numero, formatar_segundos, nome_do_caminho, pl
 use interface::grade::{texto_celula, texto_exibicao};
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::avisos::{aviso_texto, carregando, vazio};
-use interface::pecas::botao::{Botao, LADO_PEQUENO};
-use interface::pecas::campos::{Entrada as CampoTexto, Select, campo, enter_no_campo};
+use interface::pecas::botao::Botao;
+use interface::pecas::campos::Select;
+use interface::pecas::filtros::{
+    CondicaoEmEdicao, ContagemFiltros, EtiquetaFiltro, FimCondicao, filtros as desenhar_filtros, popover_condicao,
+};
 use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::painel::{Secao, ficha};
-use interface::pecas::popover::Popover;
-use interface::pecas::rotulos::{chip_filtro, pill};
-use interface::pecas::texto::{galley_tit, texto as texto_simples};
+use interface::pecas::rotulos::pill;
+use interface::pecas::texto::texto as texto_simples;
 use interface::pecas::toast::{toast, toast_concluido, toast_erro};
 use interface::tema::paleta;
 use servico::{BlobSalvo, Gravado};
@@ -47,8 +49,6 @@ use crate::regras::{
 
 /// A altura da linha da dica de página lenta, acima do rodapé (o fio de cima e a linha do botão pequeno).
 const ALTURA_DICA_LENTA: f32 = 38.0;
-/// A largura do popover da condição de filtro.
-const LARGURA_CONDICAO: f32 = 300.0;
 /// A altura mínima da grade (o cabeçalho e uma linha), numa janela muito baixa.
 const ALTURA_GRADE_MIN: f32 = 58.0;
 
@@ -93,18 +93,8 @@ struct Abertura {
 }
 
 /// A condição de filtro aberta no popover: a nova ("+ Condição", o Filtrar da barra) ou a de uma
-/// etiqueta, com o que a pessoa já escolheu e onde o popover se prende.
-struct EdicaoCondicao {
-    /// A condição da etiqueta clicada (None: uma nova).
-    alvo: Option<u64>,
-    /// O índice da coluna em `nomes_visiveis`.
-    coluna: usize,
-    op: Operador,
-    valor: String,
-    ancora: Rect,
-    /// O foco vai para o valor no próximo quadro.
-    focar: bool,
-}
+/// etiqueta (a coluna é o índice em `nomes_visiveis`).
+type EdicaoCondicao = CondicaoEmEdicao<Operador>;
 
 /// O que a janela da linha mandou fazer e ainda não voltou.
 enum TarefaJanela {
@@ -124,18 +114,6 @@ enum Pergunta {
 struct FocoPendente {
     chave: Option<String>,
     ativa: Option<(usize, usize)>,
-}
-
-/// A contagem à direita da faixa ("41 de 60 linhas").
-#[derive(Debug, Clone, PartialEq)]
-enum ContagemFaixa {
-    Texto(String),
-    /// Tabela grande com busca ou filtro: "contando…".
-    Contando,
-    /// A contagem à parte falhou: "linhas não contadas", com o motivo na dica.
-    NaoContadas(String),
-    /// A página ainda não chegou, ou não pôde ser lida (o aviso fica no conteúdo).
-    Nada,
 }
 
 /// A dica de página lenta, na linha de informação acima do rodapé.
@@ -771,65 +749,16 @@ impl AbaDados {
         self.aplicar_filtros(ctx, tabela);
     }
 
-    /// O popover da condição (sem prancheta: o vidro das camadas que se sobrepõem): Coluna,
-    /// Operador (os 14 de `OPERADORES`), Valor (fora nos operadores sem valor), Cancelar e Aplicar. Enter no valor
-    /// aplica; Esc, Cancelar e o clique fora desistem.
+    /// O popover da condição (`interface::pecas::filtros::popover_condicao`): Coluna, Operador (os 14 de
+    /// `OPERADORES`), Valor (fora nos operadores sem valor), Cancelar e Aplicar.
     fn desenhar_condicao(&mut self, ectx: &egui::Context, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
         let Some(c) = self.condicao.as_mut() else { return };
-        let nome = self.nome.as_str();
         let colunas: Vec<(usize, &str)> = self.nomes_visiveis.iter().map(String::as_str).enumerate().collect();
-        let (mut aplicar, mut cancelar) = (false, false);
-        let popover = Popover::new(("tela_dados::condicao", nome), c.ancora).largura(LARGURA_CONDICAO);
-        let r = popover.rotulo("Condição de filtro").mostrar(ectx, |ui| {
-            ui.spacing_mut().item_spacing.y = 12.0;
-            campo(ui, "Coluna", None, |ui| {
-                Select::new(("tela_dados::coluna_condicao", nome), &mut c.coluna, &colunas)
-                    .rotulo("Coluna da condição")
-                    .mostrar(ui);
-            });
-            let mudou_op = campo(ui, "Operador", None, |ui| {
-                Select::new(("tela_dados::op_condicao", nome), &mut c.op, &OPERADORES)
-                    .rotulo("Operador da condição")
-                    .mostrar(ui)
-                    .changed()
-            });
-            if mudou_op && !c.op.sem_valor() {
-                c.focar = true;
-            }
-            let pode_aplicar = c.op.sem_valor() || !c.valor.is_empty();
-            if !c.op.sem_valor() {
-                campo(ui, "Valor", None, |ui| {
-                    let r = CampoTexto::new(&mut c.valor)
-                        .dica("valor a procurar")
-                        .rotulo("Valor da condição")
-                        .id_salt(("tela_dados::valor_condicao", nome))
-                        .mostrar(ui)
-                        .response
-                        .response;
-                    if std::mem::take(&mut c.focar) {
-                        r.request_focus();
-                    }
-                    if enter_no_campo(ui, &r) && !c.valor.is_empty() {
-                        aplicar = true;
-                    }
-                });
-            }
-            let largura = ui.available_width();
-            ui.allocate_ui_with_layout(vec2(largura, LADO_PEQUENO), Layout::right_to_left(Align::Center), |ui| {
-                ui.spacing_mut().item_spacing.x = 8.0;
-                let b = ui.add(Botao::primario("Aplicar").pequeno().habilitado(pode_aplicar));
-                if b.on_disabled_hover_text("Escreva um valor para aplicar").clicked() {
-                    aplicar = true;
-                }
-                if ui.add(Botao::ghost("Cancelar").pequeno()).clicked() {
-                    cancelar = true;
-                }
-            });
-        });
-        if aplicar {
-            self.aplicar_condicao(ctx, tabela);
-        } else if r.fechar || cancelar {
-            self.condicao = None;
+        let id = ("tela_dados::condicao", self.nome.as_str());
+        match popover_condicao(ectx, id, c, &colunas, &OPERADORES, |o| o.sem_valor()) {
+            Some(FimCondicao::Aplicar) => self.aplicar_condicao(ctx, tabela),
+            Some(FimCondicao::Desistir) => self.condicao = None,
+            None => {}
         }
     }
 
@@ -866,18 +795,18 @@ impl AbaDados {
 
     /// A contagem da faixa: as linhas da busca e dos filtros de quantas a tabela tem ("41 de 60 linhas"), ou só as
     /// linhas sem busca nem filtro ("60 linhas").
-    fn contagem_faixa(&self, info: &TabelaInfo) -> ContagemFaixa {
+    fn contagem_faixa(&self, info: &TabelaInfo) -> ContagemFiltros {
         if self.erro.is_some() {
-            return ContagemFaixa::Nada;
+            return ContagemFiltros::Nada;
         }
-        let Some(d) = &self.dados else { return ContagemFaixa::Nada };
+        let Some(d) = &self.dados else { return ContagemFiltros::Nada };
         match (d.total, &d.contagem_falhou) {
             (Some(t), _) => {
                 let filtrando = !self.consulta.busca.is_empty() || !self.consulta.filtros.is_empty();
-                ContagemFaixa::Texto(texto_contagem_faixa(t, info.linhas, filtrando))
+                ContagemFiltros::Texto(texto_contagem_faixa(t, info.linhas, filtrando))
             }
-            (None, Some(motivo)) => ContagemFaixa::NaoContadas(motivo.clone()),
-            (None, None) => ContagemFaixa::Contando,
+            (None, Some(motivo)) => ContagemFiltros::NaoContadas(motivo.clone()),
+            (None, None) => ContagemFiltros::Contando,
         }
     }
 
@@ -973,58 +902,20 @@ impl AbaDados {
     /// A faixa de contexto: "Filtros", uma etiqueta por condição aplicada (o clique abre a condição no popover, o ×
     /// a tira), "+ Condição" e, à direita, a contagem e "Limpar filtros" (só com condição).
     fn desenhar_faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
-        let p = paleta(ui);
-        let g = galley_tit(ui, "Filtros", p.estudio.t3);
-        let (r, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
-        ui.painter().galley(r.min, g, p.estudio.t3);
-        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, "Filtros"));
-        let mut abrir: Option<(Option<u64>, Rect)> = None;
-        let mut tirar = None;
-        for f in &self.filtros {
-            let op = rotulo_operador(f.op);
-            let mut trechos = vec![(f.coluna.as_str(), true), (op, false)];
-            if !f.op.sem_valor() {
-                trechos.push((f.valor.as_str(), true));
-            }
-            let r = chip_filtro(ui, &trechos, "Tirar o filtro");
-            if r.fechar {
-                tirar = Some(f.id);
-            } else if r.abrir {
-                abrir = Some((Some(f.id), r.resposta.rect));
-            }
-        }
-        let b = ui.add(
-            Botao::ghost("Condição")
-                .com_icone(Icone::Mais)
-                .pequeno()
-                .rotulo("Nova condição")
-                .dica("Nova condição de filtro"),
-        );
-        self.rect_condicao = Some(b.rect);
-        if b.clicked() {
-            abrir = Some((None, b.rect));
-        }
+        let etiquetas: Vec<EtiquetaFiltro<'_>> = self
+            .filtros
+            .iter()
+            .map(|f| EtiquetaFiltro {
+                id: f.id,
+                coluna: &f.coluna,
+                operador: rotulo_operador(f.op),
+                valor: (!f.op.sem_valor()).then_some(f.valor.as_str()),
+            })
+            .collect();
         let contagem = self.contagem_faixa(tabela.info());
-        let tem_filtros = !self.filtros.is_empty();
-        let mut limpar = false;
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if tem_filtros && ui.add(Botao::ghost("Limpar filtros").pequeno()).clicked() {
-                limpar = true;
-            }
-            let t3 = p.estudio.t3;
-            match &contagem {
-                ContagemFaixa::Texto(t) => {
-                    texto_simples(ui, t, 12.0, t3);
-                }
-                ContagemFaixa::Contando => {
-                    carregando(ui, CONTANDO);
-                }
-                ContagemFaixa::NaoContadas(motivo) => {
-                    texto_simples(ui, LINHAS_NAO_CONTADAS, 12.0, t3).on_hover_text(motivo);
-                }
-                ContagemFaixa::Nada => {}
-            }
-        });
+        let r = desenhar_filtros(ui, &etiquetas, &contagem);
+        self.rect_condicao = Some(r.nova_condicao);
+        let (abrir, tirar, limpar) = (r.abrir, r.tirar, r.limpar);
         if let Some(id) = tirar {
             self.filtros.retain(|f| f.id != id);
             if self.condicao.as_ref().is_some_and(|c| c.alvo == Some(id)) {
@@ -1883,10 +1774,10 @@ impl AbaDados {
     #[doc(hidden)]
     pub fn retrato(&self, tabela: &TabelaAberta) -> Retrato {
         let faixa = match self.contagem_faixa(tabela.info()) {
-            ContagemFaixa::Texto(t) => t,
-            ContagemFaixa::Contando => CONTANDO.to_string(),
-            ContagemFaixa::NaoContadas(_) => LINHAS_NAO_CONTADAS.to_string(),
-            ContagemFaixa::Nada => String::new(),
+            ContagemFiltros::Texto(t) => t,
+            ContagemFiltros::Contando => CONTANDO.to_string(),
+            ContagemFiltros::NaoContadas(_) => LINHAS_NAO_CONTADAS.to_string(),
+            ContagemFiltros::Nada => String::new(),
         };
         let rodape = self.rodape(tabela.info(), false);
         let primeira = self.grade.as_ref().map_or(0, GradeDados::primeira);

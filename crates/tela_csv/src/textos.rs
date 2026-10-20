@@ -57,13 +57,14 @@ pub fn numerica(tipo: TipoDetectado) -> bool {
     matches!(tipo, TipoDetectado::Inteiro | TipoDetectado::Decimal)
 }
 
-/// "1.204 linhas · 6 colunas"; filtrado, "236 de 1.180 linhas · 6 colunas".
-pub fn contagem(linhas: u64, colunas: usize, filtradas: Option<u64>) -> String {
-    let c = plural(colunas as u64, "coluna", "colunas");
-    match filtradas {
-        Some(f) => format!("{} de {} · {c}", formatar_numero(f), plural(linhas, "linha", "linhas")),
-        None => format!("{} · {c}", plural(linhas, "linha", "linhas")),
-    }
+/// O formato em pílulas na faixa (prancheta 7): o separador em palavras, a codificação e o fim de linha ("Ponto e
+/// vírgula", "UTF-8", "CRLF"; a pílula põe em caixa alta).
+pub fn pilulas_do_formato(f: &Formato) -> Vec<String> {
+    vec![
+        rotulo_do_separador(f.separador),
+        codificacao_curta(f.codificacao).to_string(),
+        fim_de_linha_curto(f.fim_de_linha).to_string(),
+    ]
 }
 
 /// "· 1 alteração não salva" / "· 3 alterações não salvas".
@@ -176,10 +177,11 @@ mod testes {
     use super::*;
 
     #[test]
-    fn contagens_do_rodape() {
-        assert_eq!(contagem(1204, 6, None), "1.204 linhas · 6 colunas");
-        assert_eq!(contagem(1, 1, None), "1 linha · 1 coluna");
-        assert_eq!(contagem(1180, 6, Some(236)), "236 de 1.180 linhas · 6 colunas");
+    fn contagens_do_rodape_e_pilulas() {
+        let f = Formato { codificacao: Codificacao::Utf8, ..Formato::padrao() };
+        assert_eq!(pilulas_do_formato(&f), ["Ponto e vírgula", "UTF-8", "CRLF"]);
+        let f = Formato { separador: '\t', fim_de_linha: FimDeLinha::Lf, ..Formato::padrao() };
+        assert_eq!(pilulas_do_formato(&f), ["Tabulação", "UTF-8 com BOM", "LF"]);
         assert_eq!(alteracoes_nao_salvas(1), "· 1 alteração não salva");
         assert_eq!(alteracoes_nao_salvas(3), "· 3 alterações não salvas");
     }

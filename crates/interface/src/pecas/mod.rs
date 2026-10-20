@@ -18,6 +18,7 @@ pub mod divisoria;
 pub mod dock;
 pub mod documento;
 pub mod ferramentas;
+pub mod filtros;
 pub mod folhas;
 pub mod janela;
 pub mod menu_contexto;

@@ -17,8 +17,9 @@
 //!
 //! Cabeçalho (`.grade th`): 30px, 11.5px / 600 em `--t2` sem caixa alta, `padding:0 10px`, fundo `Cabecalho` com
 //! as riscas (a regra `.faixa,.grade th,.lista-t th` do fim do CSS), fio `--btb` embaixo e `--b` à direita; o tipo
-//! declarado vai à direita do nome em 10px `--t3` (o `.tp`; a etapa 3 troca pela pastilha) e a seta da ordem em
-//! `--acct`. Fica grudado no topo ao rolar.
+//! declarado vai à direita do nome em 10px `--t3` (o `.tp`; a etapa 3 troca pela pastilha) e a seta da ordem
+//! desenhada em `--acct` (a `.seta-ord` da revisão de UI de 19/10/2026, [`pintar_seta_ordem`]). Fica grudado no topo
+//! ao rolar.
 //!
 //! A planilha (etapa 6) usa o mesmo núcleo com o painel congelado ([`NucleoGrade::com_congelado`]: linhas sob o
 //! cabeçalho e colunas presas à esquerda, o fio de 2px `--b2` na emenda), as células mescladas
@@ -305,7 +306,7 @@ pub fn pastilha_pelos_valores<'a>(valores: impl IntoIterator<Item = &'a Celula>)
     }
 }
 
-/// Ordenação de uma coluna (a seta ▲/▼ em `--acct` no cabeçalho da aba Dados).
+/// Ordenação de uma coluna (a seta desenhada em `--acct` no cabeçalho, [`pintar_seta_ordem`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ordem {
     Crescente,
@@ -561,22 +562,29 @@ pub fn pintar_numero_linha(painter: &Painter, p: &Paleta, conteudo: Rect, numero
 /// Espaço entre o nome e o tipo no `th` (`.grade th .tp{margin-left:6px}`).
 const ESPACO_TIPO: f32 = 6.0;
 
-/// O nome de um `th` (11.5px / 600) e a seta da ordem (" ▲" na mesma fonte), numa linha.
-fn galley_nome_th(
-    painter: &Painter,
-    nome: &str,
-    ordem: Option<Ordem>,
-    cor_nome: Color32,
-    cor_seta: Color32,
-) -> Arc<Galley> {
-    let fonte = fontes::fonte(11.5, Peso::Medio);
-    let mut job = LayoutJob::default();
-    job.append(nome, 0.0, formato(fonte.clone(), cor_nome));
-    if let Some(o) = ordem {
-        job.append(if o == Ordem::Crescente { " ▲" } else { " ▼" }, 0.0, formato(fonte, cor_seta));
-    }
+/// O nome de um `th` (11.5px / 600), numa linha.
+fn galley_nome_th(painter: &Painter, nome: &str, cor_nome: Color32) -> Arc<Galley> {
+    let mut job = LayoutJob::single_section(nome.to_owned(), formato(fontes::fonte(11.5, Peso::Medio), cor_nome));
     job.break_on_newline = false;
     painter.layout_job(job)
+}
+
+/// Lado da seta da ordem (`.seta-ord{width:9px;height:9px}`).
+pub const LADO_SETA_ORDEM: f32 = 9.0;
+/// Espaço entre o nome e a seta da ordem (`.seta-ord{margin-left:5px}`).
+pub const ESPACO_SETA_ORDEM: f32 = 5.0;
+
+/// A seta da ordem desenhada (a `.seta-ord` da revisão de UI de 19/10/2026, no lugar do glifo ▲/▼ da fonte): o
+/// triângulo `M5 1.5 9.2 8.5H.8z` da `viewBox` de 10 esticado em `rect` (9px nas pranchetas), com a ponta para cima
+/// na crescente e para baixo na decrescente, cheio em `cor` (`--acct`; a seta clicável do CSV usa `--t3` e `--t` no
+/// hover antes de ordenar).
+pub fn pintar_seta_ordem(painter: &Painter, rect: Rect, ordem: Ordem, cor: Color32) {
+    let ponto = |x: f32, y: f32| {
+        let y = if ordem == Ordem::Crescente { y } else { 10.0 - y };
+        pos2(rect.left() + x * rect.width() / 10.0, rect.top() + y * rect.height() / 10.0)
+    };
+    let pontos = vec![ponto(5.0, 1.5), ponto(9.2, 8.5), ponto(0.8, 8.5)];
+    painter.add(egui::Shape::convex_polygon(pontos, cor, Stroke::NONE));
 }
 
 /// O tipo de um `th` (o `.tp`: 10px / 400, `letter-spacing:.03em`).
@@ -605,7 +613,7 @@ pub struct Th<'a> {
     pub tipo: Option<&'a str>,
     /// Coluna numérica: alinha à direita.
     pub numerica: bool,
-    /// Seta de ordenação (▲/▼ em `--acct`) depois do nome.
+    /// Seta de ordenação depois do nome ([`pintar_seta_ordem`], em `--acct`).
     pub ordem: Option<Ordem>,
     /// O nome é clicável (o `th` que ordena). O desenho é o mesmo do `th` comum (o Estúdio não tem o pontilhado
     /// embaixo do nome); o hover vem por [`Th::realce`].
@@ -651,10 +659,11 @@ pub const LARGURA_PASTILHA_TH: f32 = LADO_PASTILHA_TH + ESPACO_TIPO;
 pub fn pintar_cabecalho_coluna(painter: &Painter, p: &Paleta, conteudo: Rect, th: &Th<'_>) -> Option<Rect> {
     let e = &p.estudio;
     let cor = if th.realce || th.selecionada { e.t } else { e.t2 };
-    let g = galley_nome_th(painter, th.nome, th.ordem, cor, e.acct);
+    let g = galley_nome_th(painter, th.nome, cor);
     let gt = th.tipo.map(|t| galley_tipo_th(painter, t, e.t3));
     let antes = if th.pastilha.is_some() { LARGURA_PASTILHA_TH } else { 0.0 };
-    let largura = antes + g.size().x + gt.as_ref().map_or(0.0, |gt| ESPACO_TIPO + gt.size().x);
+    let seta = if th.ordem.is_some() { ESPACO_SETA_ORDEM + LADO_SETA_ORDEM } else { 0.0 };
+    let largura = antes + g.size().x + seta + gt.as_ref().map_or(0.0, |gt| ESPACO_TIPO + gt.size().x);
     let x0 = if th.numerica {
         (conteudo.right() - largura).max(conteudo.left())
     } else if th.centrada {
@@ -664,9 +673,9 @@ pub fn pintar_cabecalho_coluna(painter: &Painter, p: &Paleta, conteudo: Rect, th
     };
     let x = x0 + antes;
     let y = conteudo.center().y - g.size().y / 2.0;
-    // o tipo na linha de base do nome (`vertical-align:baseline`)
+    // o tipo e a seta na linha de base do nome (`vertical-align:baseline`; a seta é o `svg` com `vertical-align:0`)
     let base = y + linha_de_base(&g);
-    let x_tipo = x + g.size().x + ESPACO_TIPO;
+    let x_tipo = x + g.size().x + seta + ESPACO_TIPO;
     let pastilha = th.pastilha.map(|tipo| {
         let r = Rect::from_center_size(
             pos2(x0 + LADO_PASTILHA_TH / 2.0, conteudo.center().y),
@@ -675,6 +684,13 @@ pub fn pintar_cabecalho_coluna(painter: &Painter, p: &Paleta, conteudo: Rect, th
         icones::pintar(painter, r, Icone::Tipo(tipo), Color32::WHITE);
         r
     });
+    if let Some(ordem) = th.ordem {
+        let r = Rect::from_min_size(
+            pos2(x + g.size().x + ESPACO_SETA_ORDEM, base - LADO_SETA_ORDEM),
+            vec2(LADO_SETA_ORDEM, LADO_SETA_ORDEM),
+        );
+        pintar_seta_ordem(painter, r, ordem, e.acct);
+    }
     painter.galley(pos2(x, y), g, cor);
     if let Some(gt) = gt {
         let y_tipo = base - linha_de_base(&gt);
@@ -684,9 +700,9 @@ pub fn pintar_cabecalho_coluna(painter: &Painter, p: &Paleta, conteudo: Rect, th
 }
 
 /// Largura natural do texto de um `th` (sem padding): o nome e, com o tipo, os 6px e o tipo à direita dele (sem a
-/// seta da ordem: " ▲" mede uns 12px).
+/// seta da ordem, que soma [`ESPACO_SETA_ORDEM`] e [`LADO_SETA_ORDEM`]).
 pub fn largura_cabecalho(painter: &Painter, nome: &str, tipo: Option<&str>) -> f32 {
-    let n = galley_nome_th(painter, nome, None, Color32::PLACEHOLDER, Color32::PLACEHOLDER).size().x;
+    let n = galley_nome_th(painter, nome, Color32::PLACEHOLDER).size().x;
     n + tipo.map_or(0.0, |t| ESPACO_TIPO + galley_tipo_th(painter, t, Color32::PLACEHOLDER).size().x)
 }
 

@@ -12,6 +12,7 @@ use estado::{
     Acao, Anatomia, Contexto, Documento, Estado as EstadoApp, Ofertas, Promessa, Reacao, Situacao, StatusDeArquivo,
     Verbo,
 };
+use interface::formato::contagem_linhas;
 use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando};
 use interface::pecas::botao::Botao;
 use interface::pecas::janela::{Confirmacao, confirmar};
@@ -163,6 +164,8 @@ pub struct TelaCsv {
     pub(crate) janela: Janela,
     /// A página já pedida e ainda não chegada (`inicio`, para não pedir de novo a cada quadro).
     pagina_pedida: Option<u64>,
+    /// As linhas da vista à vista no último quadro (a primeira e a última, de 0): o "Linhas a–b de n" do rodapé.
+    visiveis: Option<(u64, u64)>,
     /// Muda a cada resposta que pode ter mudado o conteúdo (as estatísticas guardadas, a vista do filtro, o resumo da
     /// fonte e o casamento da janela Trazer valem por versão): uma alteração que mudou alguma coisa, ler de novo, uma
     /// gravação. Ler uma página, conferir o disco e copiar linhas não mudam.
@@ -234,6 +237,7 @@ impl TelaCsv {
             abrir_condicao_pendente: false,
             calculo_vista: None,
             vista_de: None,
+            visiveis: None,
             janela: Janela::inicial(),
             pagina_pedida: None,
             versao: 0,
@@ -759,6 +763,7 @@ impl TelaCsv {
             cabecalho_desenhado: pintor.cabecalho_desenhado,
             ordenar: pintor.ordenar,
         };
+        self.visiveis = saida.visiveis;
         self.pedir_pagina(saida.visiveis);
         let mut focos: Vec<egui::Id> = ths.iter().map(|(_, r)| r.id).collect();
         focos.push(id_corpo);
@@ -817,6 +822,7 @@ impl TelaCsv {
                 if self.retrato.is_none() {
                     carregando(&mut dentro, "Lendo as linhas…");
                 } else {
+                    self.desenhar_filtros(&mut dentro);
                     self.desenhar_aviso_cola(&mut dentro);
                     self.desenhar_grade(&mut dentro);
                 }
@@ -844,11 +850,15 @@ impl TelaCsv {
         self.iniciar_proximo(&ectx);
     }
 
+    /// O rodapé (o dos Dados, sem as páginas: a grade rola todas as linhas): "Linhas 1–24 de 1.204" (as à vista, de
+    /// quantas a vista tem) e, em `--acct`, "· 1 alteração não salva"; em `--t3`, as marcadas e as colunas
+    /// selecionadas.
     fn desenhar_rodape(&mut self, ui: &mut Ui) {
         let Some(r) = &self.retrato else { return };
         let p = paleta(ui);
-        let filtradas = if self.filtrando() { self.linhas_filtradas() } else { None };
-        texto_simples(ui, &textos::contagem(r.linhas, r.colunas(), filtradas), 12.0, p.estudio.t2);
+        let total = self.linhas_da_vista();
+        let (a, b) = self.visiveis.filter(|_| total > 0).map_or((0, 0), |(a, b)| (a + 1, (b + 1).min(total)));
+        texto_simples(ui, &contagem_linhas(a, b, total), 12.0, p.estudio.t2);
         if r.alterada {
             texto_simples(ui, &textos::alteracoes_nao_salvas(r.alteracoes.max(1)), 12.0, p.estudio.acct);
         }
@@ -927,12 +937,11 @@ impl TelaCsv {
 
 impl Documento for TelaCsv {
     fn anatomia(&self) -> Anatomia {
-        let a = Anatomia::default().com_rodape().rolagem_propria();
-        if self.com_faixa() { a.com_faixa() } else { a }
+        Anatomia::default().com_faixa().com_rodape().rolagem_propria()
     }
 
-    fn faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
-        self.desenhar_faixa(ui, ctx);
+    fn faixa(&mut self, ui: &mut Ui, _ctx: &mut Contexto) {
+        self.desenhar_faixa(ui);
     }
 
     fn avisos(&mut self, doc: &mut interface::pecas::documento::Documento, ui: &mut Ui, _ctx: &mut Contexto) {

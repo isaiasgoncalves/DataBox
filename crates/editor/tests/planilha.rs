@@ -176,12 +176,12 @@ fn trazer_colunas_desta_planilha_abre_a_janela_do_csv_com_a_origem() {
     std::fs::write(&outro, "id;nome\n1;a\n").expect("o outro csv");
     h.state_mut().ir(Rota::arquivo(&outro));
     h.run_steps(2);
-    esperar(&mut h, "o outro CSV abrir", |h| tem_texto(h, "1 linha · 2 colunas"));
+    esperar(&mut h, "o outro CSV abrir", |h| tem_texto(h, "Linhas 1–1 de 1"));
     fechar_aba(&mut h, "relatorio_q3.xlsx");
     assentar(&mut h);
     h.state_mut().ir(Rota::arquivo(&csv));
     h.run_steps(2);
-    esperar(&mut h, "o CSV abrir", |h| tem_texto(h, "2 linhas · 2 colunas"));
+    esperar(&mut h, "o CSV abrir", |h| tem_texto(h, "Linhas 1–2 de 2"));
     // com o CSV aberto (lido) em outra aba, o item liga e leva à janela do CSV usado por último, com a planilha
     // escolhida
     h.state_mut().ir(Rota::arquivo(&planilha));

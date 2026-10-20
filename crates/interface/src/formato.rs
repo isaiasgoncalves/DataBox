@@ -423,6 +423,25 @@ pub fn plural(n: impl Into<Numero>, um: &str, varios: &str) -> String {
     format!("{} {}", formatar_numero(n), if n.e_um() { um } else { varios })
 }
 
+/// O rodapé das grades (a aba Dados e o CSV): "Linhas 1–100 de 5.000", com as linhas à vista (ou as da página) de
+/// quantas a grade tem; "Nenhuma linha" sem linhas.
+pub fn contagem_linhas(inicio: u64, fim: u64, total: u64) -> String {
+    if total > 0 {
+        format!("Linhas {}–{} de {}", formatar_numero(inicio), formatar_numero(fim), formatar_numero(total))
+    } else {
+        "Nenhuma linha".to_string()
+    }
+}
+
+/// A contagem dos filtros das grades: filtrando, as linhas que passam de quantas há ("41 de 60 linhas"; sem o
+/// total, só as que passam); sem filtro, as linhas ("60 linhas").
+pub fn contagem_filtrada(linhas: u64, total: Option<u64>, filtrando: bool) -> String {
+    match total {
+        Some(t) if filtrando => format!("{} de {}", formatar_numero(linhas), plural(t, "linha", "linhas")),
+        _ => plural(linhas, "linha", "linhas"),
+    }
+}
+
 /// Nome do arquivo de um caminho do Windows (`"C:\\dados\\vendas.db"` → `"vendas.db"`).
 pub fn nome_do_caminho(caminho: &str) -> &str {
     caminho.split(['\\', '/']).rfind(|p| !p.is_empty()).unwrap_or(caminho)
@@ -510,6 +529,16 @@ pub fn real_js(x: f64) -> String {
 #[cfg(test)]
 mod testes {
     use super::*;
+
+    #[test]
+    fn contagens_das_grades() {
+        assert_eq!(contagem_linhas(101, 200, 5000), "Linhas 101–200 de 5.000");
+        assert_eq!(contagem_linhas(0, 0, 0), "Nenhuma linha");
+        assert_eq!(contagem_filtrada(41, Some(60), true), "41 de 60 linhas");
+        assert_eq!(contagem_filtrada(60, Some(60), false), "60 linhas");
+        assert_eq!(contagem_filtrada(1, Some(1), true), "1 de 1 linha");
+        assert_eq!(contagem_filtrada(2500, None, true), "2.500 linhas", "sem o total, só as que passam");
+    }
 
     #[test]
     fn sem_acento_para_buscas() {

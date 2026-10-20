@@ -16,9 +16,10 @@ use egui::{
 };
 use interface::fontes::{self, Peso};
 use interface::grade::{
-    ALTURA_CABECALHO_COM_TIPO_ABRE, ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, LARGURA_COLUNA_MARCAR,
-    LARGURA_MAX_COLUNA, LARGURA_MIN_COLUNA, LARGURA_PASTILHA_TH, Navegacao, NucleoGrade, Ordem, Th, dica_celula,
-    largura_cabecalho, largura_natural, padding_coluna, pintar_cabecalho_coluna, pintar_celula,
+    ALTURA_CABECALHO_COM_TIPO_ABRE, ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, ESPACO_SETA_ORDEM,
+    LADO_SETA_ORDEM, LARGURA_COLUNA_MARCAR, LARGURA_MAX_COLUNA, LARGURA_MIN_COLUNA, LARGURA_PASTILHA_TH, Navegacao,
+    NucleoGrade, Ordem, Th, dica_celula, largura_cabecalho, largura_natural, padding_coluna, pintar_cabecalho_coluna,
+    pintar_celula,
 };
 use interface::pecas::campos::{ALTURA_CAMPO_PEQUENO, Check, DURACAO_SALVO, Entrada, pintar_salvo};
 use interface::pecas::texto::nome_abre_tamanho;
@@ -215,8 +216,8 @@ fn medir_colunas(
     for (i, col) in dados.colunas.iter().enumerate() {
         let (esq, dir) = padding_coluna(primeira + i, n);
         let limite = LARGURA_MAX_COLUNA - esq - dir;
-        // a pastilha antes do nome, e a seta da ordem ao lado dele (5px + o triângulo)
-        let seta = if ordem == Some(col.nome.as_str()) { 12.0 } else { 0.0 };
+        // a pastilha antes do nome, e a seta da ordem ao lado dele (5px + a `.seta-ord` de 9)
+        let seta = if ordem == Some(col.nome.as_str()) { ESPACO_SETA_ORDEM + LADO_SETA_ORDEM } else { 0.0 };
         let mut maior = LARGURA_PASTILHA_TH + largura_cabecalho(painter, &col.nome, None) + seta;
         for (linha, rotulo) in dados.pagina.linhas.iter().zip(&dados.rotulos).take(200) {
             if maior >= limite {
@@ -607,7 +608,7 @@ impl DesenhoGrade for Pintor<'_> {
         let seta = ordenada.map(|d| if d == Direcao::Desc { Ordem::Decrescente } else { Ordem::Crescente });
         // a pastilha de 16 (o tipo por extenso na dica dela) e o `button.th-abre`: o nome (e a seta), na altura toda
         // do `th`; numa coluna numérica os dois vão juntos à direita, como o `pintar_cabecalho_coluna` os desenha
-        let largura_seta = if seta.is_some() { 12.0 } else { 0.0 };
+        let largura_seta = if seta.is_some() { ESPACO_SETA_ORDEM + LADO_SETA_ORDEM } else { 0.0 };
         let largura_nome = largura_cabecalho(ui.painter(), &col.nome, None) + largura_seta;
         let x0 = if col.numerica {
             (h.conteudo.right() - LARGURA_PASTILHA_TH - largura_nome).max(h.conteudo.left())
