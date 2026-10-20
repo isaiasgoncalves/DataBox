@@ -45,10 +45,10 @@ fn arquivo_vazio_e_sem_quebra() {
     assert_eq!(c.texto, "");
     assert_eq!(
         (c.codificacao, c.fim_de_linha, c.fim_misto, c.termina_em_quebra),
-        (Codificacao::Utf8, FimDeLinha::Crlf, false, false)
+        (Codificacao::Utf8, FIM_DO_SISTEMA, false, false)
     );
     let c = carregar_bytes(&pasta, b"uma linha");
-    assert_eq!((c.fim_de_linha, c.termina_em_quebra), (FimDeLinha::Crlf, false), "sem quebra: o padrão do Windows");
+    assert_eq!((c.fim_de_linha, c.termina_em_quebra), (FIM_DO_SISTEMA, false), "sem quebra: o padrão do sistema");
 }
 
 #[test]

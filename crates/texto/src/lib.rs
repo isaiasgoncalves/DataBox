@@ -40,7 +40,7 @@
 //!   zeros se repetem de dois em dois) recebe a frase "O arquivo está em UTF-16…"; outros bytes nulos, "O arquivo
 //!   não parece de texto…". Acima de 32 MiB a leitura é recusada com a frase do tamanho.
 //! - **Fim de linha:** o texto carregado só tem `\n`; `\r\n` e `\r` viram `\n`. O fim de linha dominante (empate:
-//!   CRLF, depois LF; sem nenhuma quebra: CRLF) é guardado e **volta na gravação**; arquivo que misturava fins de
+//!   CRLF, depois LF; sem nenhuma quebra: o do sistema) é guardado e **volta na gravação**; arquivo que misturava fins de
 //!   linha é regravado todo com o dominante (`fim_misto`, a ficha mostra "CRLF (misto)").
 //! - **Quebra no fim:** o texto carregado traz a quebra final se o arquivo tinha, e a gravação grava o texto como
 //!   ele está, então não acrescenta nem tira a quebra sozinha. O BOM volta como estava.

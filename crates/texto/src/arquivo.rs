@@ -39,7 +39,7 @@ pub struct Carregado {
     /// O texto, só com `\n` como quebra de linha, sem o BOM, com a quebra do fim se o arquivo tinha.
     pub texto: String,
     pub codificacao: Codificacao,
-    /// O fim de linha dominante (CRLF, LF ou CR; empate, CRLF; sem nenhuma quebra, CRLF). É o da gravação.
+    /// O fim de linha dominante (CRLF, LF ou CR; empate, CRLF; sem nenhuma quebra, o do sistema). É o da gravação.
     pub fim_de_linha: FimDeLinha,
     /// O arquivo misturava mais de um fim de linha: a gravação o regrava todo com o dominante ("CRLF (misto)").
     pub fim_misto: bool,
@@ -208,12 +208,15 @@ fn parece_utf16_sem_bom(bytes: &[u8]) -> bool {
     pares_nulos.max(impares_nulos) * 5 >= pares * 2
 }
 
+/// O fim de linha de um arquivo sem nenhuma quebra: CRLF no Windows, LF nos outros sistemas.
+pub const FIM_DO_SISTEMA: FimDeLinha = if cfg!(windows) { FimDeLinha::Crlf } else { FimDeLinha::Lf };
+
 /// Troca `\r\n` e `\r` por `\n` e conta cada tipo. O dominante é o que mais aparece (empate: CRLF, depois LF,
-/// depois CR; nenhum: CRLF); é "misto" quando mais de um tipo aparece.
+/// depois CR; nenhum: o do sistema, [`FIM_DO_SISTEMA`]); é "misto" quando mais de um tipo aparece.
 fn normalizar_quebras(texto: String) -> (String, FimDeLinha, bool) {
     if !texto.contains('\r') {
         let lf = texto.bytes().filter(|&b| b == b'\n').count();
-        let dominante = if lf > 0 { FimDeLinha::Lf } else { FimDeLinha::Crlf };
+        let dominante = if lf > 0 { FimDeLinha::Lf } else { FIM_DO_SISTEMA };
         return (texto, dominante, false);
     }
     let (mut crlf, mut cr) = (0usize, 0usize);
