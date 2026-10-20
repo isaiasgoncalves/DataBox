@@ -59,7 +59,10 @@
 //!     modificado_em: Option<String>, aberto_em: Option<String> }  // datas ISO locais "2026-10-07T14:03:05"
 //!     // existe: pasta → "é uma pasta que respondeu a tempo"; banco e arquivo → "é arquivo comum que respondeu";
 //!     // tamanho: só do arquivo (None na pasta)
-//! pub struct ComandoSql { sql: String, quando: Option<String> }
+//! pub struct ComandoSql { sql: String, quando: Option<String>, resultado: Option<ResultadoSql>, comandos: Option<u32> }
+//! pub enum ResultadoSql { Linhas { quantidade: u64, mais: bool }, Alteradas(u64), Executado,
+//!     Erro { numero: u32, mensagem: String }, Interrompida { numero: u32 } }
+//!     // ResultadoSql::erro(numero, &str) corta a mensagem
 //! pub struct PrefsInfo { tema: Tema, recentes: Vec<Recente>, exportacao: OpcoesExportacao, aparencia: Aparencia }
 //! pub fn arquivo_padrao() -> PathBuf            // %APPDATA%\DataBox\preferencias.json (sem APPDATA, a pasta pessoal)
 //! pub fn caminho_exibido(p) -> String           // absoluto e normalizado, com a caixa como veio
@@ -96,7 +99,10 @@
 //!   data de modificação local, arredondada ao microssegundo, com as regras de horário de verão da época (as do
 //!   Windows, como o Explorer).
 //! - `registrar_sql` guarda o texto aparado, ignora texto vazio e comando com mais de 100 000 caracteres;
-//!   repetido só sobe para o topo. O histórico guarda no máximo 50 bancos; o usado há mais tempo sai primeiro.
+//!   repetido só sobe para o topo, com o resultado novo. Guarda também as execuções que falharam (desde a 0.2.0):
+//!   cada item leva `"resultado"` (`{"tipo": "linhas"|"alteradas"|"executado"|"erro"|"interrompida", …}`, a mensagem do erro
+//!   cortada em 300 caracteres) e `"comandos"`; os dois são opcionais, e um item da 0.1.x (sem eles) abre como
+//!   antes, sem pílula. Um resultado estranho fica de fora sem alarde. O histórico guarda no máximo 50 bancos; o usado há mais tempo sai primeiro.
 //! - `atualizar` recusa (ErroBanco 400, nada gravado): separador de CSV fora de `; , \t` ("O separador do CSV
 //!   precisa ser ponto e vírgula, vírgula ou tabulação."), decimal fora de `, .` ("O separador decimal precisa
 //!   ser vírgula ou ponto."), última pasta vazia ("A última pasta precisa ser um caminho."), tamanho do código
@@ -167,6 +173,8 @@ pub const MAX_RECENTES: usize = 15;
 pub const MAX_COMANDOS: usize = 30;
 pub const MAX_BANCOS_NO_HISTORICO: usize = 50;
 pub const MAX_CARACTERES_COMANDO: usize = 100_000;
+/// A mensagem de erro guardada no histórico é cortada aqui.
+pub const MAX_CARACTERES_MENSAGEM: usize = 300;
 /// Quanto esperar a outra instância terminar de gravar.
 pub const TEMPO_MAXIMO_TRAVA: Duration = Duration::from_secs(3);
 /// Prazo total para consultar os arquivos dos recentes.
@@ -530,6 +538,94 @@ pub struct ComandoSql {
     pub sql: String,
     /// ISO local sem fração.
     pub quando: Option<String>,
+    /// O que a última execução deu (None nos comandos guardados antes da 0.2.0, que só guardava os que deram certo).
+    pub resultado: Option<ResultadoSql>,
+    /// Quantos comandos o roteiro executou (até o que parou, se parou); None como no `resultado`.
+    pub comandos: Option<u32>,
+}
+
+/// O que uma execução da Consulta SQL deu: a pílula do Histórico.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResultadoSql {
+    /// O último comando devolveu linhas; `mais`: a lista parou no limite e havia mais.
+    Linhas { quantidade: u64, mais: bool },
+    /// O último comando alterou linhas (INSERT, UPDATE, DELETE, REPLACE).
+    Alteradas(u64),
+    /// O último comando rodou sem contagem (CREATE, PRAGMA sem resultado, BEGIN…).
+    Executado,
+    /// O roteiro parou no comando `numero` (do 1); os anteriores já rodaram. `mensagem`: a frase do erro, cortada
+    /// em [`MAX_CARACTERES_MENSAGEM`].
+    Erro { numero: u32, mensagem: String },
+    /// A pessoa interrompeu o roteiro no comando `numero` (do 1); os anteriores já rodaram.
+    Interrompida { numero: u32 },
+}
+
+impl ResultadoSql {
+    /// O erro, com a mensagem cortada em [`MAX_CARACTERES_MENSAGEM`] (com "…").
+    pub fn erro(numero: u32, mensagem: &str) -> ResultadoSql {
+        let mensagem = caminhos::tirar_espacos(mensagem);
+        let mensagem = if mensagem.chars().count() > MAX_CARACTERES_MENSAGEM {
+            let mut curta: String = mensagem.chars().take(MAX_CARACTERES_MENSAGEM - 1).collect();
+            curta.push('…');
+            curta
+        } else {
+            mensagem.to_string()
+        };
+        ResultadoSql::Erro { numero, mensagem }
+    }
+
+    /// `{"tipo": "linhas", "quantidade": 9}`, `{"tipo": "alteradas", "quantidade": 3}`, `{"tipo": "executado"}`,
+    /// `{"tipo": "erro", "comando": 3, "mensagem": "…"}`, `{"tipo": "interrompida", "comando": 1}`; `"mais": true`
+    /// só nas linhas cortadas.
+    fn para_json(&self) -> Json {
+        let tipo = |t: &str| ("tipo".to_string(), Json::Texto(t.to_string()));
+        let quantidade = |n: u64| ("quantidade".to_string(), Json::Inteiro(i64::try_from(n).unwrap_or(i64::MAX)));
+        Json::Objeto(match self {
+            ResultadoSql::Linhas { quantidade: n, mais } => {
+                let mut pares = vec![tipo("linhas"), quantidade(*n)];
+                if *mais {
+                    pares.push(("mais".to_string(), Json::Bool(true)));
+                }
+                pares
+            }
+            ResultadoSql::Alteradas(n) => vec![tipo("alteradas"), quantidade(*n)],
+            ResultadoSql::Executado => vec![tipo("executado")],
+            ResultadoSql::Erro { numero, mensagem } => vec![
+                tipo("erro"),
+                ("comando".to_string(), Json::Inteiro(i64::from(*numero))),
+                ("mensagem".to_string(), Json::Texto(mensagem.clone())),
+            ],
+            ResultadoSql::Interrompida { numero } => {
+                vec![tipo("interrompida"), ("comando".to_string(), Json::Inteiro(i64::from(*numero)))]
+            }
+        })
+    }
+
+    /// O contrário de [`ResultadoSql::para_json`]; o que não fizer sentido é None (o item fica sem resultado).
+    fn de_json(valor: &Json) -> Option<ResultadoSql> {
+        let quantidade = || match valor.campo("quantidade") {
+            Some(Json::Inteiro(n)) => u64::try_from(*n).ok(),
+            _ => None,
+        };
+        let numero = || match valor.campo("comando") {
+            Some(Json::Inteiro(n)) => u32::try_from(*n).ok().filter(|n| *n > 0),
+            _ => None,
+        };
+        match valor.campo("tipo").and_then(Json::como_texto)? {
+            "linhas" => Some(ResultadoSql::Linhas {
+                quantidade: quantidade()?,
+                mais: matches!(valor.campo("mais"), Some(Json::Bool(true))),
+            }),
+            "alteradas" => Some(ResultadoSql::Alteradas(quantidade()?)),
+            "executado" => Some(ResultadoSql::Executado),
+            "erro" => {
+                let mensagem = valor.campo("mensagem").and_then(Json::como_texto).unwrap_or_default();
+                Some(ResultadoSql::erro(numero()?, mensagem))
+            }
+            "interrompida" => Some(ResultadoSql::Interrompida { numero: numero()? }),
+            _ => None,
+        }
+    }
 }
 
 /// O resumo para a interface (com a aparência do código).
@@ -893,10 +989,17 @@ impl Dados {
                 let itens = itens
                     .iter()
                     .map(|i| {
-                        Json::Objeto(vec![
+                        let mut pares = vec![
                             ("sql".to_string(), Json::Texto(i.sql.clone())),
                             ("quando".to_string(), texto_ou_nulo(&i.quando)),
-                        ])
+                        ];
+                        if let Some(resultado) = &i.resultado {
+                            pares.push(("resultado".to_string(), resultado.para_json()));
+                        }
+                        if let Some(n) = i.comandos {
+                            pares.push(("comandos".to_string(), Json::Inteiro(i64::from(n))));
+                        }
+                        Json::Objeto(pares)
                     })
                     .collect();
                 (chave.clone(), Json::Lista(itens))
@@ -982,7 +1085,12 @@ fn sanear(bruto: &Json, max_bancos: usize) -> Result<Dados, String> {
                     continue;
                 }
                 let quando = item.campo("quando").and_then(Json::como_texto).map(str::to_string);
-                limpos.push(ComandoSql { sql: sql.to_string(), quando });
+                let resultado = item.campo("resultado").and_then(ResultadoSql::de_json);
+                let comandos = match item.campo("comandos") {
+                    Some(Json::Inteiro(n)) => u32::try_from(*n).ok().filter(|n| *n > 0),
+                    _ => None,
+                };
+                limpos.push(ComandoSql { sql: sql.to_string(), quando, resultado, comandos });
             }
             if !limpos.is_empty() {
                 limpos.truncate(MAX_COMANDOS);
@@ -1674,10 +1782,18 @@ impl Preferencias {
             .unwrap_or_default()
     }
 
-    /// Guarda o comando no topo do histórico do banco; um comando repetido só sobe para o topo.
+    /// Guarda o comando no topo do histórico do banco, com o que a execução deu (inclusive o erro: a consulta que
+    /// falhou é a que a pessoa mais quer recuperar) e quantos comandos rodaram; um comando repetido só sobe para o
+    /// topo, com o resultado novo.
     ///
     /// Comandos vazios não entram, nem os gigantes (um script colado de megabytes incharia o arquivo).
-    pub fn registrar_sql(&self, caminho_banco: impl AsRef<Path>, sql: &str) {
+    pub fn registrar_sql(
+        &self,
+        caminho_banco: impl AsRef<Path>,
+        sql: &str,
+        resultado: Option<ResultadoSql>,
+        comandos: Option<u32>,
+    ) {
         let texto = caminhos::tirar_espacos(sql);
         if texto.is_empty() || texto.chars().count() > MAX_CARACTERES_COMANDO {
             return;
@@ -1691,7 +1807,8 @@ impl Preferencias {
                 None => Vec::new(),
             };
             itens.retain(|i| i.sql != texto);
-            itens.insert(0, ComandoSql { sql: texto.to_string(), quando: Some(agora()) });
+            let item = ComandoSql { sql: texto.to_string(), quando: Some(agora()), resultado, comandos };
+            itens.insert(0, item);
             itens.truncate(MAX_COMANDOS);
             // Reinserido no fim: a ordem é a do uso, e o banco mais antigo sai primeiro.
             historico.push((chave, itens));

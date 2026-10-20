@@ -13,7 +13,9 @@ use banco::{
 use comum::{Celula, Chave, Codigo, Entrada, ErroBanco, Valor};
 use ddl::ColunaDef;
 use exportar::{Formato, Opcoes};
-use prefs::{Aparencia, CoresCodigo, Mudanca, MudancaAparencia, MudancaExportacao, OpcoesExportacao, Tema};
+use prefs::{
+    Aparencia, CoresCodigo, Mudanca, MudancaAparencia, MudancaExportacao, OpcoesExportacao, ResultadoSql, Tema,
+};
 
 use super::leitura::{Json, ler_csv, ler_csv_texto, ler_json, ler_xlsx, ler_zip, sem_bom};
 use super::*;
@@ -708,19 +710,49 @@ fn sql_com_historico() {
         ["UPDATE eventos SET tipo = 'login' WHERE rowid = 1; SELECT 1", "SELECT count(*) AS n FROM clientes"]
     );
     assert!(itens.iter().all(|i| i.quando.is_some()));
+    // o resultado de cada execução: o do último comando, e quantos rodaram
+    let resultados: Vec<_> = itens.iter().map(|i| (i.resultado.clone(), i.comandos)).collect();
+    assert_eq!(
+        resultados,
+        [
+            (Some(ResultadoSql::Linhas { quantidade: 1, mais: false }), Some(2)),
+            (Some(ResultadoSql::Linhas { quantidade: 1, mais: false }), Some(1)),
+        ]
+    );
+
+    a.servico.sql(&id, "UPDATE eventos SET tipo = tipo WHERE rowid <= 3", 1000).unwrap();
+    a.servico.sql(&id, "CREATE TABLE nova (a)", 1000).unwrap();
+    a.servico.sql(&id, "SELECT * FROM eventos", 10).unwrap();
+    let itens = a.servico.historico(&id).unwrap();
+    let resultados: Vec<_> = itens[..3].iter().map(|i| i.resultado.clone().unwrap()).collect();
+    assert_eq!(
+        resultados,
+        [ResultadoSql::Linhas { quantidade: 10, mais: true }, ResultadoSql::Executado, ResultadoSql::Alteradas(3)]
+    );
 }
 
 #[test]
-fn sql_com_erro_nao_entra_no_historico() {
+fn sql_com_erro_entra_no_historico_com_o_erro() {
     let a = ambiente("sql-erro");
     let id = a.id();
     let r = a.servico.sql(&id, "SELECT * FROM fantasma", 1000).unwrap();
-    match &r.resultados[0] {
-        ResultadoComando::Erro { mensagem, .. } => assert!(!mensagem.is_empty()),
+    let mensagem = match &r.resultados[0] {
+        ResultadoComando::Erro { mensagem, .. } => mensagem.clone(),
         outro => panic!("{outro:?}"),
-    }
-    let _ = a.servico.sql(&id, "   ", 1000);
-    assert!(a.servico.historico(&id).unwrap().is_empty());
+    };
+    assert!(!mensagem.is_empty());
+    let _ = a.servico.sql(&id, "   ", 1000); // sem comando: não entra
+    let itens = a.servico.historico(&id).unwrap();
+    assert_eq!(itens.len(), 1);
+    assert_eq!(itens[0].sql, "SELECT * FROM fantasma");
+    assert_eq!(itens[0].resultado, Some(ResultadoSql::Erro { numero: 1, mensagem }));
+    assert_eq!(itens[0].comandos, Some(1));
+
+    // o roteiro que parou no terceiro: os dois primeiros rodaram
+    a.servico.sql(&id, "SELECT 1; SELECT 2; SELECT * FROM fantasma", 1000).unwrap();
+    let topo = &a.servico.historico(&id).unwrap()[0];
+    assert!(matches!(topo.resultado, Some(ResultadoSql::Erro { numero: 3, .. })), "{topo:?}");
+    assert_eq!(topo.comandos, Some(3));
 }
 
 #[test]

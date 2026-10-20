@@ -419,7 +419,7 @@ fn grava_e_outra_instancia_le() {
     })
     .unwrap();
     p.adicionar_recente(tmp.caminho().join("vendas.db"));
-    p.registrar_sql(tmp.caminho().join("vendas.db"), "SELECT 1");
+    p.registrar_sql(tmp.caminho().join("vendas.db"), "SELECT 1", None, None);
 
     assert_eq!(json_do_arquivo(&arquivo)["tema"], "dark");
 
@@ -455,7 +455,7 @@ fn varias_threads_ao_mesmo_tempo() {
             thread::spawn(move || {
                 for i in 0..10 {
                     p.adicionar_recente(pasta.join(format!("t{n}_{i}.db")));
-                    p.registrar_sql(pasta.join("comum.db"), &format!("SELECT {}", n * 100 + i));
+                    p.registrar_sql(pasta.join("comum.db"), &format!("SELECT {}", n * 100 + i), None, None);
                 }
             })
         })
@@ -475,9 +475,9 @@ fn historico_mais_recente_primeiro_sem_repetir() {
     let tmp = PastaTemp::nova("historico");
     let p = abrir(&tmp.arquivo());
     let b = tmp.caminho().join("vendas.db");
-    p.registrar_sql(&b, "SELECT 1");
-    p.registrar_sql(&b, "SELECT 2");
-    p.registrar_sql(&b, "  SELECT 1  \n"); // repetido (com espaços em volta) sobe para o topo
+    p.registrar_sql(&b, "SELECT 1", None, None);
+    p.registrar_sql(&b, "SELECT 2", None, None);
+    p.registrar_sql(&b, "  SELECT 1  \n", None, None); // repetido (com espaços em volta) sobe para o topo
     let itens = p.historico_sql(&b);
     assert_eq!(sqls(&itens), ["SELECT 1", "SELECT 2"]);
     assert!(segundos_de_agora(itens[0].quando.as_deref().unwrap()) < 60);
@@ -489,7 +489,7 @@ fn historico_no_maximo_30_por_banco() {
     let p = abrir(&tmp.arquivo());
     let b = tmp.caminho().join("vendas.db");
     for i in 0..MAX_COMANDOS + 7 {
-        p.registrar_sql(&b, &format!("SELECT {i}"));
+        p.registrar_sql(&b, &format!("SELECT {i}"), None, None);
     }
     let itens = p.historico_sql(&b);
     assert_eq!(itens.len(), 30);
@@ -506,8 +506,8 @@ fn historico_separado_por_banco_e_normalizado() {
     let tmp = PastaTemp::nova("separado");
     let p = abrir(&tmp.arquivo());
     let (vendas, estoque) = (tmp.caminho().join("Vendas.db"), tmp.caminho().join("estoque.db"));
-    p.registrar_sql(&vendas, "SELECT * FROM clientes");
-    p.registrar_sql(&estoque, "SELECT * FROM produtos");
+    p.registrar_sql(&vendas, "SELECT * FROM clientes", None, None);
+    p.registrar_sql(&estoque, "SELECT * FROM produtos", None, None);
     let outra_grafia = texto(&vendas).to_lowercase().replace('\\', "/");
     assert_eq!(sqls(&p.historico_sql(&outra_grafia)), ["SELECT * FROM clientes"]);
     assert_eq!(sqls(&p.historico_sql(&estoque)), ["SELECT * FROM produtos"]);
@@ -520,9 +520,9 @@ fn historico_ignora_vazio_e_gigante() {
     let arquivo = tmp.arquivo();
     let p = abrir(&arquivo);
     let b = tmp.caminho().join("vendas.db");
-    p.registrar_sql(&b, "   ");
-    p.registrar_sql(&b, ""); // vazio
-    p.registrar_sql(&b, &"INSERT INTO t VALUES (1);".repeat(10_000));
+    p.registrar_sql(&b, "   ", None, None);
+    p.registrar_sql(&b, "", None, None); // vazio
+    p.registrar_sql(&b, &"INSERT INTO t VALUES (1);".repeat(10_000), None, None);
     assert!(p.historico_sql(&b).is_empty());
     assert!(!arquivo.exists());
 }
@@ -534,13 +534,153 @@ fn historico_de_muitos_bancos_descarta_o_mais_antigo() {
     p.max_bancos_no_historico = 3;
     let b = |nome: &str| tmp.caminho().join(format!("{nome}.db"));
     for nome in ["a", "b", "c"] {
-        p.registrar_sql(b(nome), "SELECT 1");
+        p.registrar_sql(b(nome), "SELECT 1", None, None);
     }
-    p.registrar_sql(b("a"), "SELECT 2"); // "a" volta a ser o mais recente
-    p.registrar_sql(b("d"), "SELECT 1");
+    p.registrar_sql(b("a"), "SELECT 2", None, None); // "a" volta a ser o mais recente
+    p.registrar_sql(b("d"), "SELECT 1", None, None);
     assert!(p.historico_sql(b("b")).is_empty());
     assert_eq!(p.historico_sql(b("a")).len(), 2);
     assert!(!p.historico_sql(b("c")).is_empty() && !p.historico_sql(b("d")).is_empty());
+}
+
+#[test]
+fn historico_guarda_o_resultado_inclusive_o_erro() {
+    let tmp = PastaTemp::nova("hist-resultado");
+    let arquivo = tmp.arquivo();
+    let p = abrir(&arquivo);
+    let b = tmp.caminho().join("vendas.db");
+    p.registrar_sql(&b, "SELECT * FROM clientes", Some(ResultadoSql::Linhas { quantidade: 9, mais: false }), Some(1));
+    p.registrar_sql(&b, "UPDATE t SET a = 1", Some(ResultadoSql::Alteradas(3)), Some(1));
+    p.registrar_sql(&b, "CREATE TABLE x (a)", Some(ResultadoSql::Executado), Some(1));
+    p.registrar_sql(
+        &b,
+        "SELECT 1; SELECT 2; SELECT * FROM nada",
+        Some(ResultadoSql::erro(3, "A tabela não existe: nada.")),
+        Some(3),
+    );
+    p.registrar_sql(&b, "SELECT * FROM grande", Some(ResultadoSql::Linhas { quantidade: 500, mais: true }), Some(1));
+    p.registrar_sql(&b, "SELECT 1; SELECT longo", Some(ResultadoSql::Interrompida { numero: 2 }), Some(2));
+
+    // outra instância lê do arquivo o mesmo que esta guardou
+    let itens = abrir(&arquivo).historico_sql(&b);
+    let resultados: Vec<_> = itens.iter().map(|i| (i.resultado.clone(), i.comandos)).collect();
+    assert_eq!(
+        resultados,
+        [
+            (Some(ResultadoSql::Interrompida { numero: 2 }), Some(2)),
+            (Some(ResultadoSql::Linhas { quantidade: 500, mais: true }), Some(1)),
+            (Some(ResultadoSql::Erro { numero: 3, mensagem: "A tabela não existe: nada.".into() }), Some(3)),
+            (Some(ResultadoSql::Executado), Some(1)),
+            (Some(ResultadoSql::Alteradas(3)), Some(1)),
+            (Some(ResultadoSql::Linhas { quantidade: 9, mais: false }), Some(1)),
+        ]
+    );
+    let lido = json_do_arquivo(&arquivo);
+    let gravados = lido["historico_sql"].as_object().unwrap().values().next().unwrap().clone();
+    assert_eq!(gravados[0]["resultado"], serde_json::json!({"tipo": "interrompida", "comando": 2}));
+    assert_eq!(
+        gravados[2],
+        serde_json::json!({
+            "sql": "SELECT 1; SELECT 2; SELECT * FROM nada",
+            "quando": gravados[2]["quando"],
+            "resultado": {"tipo": "erro", "comando": 3, "mensagem": "A tabela não existe: nada."},
+            "comandos": 3,
+        })
+    );
+    assert_eq!(gravados[1]["resultado"], serde_json::json!({"tipo": "linhas", "quantidade": 500, "mais": true}));
+    assert_eq!(gravados[5]["resultado"], serde_json::json!({"tipo": "linhas", "quantidade": 9}));
+
+    // repetido sobe para o topo com o resultado novo: a consulta corrigida deixa de mostrar o erro
+    p.registrar_sql(
+        &b,
+        "SELECT 1; SELECT 2; SELECT * FROM nada",
+        Some(ResultadoSql::Linhas { quantidade: 0, mais: false }),
+        Some(3),
+    );
+    let topo = &p.historico_sql(&b)[0];
+    assert_eq!(topo.resultado, Some(ResultadoSql::Linhas { quantidade: 0, mais: false }));
+    assert_eq!(p.historico_sql(&b).len(), 6);
+}
+
+#[test]
+fn mensagem_de_erro_longa_e_cortada() {
+    let longa = "x".repeat(MAX_CARACTERES_MENSAGEM * 2);
+    let ResultadoSql::Erro { numero, mensagem } = ResultadoSql::erro(1, &longa) else { unreachable!() };
+    assert_eq!(numero, 1);
+    assert_eq!(mensagem.chars().count(), MAX_CARACTERES_MENSAGEM);
+    assert!(mensagem.ends_with('…'));
+    assert_eq!(ResultadoSql::erro(2, "  curta \n"), ResultadoSql::Erro { numero: 2, mensagem: "curta".into() });
+}
+
+/// O `preferencias.json` da 0.1.x: os itens do histórico só com `sql` e `quando` (e só os que deram certo). Abre
+/// como antes, sem resultado; regravado, os itens antigos continuam sem as chaves novas.
+#[test]
+fn historico_da_0_1_abre_sem_resultado() {
+    let tmp = PastaTemp::nova("hist-0-1");
+    let arquivo = tmp.arquivo();
+    let b = tmp.caminho().join("vendas.db");
+    let antigo = serde_json::json!({
+        "versao": 1,
+        "tema": "dark",
+        "exportacao": {"csv_separador": ";", "csv_decimal": ",", "csv_bom": true, "json_indentado": true},
+        "ultimo_diretorio": null,
+        "recentes": [{"caminho": texto(&b), "aberto_em": "2026-10-10T09:00:00"}],
+        "historico_sql": {
+            chave_caminho(&b): [
+                {"sql": "SELECT * FROM clientes", "quando": "2026-10-10T09:05:00"},
+                {"sql": "SELECT 1", "quando": null}
+            ]
+        }
+    });
+    gravar_texto(&arquivo, &serde_json::to_string_pretty(&antigo).unwrap());
+
+    let p = abrir(&arquivo);
+    assert_eq!(p.tema(), Tema::Escuro);
+    assert_eq!(
+        p.historico_sql(&b),
+        [
+            ComandoSql {
+                sql: "SELECT * FROM clientes".into(),
+                quando: Some("2026-10-10T09:05:00".into()),
+                resultado: None,
+                comandos: None,
+            },
+            ComandoSql { sql: "SELECT 1".into(), quando: None, resultado: None, comandos: None },
+        ]
+    );
+
+    // uma execução nova entra com o resultado; os itens antigos são regravados como estavam
+    p.registrar_sql(&b, "SELECT * FROM nada", Some(ResultadoSql::erro(1, "A tabela não existe: nada.")), Some(1));
+    let lido = json_do_arquivo(&arquivo);
+    let gravados = lido["historico_sql"][chave_caminho(&b)].clone();
+    assert_eq!(gravados[0]["resultado"]["tipo"], "erro");
+    assert_eq!(gravados[1], serde_json::json!({"sql": "SELECT * FROM clientes", "quando": "2026-10-10T09:05:00"}));
+    assert_eq!(gravados[2], serde_json::json!({"sql": "SELECT 1", "quando": null}));
+}
+
+#[test]
+fn resultado_estranho_no_historico_fica_de_fora() {
+    let tmp = PastaTemp::nova("hist-estranho");
+    let arquivo = tmp.arquivo();
+    let b = tmp.caminho().join("vendas.db");
+    let estranho = serde_json::json!({
+        "historico_sql": {
+            chave_caminho(&b): [
+                {"sql": "SELECT 1", "quando": null, "resultado": {"tipo": "desconhecido"}, "comandos": -2},
+                {"sql": "SELECT 2", "quando": null, "resultado": {"tipo": "linhas", "quantidade": -1}},
+                {"sql": "SELECT 3", "quando": null, "resultado": {"tipo": "erro", "comando": 0}},
+                {"sql": "SELECT 4", "quando": null, "resultado": "erro", "comandos": "3"},
+                {"sql": "SELECT 5", "quando": null, "resultado": {"tipo": "erro", "comando": 2}, "comandos": 2}
+            ]
+        }
+    });
+    gravar_texto(&arquivo, &estranho.to_string());
+    let itens = abrir(&arquivo).historico_sql(&b);
+    assert_eq!(sqls(&itens), ["SELECT 1", "SELECT 2", "SELECT 3", "SELECT 4", "SELECT 5"], "o comando fica");
+    assert!(itens[..4].iter().all(|i| i.resultado.is_none() && i.comandos.is_none()), "{itens:?}");
+    // erro sem mensagem: vale, com a mensagem vazia
+    assert_eq!(itens[4].resultado, Some(ResultadoSql::Erro { numero: 2, mensagem: String::new() }));
+    assert_eq!(itens[4].comandos, Some(2));
 }
 
 #[test]
@@ -551,8 +691,8 @@ fn limpar_recentes_e_historico_grava_o_arquivo_sem_eles() {
     let (a, b) = (tmp.caminho().join("a.db"), tmp.caminho().join("b.db"));
     p.adicionar_recente(&a);
     p.adicionar_recente(&b);
-    p.registrar_sql(&a, "SELECT 1");
-    p.registrar_sql(&b, "SELECT 2");
+    p.registrar_sql(&a, "SELECT 1", None, None);
+    p.registrar_sql(&b, "SELECT 2", None, None);
     p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
 
     p.limpar_recentes();
@@ -925,7 +1065,7 @@ fn filho_prefs() {
         thread::sleep(Duration::from_millis(1));
     }
     for i in 0..20 {
-        p.registrar_sql(format!("C:/bancos/{quem}.db"), &format!("SELECT {i} -- {quem}"));
+        p.registrar_sql(format!("C:/bancos/{quem}.db"), &format!("SELECT {i} -- {quem}"), None, None);
         p.adicionar_recente(format!("C:/bancos/{quem}_{i}.db"));
     }
 }
@@ -1282,7 +1422,7 @@ fn chaves_desconhecidas_sobrevivem_a_gravar() {
     assert_eq!(fs::read_to_string(&arquivo).unwrap(), REGRAVADO_COM_O_TEMA_CLARO);
 
     // outra instância lê e regrava sem perder nada nem mudar a ordem
-    abrir(&arquivo).registrar_sql(r"C:\Dados\vendas.db", "SELECT 1");
+    abrir(&arquivo).registrar_sql(r"C:\Dados\vendas.db", "SELECT 1", None, None);
     let gravado = json_lido(&arquivo);
     let regravado = json::ler(REGRAVADO_COM_O_TEMA_CLARO.as_bytes()).unwrap();
     assert_eq!(chaves(&gravado), chaves(&regravado));
@@ -1501,7 +1641,7 @@ fn recente_de_banco_nao_grava_o_tipo() {
     let p = abrir(&arquivo);
     p.adicionar_recente(r"C:\Dados\vendas.db");
     p.adicionar_recente_de(r"C:\Dados\estoque.db", TipoRecente::Banco);
-    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1");
+    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1", None, None);
     p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
     // quem só abre bancos tem o arquivo sem chave nova nenhuma, nem o "tipo"
     let bruto = fs::read_to_string(&arquivo).unwrap();
@@ -1610,7 +1750,7 @@ fn pasta_aberta_grava_e_volta() {
     // as outras mudanças a levam junto; a aparência e as larguras entram antes dela
     p.atualizar(Mudanca::aparencia(MudancaAparencia { tamanho_codigo: Some(13.0), ..Default::default() })).unwrap();
     p.atualizar(Mudanca::paineis(MudancaLarguraPaineis { explorador: Some(300.0), propriedades: None })).unwrap();
-    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1");
+    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1", None, None);
     p.adicionar_recente(r"C:\Dados\vendas.db");
     let gravado = json_lido(&arquivo);
     assert_eq!(
@@ -1769,7 +1909,7 @@ fn aparencia_padrao_nao_vai_para_o_arquivo() {
     // as outras mudanças não criam a chave
     p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
     p.adicionar_recente(r"C:\Dados\vendas.db");
-    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1");
+    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1", None, None);
     let gravado = json_lido(&arquivo);
     assert_eq!(chaves(&gravado), ["versao", "tema", "exportacao", "ultimo_diretorio", "recentes", "historico_sql"]);
     assert_eq!(p.resumo().aparencia, Aparencia::default());
@@ -1934,7 +2074,7 @@ fn paineis_padrao_nao_vao_para_o_arquivo() {
     // as outras mudanças não criam a chave
     p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
     p.adicionar_recente(r"C:\Dados\vendas.db");
-    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1");
+    p.registrar_sql(r"C:\Dados\vendas.db", "SELECT 1", None, None);
     let gravado = json_lido(&arquivo);
     assert_eq!(chaves(&gravado), ["versao", "tema", "exportacao", "ultimo_diretorio", "recentes", "historico_sql"]);
     let dados = sanear(&gravado, MAX_BANCOS_NO_HISTORICO).unwrap();

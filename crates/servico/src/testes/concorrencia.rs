@@ -8,6 +8,7 @@ use std::thread;
 
 use banco::{PedidoPagina, ResultadoComando};
 use comum::{Codigo, Entrada, Valor};
+use prefs::ResultadoSql;
 
 use super::*;
 use crate::servico::ESPERA_FECHAR_ANTERIOR;
@@ -170,8 +171,10 @@ fn interromper_sql_com_o_sql_esperando_a_vez() {
         [ResultadoComando::Erro { mensagem, .. }] => assert_eq!(mensagem, banco::MSG_INTERROMPIDA),
         outro => panic!("{outro:?}"),
     }
-    // o comando não rodou, e o roteiro interrompido não entra no histórico
-    assert!(a.servico.historico(&id).unwrap().is_empty());
+    // o comando não rodou; o roteiro entra no histórico como interrompido no primeiro
+    let itens = a.servico.historico(&id).unwrap();
+    assert_eq!(itens.len(), 1);
+    assert_eq!(itens[0].resultado, Some(ResultadoSql::Interrompida { numero: 1 }));
     let r = a.servico.sql(&id, "SELECT count(*) FROM eventos WHERE tipo = 'nao devia rodar'", 10).unwrap();
     assert!(
         matches!(&r.resultados[..], [ResultadoComando::Linhas { linhas, .. }] if linhas == &vec![vec![comum::Celula::Inteiro(0)]]),
@@ -221,10 +224,12 @@ fn interromper_sql_nao_espera_a_trava() {
         }
         outro => panic!("{outro:?}"),
     }
-    assert!(a.servico.historico(&id).unwrap().is_empty());
+    let itens = a.servico.historico(&id).unwrap();
+    assert_eq!(itens.len(), 1);
+    assert_eq!(itens[0].resultado, Some(ResultadoSql::Interrompida { numero: 1 }), "entra como interrompida");
     // a próxima roda normalmente e entra no histórico
     let r = a.servico.sql(&id, "SELECT count(*) FROM clientes", 1000).unwrap();
     assert!(matches!(&r.resultados[..], [ResultadoComando::Linhas { .. }]), "{r:?}");
     assert!(!a.servico.interromper_sql(&id).unwrap());
-    assert_eq!(a.servico.historico(&id).unwrap().len(), 1);
+    assert_eq!(a.servico.historico(&id).unwrap().len(), 2);
 }

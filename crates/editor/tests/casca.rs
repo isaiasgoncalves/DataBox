@@ -1552,6 +1552,31 @@ fn historico_clique_seleciona_e_duplo_clique_abre() {
     assert!(h.query(by().role(Role::Button).label("SELECT 1 AS um")).is_none());
 }
 
+/// A consulta que falhou também entra no Histórico (0.2.0): é a que a pessoa mais quer recuperar. O erro vai na dica,
+/// com a pílula "Erro" ou "Parou no K" embaixo do resumo.
+#[test]
+fn historico_guarda_a_consulta_que_falhou() {
+    let amb = Ambiente::exemplo("historico_falhou");
+    let mut h = harness(&amb);
+    clicar_botao(&mut h, "Histórico de consultas");
+    assentar(&mut h);
+    let id = amb.estado.banco_id();
+    amb.servico.sql(&id, "SELECT * FROM fantasma", 10).expect("um");
+    amb.servico.sql(&id, "SELECT 1; SELECT * FROM fantasma", 10).expect("dois");
+    h.state_mut().emitir(estado::Acao::NotarTransacao(false));
+    let roteiro = "SELECT 1; SELECT * FROM fantasma";
+    esperar(&mut h, "a lista nova", |h| h.query(by().role(Role::Button).label(roteiro)).is_some());
+    let dica = ler_dica(&mut h, Role::Button, "SELECT * FROM fantasma");
+    assert!(dica.starts_with("SELECT * FROM fantasma\n\nErro: "), "{dica}");
+    let dica = ler_dica(&mut h, Role::Button, roteiro);
+    assert!(dica.starts_with("SELECT 1; SELECT * FROM fantasma\n\nParou no comando 2: "), "{dica}");
+    // selecionado, a pílula de erro fica só no contorno (a captura mostra)
+    clicar_botao(&mut h, roteiro);
+    assentar(&mut h);
+    assert!(ligado(&h, Role::Button, roteiro));
+    capturar(&mut h, "historico-com-erro-claro.png");
+}
+
 #[test]
 fn menu_arquivo_abre_os_recentes() {
     let amb = Ambiente::exemplo("menu_recentes");
@@ -4569,7 +4594,7 @@ fn fonte_do_codigo_troca_e_volta() {
 #[test]
 fn limpar_recentes_e_historico_valem_no_salvar() {
     let amb = Ambiente::exemplo("pref_limpar");
-    amb.servico.prefs().registrar_sql(amb.caminho_banco(), "SELECT 1");
+    amb.servico.prefs().registrar_sql(amb.caminho_banco(), "SELECT 1", None, None);
     // um recente além do banco aberto (que o menu não repete)
     let outro = amb.pasta().join("outro.db");
     criar_banco(&outro, "CREATE TABLE t (id INTEGER PRIMARY KEY);");

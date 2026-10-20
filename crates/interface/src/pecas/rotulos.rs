@@ -61,6 +61,21 @@ pub fn pintar_pill(ui: &Ui, rect: Rect, texto: &str, tipo: TipoPill) {
     painter.galley(pos, g, cor);
 }
 
+/// A pill só de contorno, para quando ela fica sobre um fundo que come o dela (o erro no item selecionado do
+/// Histórico, `.hist.on .pill.erro`): o fundo do documento (`--c`), o texto na cor da pill e o contorno de 1px na
+/// mesma cor a 60%.
+pub fn pintar_pill_contorno(ui: &Ui, rect: Rect, texto: &str, tipo: TipoPill) {
+    let p = paleta(ui);
+    let (cor, _) = cores_pill(p, tipo);
+    let painter = ui.painter();
+    let canto = pintura::canto(rect, f32::INFINITY);
+    painter.rect_filled(rect, canto, p.estudio.doc);
+    painter.rect_stroke(rect, canto, Stroke::new(1.0, cor.gamma_multiply(0.6)), StrokeKind::Inside);
+    let g = galley_pill(ui, texto, cor);
+    let pos = pos2(rect.center().x - g.size().x / 2.0, rect.center().y - g.size().y / 2.0);
+    painter.galley(pos, g, cor);
+}
+
 /// Tamanho de uma pill com este texto (`padding:1px 7px`, linha de 14px: 16px de altura).
 pub fn tamanho_pill(ui: &Ui, texto: &str) -> egui::Vec2 {
     let g = galley_pill(ui, texto, Color32::PLACEHOLDER);

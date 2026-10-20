@@ -109,7 +109,7 @@
 //!
 //! Reexportados para a tela não precisar procurar: `Formato`, `Opcoes` (exportar), `FiltroExportacao`,
 //! `ResultadoManutencao`, `AcaoManutencao`, `CopiaFeita` (banco), `ColunaDef` (ddl), `Tema`, `Mudanca`,
-//! `MudancaExportacao`, `MudancaAparencia`, `Aparencia`, `CoresCodigo`, `PrefsInfo`, `ComandoSql` (prefs).
+//! `MudancaExportacao`, `MudancaAparencia`, `Aparencia`, `CoresCodigo`, `PrefsInfo`, `ComandoSql`, `ResultadoSql` (prefs).
 //!
 //! # Regras que quem chama precisa saber
 //!
@@ -279,11 +279,13 @@ pub use tipos::{AppInfo, BlobSalvo, EstadoApp, Gravado, RespostaEsquema, ResumoE
 pub use banco::{AcaoManutencao, CopiaFeita, FiltroExportacao, ResultadoManutencao};
 pub use ddl::ColunaDef;
 pub use exportar::{Formato, Opcoes};
-pub use prefs::{Aparencia, ComandoSql, CoresCodigo, Mudanca, MudancaAparencia, MudancaExportacao, PrefsInfo, Tema};
+pub use prefs::{
+    Aparencia, ComandoSql, CoresCodigo, Mudanca, MudancaAparencia, MudancaExportacao, PrefsInfo, ResultadoSql, Tema,
+};
 
 /// A resposta de `manutencao` (`{acao, ok, mensagens, tamanho_antes, tamanho_depois}`).
 pub type RespostaManutencao = ResultadoManutencao;
-/// Um item do histórico da Consulta SQL (`{sql, quando}`).
+/// Um item do histórico da Consulta SQL (`{sql, quando, resultado, comandos}`).
 pub type ItemHistorico = ComandoSql;
 
 /// O nome do aplicativo ("DataBox"), o de `comum::app`.
