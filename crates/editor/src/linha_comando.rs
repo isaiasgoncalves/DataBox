@@ -77,7 +77,7 @@ pub enum Comando {
     Executar(Argumentos),
     /// `-h`, `--ajuda`, `--help`: mostra [`AJUDA`] e sai.
     Ajuda,
-    /// `--versao`, `--version`: mostra "DataBox 0.1.2" e sai.
+    /// `--versao`, `--version`: mostra "DataBox 0.2.0" e sai.
     Versao,
 }
 

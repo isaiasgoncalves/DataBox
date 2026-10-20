@@ -5,6 +5,8 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+## [0.2.0] - 2026-10-20
+
 ### Alterado
 
 - O Histórico de consultas guarda também as execuções que falharam ou foram interrompidas: a consulta que falhou é
@@ -89,7 +91,8 @@ Primeira versão pública.
   painéis redimensionáveis, Preferências, atalhos do teclado e acessibilidade (AccessKit).
 - Executável único, `DataBox.exe`, sem instalação; `--criar-atalho` para os atalhos do Windows.
 
-[Não lançado]: ../../compare/v0.1.2...HEAD
+[Não lançado]: ../../compare/v0.2.0...HEAD
+[0.2.0]: ../../compare/v0.1.2...v0.2.0
 [0.1.2]: ../../compare/v0.1.1...v0.1.2
 [0.1.1]: ../../compare/v0.1.0...v0.1.1
 [0.1.0]: ../../releases/tag/v0.1.0

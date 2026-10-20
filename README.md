@@ -35,7 +35,7 @@
 **DataBox** is a free, open-source data toolbox for data scientists, data engineers and developers. It is a Windows
 desktop app that opens, shows and edits everyday data files: **SQLite** databases, whole folders with their data
 files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). The UI is drawn straight on the GPU with
-[egui](https://github.com/emilk/egui), in Rust. Current version: **0.1.2**.
+[egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.0**.
 
 > The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now (the full guide is
 > [README.pt-BR.md](README.pt-BR.md)). An English UI is on the roadmap; contributions are welcome.
