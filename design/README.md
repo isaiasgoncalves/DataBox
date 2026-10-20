@@ -11,32 +11,74 @@ referência visual; o crate `interface` é a implementação em egui.
 
 | Pasta | Conteúdo |
 |---|---|
-| `canvas/` | As 17 pranchetas (`*.dc.html`) e o `canvas.json`. São páginas do formato de canvas de design: só abrem completas dentro do canvas (dependem do `support.js` dele), mas o HTML, o CSS (tokens e componentes) e o SVG de cada ícone estão inteiros e servem de fonte para a implementação. |
+| `canvas/` | As 22 pranchetas (`*.dc.html`) e o `canvas.json`, publicados no [canvas do DataBox](https://claude.ai/artifact/TCdgEPdRzEzWEmC6XTJVu9) em quatro páginas: Fundamentos, Telas, Janelas e estados, Telas futuras. São páginas do formato de canvas de design: só abrem completas dentro do canvas (dependem do `support.js` dele), mas o HTML, o CSS (tokens e componentes) e o SVG de cada ícone estão inteiros e servem de fonte para a implementação. |
 | `icones/` | Os ícones do app em SVG autônomo: `<nome>.svg` (o desenho de até 24 px) e `<nome>-grande.svg` (o de 48), e as silhuetas da barra em `sil/`. São a fonte dos PNG de `crates/interface/assets/icones` (ver `icones_app.py`, abaixo). |
 | `logo/` | `databox.svg` (o logo, sempre o completo) e `databox-simples.svg` (a versão simplificada, **fora de uso** desde 17/10/2026, só como registro), em viewBox 512 e sem dependências. Em `fragmentos/` ficam os pedaços que os geradores embutem nas pranchetas. |
 | `ferramentas/` | Os geradores em Python que montam o logo, os ícones e as pranchetas que ainda se refazem. Só biblioteca padrão. |
 
 ### As pranchetas
 
-| # | Arquivo | Tela |
+Organizadas em páginas do canvas (`pages` no `canvas.json`). A antiga 14 (`TrilhoOpcoes.dc.html`, as opções do trilho)
+saiu em 19/10/2026 junto com o trilho.
+
+| Página | Arquivo | O que mostra |
 |---|---|---|
-| 1 | `Main.dc.html` | Pasta aberta, aba Visão geral do banco (escuro) |
-| 2 | `Dados.dc.html` | Aba clientes · Dados, com filtro (escuro) |
-| 3 | `Consulta.dc.html` | Aba Consulta 1, Histórico à esquerda (escuro) |
-| 4 | `Inicio.dc.html` | Início sem pasta, menu Arquivo aberto (escuro) |
-| 5 | `Exportar.dc.html` | Janela Exportar (escuro) |
-| 6 | `DadosClaro.dc.html` | Aba clientes · Estrutura, transação aberta (claro) |
-| 7 | `Csv.dc.html` | Editor tabular de CSV (escuro) |
-| 8 | `Json.dc.html` | Editor de texto com JSON (claro) |
-| 9 | `Icones.dc.html` | A biblioteca: ícones sólidos (arquivos, objetos, tipos, estados, aplicativo, outros bancos e gráficos), as silhuetas da barra de ferramentas e os glifos de traço. Todo ícone que aparece numa prancheta está nela |
-| 10 | `Logo.dc.html` | Logo: completo, pequenos em tamanho real, fundo claro com o nome, tamanhos e em uso (só o completo, em todos os tamanhos) |
-| 11 | `LogoEditavel.dc.html` | Logo em camadas soltas, posicionadas à mão (a fonte do logo final) |
-| 12 | `Janelas.dc.html` | As três janelas pesadas: a da linha (a ficha de produtos P003, com BLOB, NULL e coluna gerada), Alterar a coluna e Nova tabela (escuro) |
-| 13 | `Preferencias.dc.html` | Preferências (Arquivo > Preferências, Ctrl+,) na seção Aparência — tema, cores do código, fonte do código — e Sobre o DataBox (Ajuda > Sobre o DataBox, licença MIT) (escuro) |
-| 14 | `TrilhoOpcoes.dc.html` | As opções A e B de ícones sólidos para o trilho, no escuro e no claro; escolhida em 16/10/2026 a B com a casa nova |
-| 15 | `Estados.dc.html` | Estados a implementar: consulta executando (com Interromper), JSON inválido, fechar aba alterada, coluna nova no CSV, Histórico vazio, linhas marcadas e menu da coluna no CSV, Copiar caminho e a ficha só leitura (escuro) |
-| 16 | `Colunas.dc.html` | Copiar, colar e trazer colunas: o menu do cabeçalho do CSV com os itens novos, a cola com filtro, as quantidades diferentes, a janela Trazer colunas e o depois de trazer (escuro) |
-| 17 | `Planilha.dc.html` | A planilha do Excel, só leitura: a planilha aberta (faixa de contexto, grade com letras, mescla, painéis congelados, faixa das planilhas, rodapé e Propriedades), muitas planilhas com a lista, a planilha grande lendo, os erros na ficha e a tela sem planilha à vista, o Trazer colunas com origem numa planilha e o menu do cabeçalho (escuro) |
+| Fundamentos | `Regras.dc.html` | Anatomia da janela, cores (tokens), medidas e tipografia, e os padrões com exemplos de sim e não |
+| Fundamentos | `Componentes.dc.html` | Botões, botões de ícone, seleção, campos, etiquetas, peças de dados, abas, menu, grade e mensagens |
+| Fundamentos | `Icones.dc.html` | A biblioteca: ícones sólidos, silhuetas da barra e glifos de traço. Todo ícone de uma prancheta está nela |
+| Fundamentos | `Logo.dc.html` · `LogoEditavel.dc.html` | O logo (só o completo, todos os tamanhos) e a fonte dele em camadas soltas |
+| Telas | `Main.dc.html` | Visão geral do banco, docas com abas, menu Exibir aberto (escuro) |
+| Telas | `Inicio.dc.html` | Início sem pasta, botões "Painéis", menu Arquivo aberto (escuro) |
+| Telas | `Dados.dc.html` | Tabela clientes: grade com filtro, colunas nas Propriedades, menu Tabela aberto (escuro) |
+| Telas | `DadosClaro.dc.html` | clientes com as Propriedades em janela própria, transação aberta (claro) |
+| Telas | `Consulta.dc.html` | Consulta 1 com o Histórico na doca e o menu Banco aberto (escuro) |
+| Telas | `Csv.dc.html` · `Json.dc.html` | Editor tabular de CSV (escuro) e editor de texto com JSON (claro) |
+| Telas | `Planilha.dc.html` | A planilha do Excel, só leitura, e os seus estados (escuro) |
+| Janelas e estados | `Exportar.dc.html` · `Janelas.dc.html` · `Preferencias.dc.html` | Exportar; a ficha da linha, Alterar a coluna e Nova tabela; Preferências e Sobre |
+| Janelas e estados | `Estados.dc.html` | Consulta executando e vazia, JSON inválido, fechar aba alterada, coluna nova e linhas marcadas no CSV, Histórico vazio, Copiar caminho, Desfazer no banco, ficha só leitura |
+| Janelas e estados | `Colunas.dc.html` · `DadosArrastar.dc.html` | Copiar, colar e trazer colunas; arrastar a aba de um painel |
+| Telas futuras | `FuturoPerfil.dc.html` · `FuturoGrafico.dc.html` · `FuturoConexao.dc.html` | Do roadmap: perfil de colunas nas Propriedades, gráfico de uma consulta com Abrir no Python, conexão ao PostgreSQL |
+
+Revisão de UI de 19/10/2026 (uso do app pelo PO), já nas pranchetas; cada prancheta tocada ganhou blocos de CSS
+"revisão de UI de 19/10/2026" e de docas no fim do `<style>`:
+
+- **Painéis em docas** (1, 2, 2b, 3, 4, 6, 7, 8, 15, 17). A prancheta 14 (opções do trilho) fica como registro. Explorador, Histórico e Propriedades são painéis; cada um
+  mora num de três lugares: a doca da esquerda, a da direita ou uma janela própria do sistema. A doca troca o cabeçalho
+  fino (`.cab`) por uma fileira de abas no estilo das de documento (`.aba`, `.abas-doca`), na mesma altura delas. As
+  abas da esquerda (Explorador, Histórico) são só ícone (`.aba.so-ic`), com o nome na dica; a das Propriedades leva o
+  nome e o objeto ("Propriedades · exemplo.db"). As ações do painel e a silhueta "Destacar em janela" ficam na ponta
+  direita da fileira.
+- **Arrastar a aba de um painel** (2b): sobre uma doca, prende lá; fora da janela, abre janela própria; Esc cancela. A
+  posição de cada painel fica guardada.
+- **Janela própria** (6): acabamento das janelas do app (`.dlg`), com a aba do painel no cabeçalho (arrastá-la de volta
+  prende), a silhueta espelhada (prender de volta) e Fechar; segmentado na faixa; rodapé com as ações. Janela do sistema,
+  não modal. Na largura de janela o conteúdo usa a forma larga (a tabela de colunas); na doca, a compacta (a lista).
+- **Uma aba por objeto** (1, 2, 3, 6, 7, 8): o título da aba é só o objeto. As vistas da tabela (Resumo, Colunas,
+  Índices, SQL) ficam num segmentado no topo das Propriedades; o documento da tabela é só a grade, e a coluna escolhida
+  nas Propriedades acende na grade. "Todas as abas" (chevron) na ponta da fileira de documentos.
+- **Menus Banco e Tabela** na barra de menus, entre Exibir e Ajuda, quando houver banco aberto e tabela ativa (Banco
+  aberto na 3, Tabela na 2): no Banco, Visão geral, Nova consulta, Nova tabela, verificações, Otimizar, VACUUM, cópia de
+  segurança, Exportar, só leitura e Fechar; na Tabela, as vistas (Alt+2…4), Abrir na Consulta, Exportar, Copiar o
+  nome, Propriedades em janela própria, Nova linha/coluna/índice, Renomear e Excluir.
+- **Sem trilho, por enquanto**: com só três painéis, o trilho repetia as abas da doca. Ele sai de todas as telas e
+  volta quando houver mais recursos. Os atalhos dele ficam no Início (botões "Painéis": Explorador, Histórico de
+  consultas, Preferências) e nos menus (Exibir › Início, Alt+Home; Exibir › Explorador, Propriedades, Histórico;
+  Arquivo › Preferências).
+- **Abas de uma doca têm uma forma só**: todas só ícone (doca estreita, como a da esquerda) ou todas com nome (doca
+  larga, como a da direita); um painel preso numa doca adota a forma dela. Um fio (`.sep-doca`) separa as abas das
+  ações do painel.
+- **Explorador**: a tabela é uma folha (sem os filhos Dados, Estrutura, Índices, Definição SQL); as vistas ficam nas
+  Propriedades e no menu Tabela. Na Visão geral, o botão da linha é "Colunas".
+- **Janela própria**: Subir, Descer e Excluir aparecem só na coluna escolhida; a prancheta 6 mostra a janela fora da
+  janela principal, sobre a área de trabalho, para não parecer modal.
+- **Grade** (2, 7): seta de ordenação desenhada (`.seta-ord`); o CSV ganha a faixa com o formato em pílulas, a barra
+  de filtros, a coluna de marcar e o rodapé "Linhas a–b de n", como os Dados.
+- **Consulta** (3, 15): o Histórico mostra o resultado de cada execução em pílula, inclusive as falhas; estado novo
+  "Consulta vazia", com a dica em itálico e sugestões que inserem SQL.
+- **JSON inválido** (15): o motivo vira a faixa de erro (`.erro`, a da Consulta) com "Ir para o erro".
+- **Desfazer no banco** (15): desfaz a última edição de célula, com aviso e Ctrl+Z.
+- **Preferências e Sobre** (13): corpo de altura fixa (432 px); fonte do código "Padrão do sistema"; caminhos do Sobre
+  com corte e Copiar caminho (`.cam`).
 
 Pedidos de 15/10/2026 que valem para a implementação, além das pranchetas 12 a 14:
 
@@ -129,15 +171,14 @@ Da revisão crítica de 15/10/2026, aplicada às pranchetas (as que se refazem i
 De cima para baixo:
 
 1. **Barra de título integrada aos menus**, numa faixa só de 30 px na cor do fundo da janela: logo completo em
-   16 px, menus Arquivo, Editar, Exibir e Ajuda, título centralizado em `--t3` ("pasta · DataBox") e os botões
+   16 px, menus Arquivo, Editar, Exibir, Banco e Tabela (quando há banco e tabela ativos) e Ajuda, título centralizado em `--t3` ("pasta · DataBox") e os botões
    minimizar, maximizar e fechar (46 px cada). A janela não usa a barra do Windows; o espaço livre arrasta a janela
    e o duplo clique maximiza. Decidido em 14/10/2026.
 2. **Barra de ferramentas** num cabeçalho de vidro logo abaixo, com a busca à direita (Ctrl+F).
 3. **Corpo:**
-   - **Barra de ícones** à esquerda, só com Início, Explorador e Histórico, e as Preferências no pé.
-   - **Painel Explorador.**
-   - **Documento com abas** no centro.
-   - **Painel Propriedades** à direita.
+   - **Doca da esquerda** (Explorador e Histórico, abas só ícone). Sem barra de ícones desde 19/10/2026.
+   - **Documento com abas** no centro, uma aba por objeto.
+   - **Doca da direita** (Propriedades, aba com nome e objeto).
 4. **Barra de status.**
 
 - **Painéis laterais redimensionáveis** (desde 17/10/2026).
@@ -163,10 +204,8 @@ De cima para baixo:
     primária de texto bateria em UNIQUE e o BLOB não seria copiado). A dica sempre diz o alvo.
   - **Exportar** é um botão de ícone como os outros. A dica diz o que vai ser exportado ("Exportar clientes",
     "Exportar o banco"), e o botão fica desligado quando não há o que exportar.
-- **Abas de documento:** "exemplo.db · Visão geral", "clientes · Dados", "clientes · Estrutura", "Consulta 1",
-  "vendas_2025.csv", "config.json".
-  - No Explorador, cada tabela tem os filhos Dados, Estrutura, Índices e gatilhos e Definição SQL, e cada um abre
-    na sua aba.
+- **Abas de documento:** "exemplo.db", "clientes", "Consulta 1", "vendas_2025.csv", "config.json": uma por objeto
+  (19/10/2026). As vistas da tabela ficam nas Propriedades e no menu Tabela; no Explorador, a tabela é uma folha.
   - A aba ativa e a faixa logo abaixo dela formam **uma superfície só**, com a textura e o degradê dos botões. Os
     cabeçalhos de grade e de painel usam a mesma textura.
   - A aba ativa **não** tem barrinha colorida em cima.
@@ -175,8 +214,8 @@ De cima para baixo:
   - no meio, o conteúdo;
   - nas grades, um rodapé com contagem e páginas.
 - **Menus:** Exibir › Tema (Seguir o Windows, Claro, Escuro) e mostrar Explorador, Propriedades e Histórico;
-  Ajuda › Atalhos do teclado. Tema e atalhos não ficam na barra de ícones.
-- **Formato do CSV** fica no painel Propriedades, não numa faixa sempre visível: seção "Formato" (Separador,
+  Ajuda › Atalhos do teclado; Exibir › Início (Alt+Home).
+- **Formato do CSV**: resumo em pílulas na faixa do documento (separador, codificação, fim de linha); o detalhe e a troca ficam nas Propriedades: seção "Formato" (Separador,
   Decimal, Codificação, Fim de linha, "Primeira linha é o cabeçalho") e seção "Arquivo" (caminho, tamanho,
   modificado em).
 - **Textos:**
@@ -191,8 +230,8 @@ De cima para baixo:
 ## Superfícies, volume e efeitos
 
 - **Fundo liso**, sem brilhos.
-- **Painéis fixos sólidos**, um tom acima do fundo: barra de menus e ferramentas, barra de ícones, Explorador,
-  Propriedades e status. Têm realce de 1 px em cima e sombra curta.
+- **Painéis fixos sólidos**, um tom acima do fundo: barra de menus e ferramentas, docas (Explorador,
+  Propriedades) e barra de status. Têm realce de 1 px em cima e sombra curta.
 - **Vidro só onde há sobreposição, e em toda sobreposição:** todo elemento que fica por cima de outro tem o efeito
   de transparência da barra de menus (pedido de 17/10/2026): menus e submenus, menus de contexto, listas de opções e
   sugestões, popovers, dicas, janelas e o aviso flutuante. Nas pranchetas é a classe `.flut` (o `--flut` com o
@@ -212,7 +251,7 @@ De cima para baixo:
     o desfoque ficou como estava.
 - As camadas flutuantes ficam sempre acima da barra de abas.
 - **Botões:**
-  - Em pílula; os só de ícone e os da barra de ícones são redondos.
+  - Em pílula; os só de ícone são redondos.
   - Volume:
     - degradê de cima para baixo;
     - realce claro na borda de cima e sombra interna embaixo;
@@ -279,7 +318,7 @@ folha, com `--painel`, é o que vale para as superfícies). Os principais:
 
 São três famílias, desenhadas na grade de 48 e usadas em 48, 24 e 16 px.
 
-1. **Silhuetas cheias**, para ferramentas e ações: barra de ferramentas, barra de ícones, cabeçalho do Explorador
+1. **Silhuetas cheias**, para ferramentas e ações: barra de ferramentas, fileira de abas das docas
    e ações nas Propriedades.
    - Pasta, arquivo e duplicar usam dois tons.
    - Salvar, Nova linha, Excluir, Buscar e Painel têm recortes vazados.
