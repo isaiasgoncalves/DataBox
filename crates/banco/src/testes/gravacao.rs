@@ -205,6 +205,51 @@ fn atualizar_padrao_e_erro_manter_pula() {
     assert_eq!(r.chave, Some(Chave::Rowid(1)));
 }
 
+/// O Desfazer da grade (prancheta 15): o valor de antes volta só se a célula ainda tem o que a edição gravou; NULL e
+/// número voltam com o tipo de antes; só leitura, texto cortado e linha que sumiu não gravam nada.
+#[test]
+fn desfazer_celula_so_com_o_valor_gravado() {
+    let ex = exemplo("desfazer-celula");
+    let b = &ex.banco;
+    let um = Chave::Rowid(1);
+    let antes = b.linha("clientes", &um).unwrap().valor("cidade").cloned().unwrap();
+    let gravado = b.atualizar("clientes", &um, &vals(&[("cidade", tx("Natal"))])).unwrap().linha.unwrap()[3].clone();
+    assert_eq!(gravado, ct("Natal"));
+
+    // outro comando mudou a célula depois: 409 e ela fica como está
+    b.atualizar("clientes", &um, &vals(&[("cidade", tx("Recife"))])).unwrap();
+    let e = erro(b.desfazer_celula("clientes", &um, "cidade", &gravado, &antes));
+    assert_eq!((e.status, e.mensagem.as_str()), (409, crate::MSG_CELULA_MUDOU));
+    assert_eq!(b.linha("clientes", &um).unwrap().valor("cidade"), Some(&ct("Recife")));
+
+    // com o valor gravado na célula, ele volta
+    b.atualizar("clientes", &um, &vals(&[("cidade", tx("Natal"))])).unwrap();
+    let r = b.desfazer_celula("clientes", &um, "cidade", &gravado, &antes).unwrap();
+    assert_eq!((r.chave, r.linha.unwrap()[3].clone()), (Some(um.clone()), antes.clone()));
+
+    // NULL e número voltam como eram (o texto "154,03" não passa pela coerção da digitação)
+    let r = b.atualizar("clientes", &um, &vals(&[("cidade", Entrada::Nulo), ("limite", tx("7"))])).unwrap();
+    let linha = r.linha.unwrap();
+    b.desfazer_celula("clientes", &um, "cidade", &linha[3], &antes).unwrap();
+    b.desfazer_celula("clientes", &um, "limite", &linha[4], &Celula::Real(154.03)).unwrap();
+    let r = b.desfazer_celula("clientes", &um, "email", &ct("lucas.1@example.test"), &Celula::Nulo).unwrap();
+    let linha = r.linha.unwrap();
+    assert_eq!((&linha[2], &linha[3], &linha[4]), (&Celula::Nulo, &antes, &Celula::Real(154.03)));
+
+    // a PK editada volta, e a chave da resposta é a de antes
+    let novo = b.inserir("clientes", &vals(&[("nome", tx("Provisório"))])).unwrap().chave.unwrap();
+    let id = rowid(&Some(novo.clone()));
+    let r = b.atualizar("clientes", &novo, &vals(&[("id", Entrada::Inteiro(9001))])).unwrap();
+    let r = b.desfazer_celula("clientes", &r.chave.unwrap(), "id", &ci(9001), &ci(id)).unwrap();
+    assert_eq!(r.chave, Some(novo));
+
+    let cortado = Celula::TextoCortado { inicio: "x".into(), tamanho: 900 };
+    assert_eq!(erro(b.desfazer_celula("clientes", &um, "nome", &ct("y"), &cortado)).status, 400);
+    assert_eq!(erro(b.desfazer_celula("clientes", &Chave::Rowid(9999), "cidade", &ct("y"), &antes)).status, 404);
+    let ro = exemplo_ro("desfazer-ro");
+    assert_eq!(erro(ro.banco.desfazer_celula("clientes", &um, "cidade", &antes, &ct("x"))).status, 403);
+}
+
 #[test]
 fn atualizar_linha_que_sumiu() {
     let ex = exemplo("sumiu");

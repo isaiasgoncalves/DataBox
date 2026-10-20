@@ -965,6 +965,29 @@ fn toast_com_acao_tem_o_botao_dentro_e_devolve_a_carga_uma_vez() {
     assert!(toast_atual(&h.ctx).is_none(), "cumprida a ação, o toast sai");
 }
 
+/// O toast com ação por outro prazo (o "Desfazer · Ctrl+Z" da gravação no banco, 6 s na prancheta 15): à vista
+/// até o prazo e fora depois da saída.
+#[test]
+fn toast_com_acao_por_um_prazo() {
+    use interface::pecas::toast::{AcaoToast, rotulo_da_acao_do_toast, toast_concluido_com_acao_por};
+    let mut h = harness((), |ui, _| desenhar_toast(ui.ctx(), f32::INFINITY));
+    h.input_mut().time = Some(0.0);
+    h.step();
+    toast_concluido_com_acao_por(
+        &h.ctx,
+        "Gravado em clientes (linha 3, email)",
+        AcaoToast { rotulo: "Desfazer · Ctrl+Z".into(), carga: "desfazer".into() },
+        6.0,
+    );
+    h.input_mut().time = Some(5.9);
+    h.step();
+    assert_eq!(rotulo_da_acao_do_toast(&h.ctx).as_deref(), Some("Desfazer · Ctrl+Z"));
+    h.input_mut().time = Some(6.5);
+    h.step();
+    assert!(toast_atual(&h.ctx).is_none(), "passado o prazo e a saída, o toast some");
+    h.input_mut().time = None;
+}
+
 #[test]
 fn toast_tem_os_recuos_das_pranchetas() {
     use interface::pecas::toast::rect_toast;

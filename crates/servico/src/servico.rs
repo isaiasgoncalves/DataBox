@@ -11,7 +11,7 @@ use banco::{
     AcaoManutencao, Banco, BancoInfo, Contagem, CopiaFeita, Filtro, Interrupcao, LinhaCompleta, LinhaGravada,
     ObjetosInfo, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, ResultadoManutencao, TipoObjeto,
 };
-use comum::{Chave, Codigo, Entrada, ErroBanco, Resultado};
+use comum::{Celula, Chave, Codigo, Entrada, ErroBanco, Resultado};
 use prefs::{ComandoSql, Mudanca, MudancaExportacao, Preferencias, PrefsInfo, ResultadoSql, Tema};
 
 use crate::arquivos::{ComandoArquivo, comando_abrir, comando_revelar};
@@ -478,6 +478,23 @@ impl Servico {
     ) -> Resultado<Gravado<LinhaGravada>> {
         let banco = self.banco_aberto(banco_id)?;
         let resultado = banco.atualizar(nome, chave, valores)?;
+        Ok(Gravado { resultado, transacao_aberta: banco.transacao_aberta() })
+    }
+
+    /// O Desfazer da edição de uma célula na grade: grava `antigo` de volta só se a célula ainda tem `gravado` (ver
+    /// [`banco::Banco::desfazer_celula`]: 409 [`banco::MSG_CELULA_MUDOU`] se ela mudou depois). Numa transação
+    /// aberta na Consulta SQL o UPDATE entra nela, como a edição.
+    pub fn desfazer_celula(
+        &self,
+        banco_id: &str,
+        nome: &str,
+        chave: &Chave,
+        coluna: &str,
+        gravado: &Celula,
+        antigo: &Celula,
+    ) -> Resultado<Gravado<LinhaGravada>> {
+        let banco = self.banco_aberto(banco_id)?;
+        let resultado = banco.desfazer_celula(nome, chave, coluna, gravado, antigo)?;
         Ok(Gravado { resultado, transacao_aberta: banco.transacao_aberta() })
     }
 

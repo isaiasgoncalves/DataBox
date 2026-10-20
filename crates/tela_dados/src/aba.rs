@@ -26,11 +26,17 @@ use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::popover::Popover;
 use interface::pecas::rotulos::{chip_filtro, pill};
 use interface::pecas::texto::{galley_tit, texto as texto_simples};
-use interface::pecas::toast::{toast, toast_concluido, toast_erro};
+use interface::pecas::toast::{
+    AcaoToast, acao_do_toast, devolver_acao_do_toast, toast, toast_concluido, toast_concluido_com_acao_por, toast_erro,
+};
 use interface::tema::paleta;
 use servico::{BlobSalvo, Gravado};
 
 use crate::Ganchos;
+use crate::desfazer::{
+    self, DICA_EXCLUIR, DICA_INCLUIR, Desfazivel, PRAZO_TOAST, ROTULO_ACAO, Situacao, UltimaEdicao, frase_desfeito,
+    frase_gravado,
+};
 use crate::grade::{GradeDados, Pendente, Pintor, Piscada, preparar_edicao};
 use crate::janela::{AcaoJanela, AvisoJanela, JanelaLinha, ModoJanela};
 use crate::modelo::{
@@ -78,7 +84,15 @@ struct GravacaoCelula {
     linha: usize,
     coluna: usize,
     nome_coluna: String,
+    /// O valor de antes da edição (o Desfazer o grava de volta).
+    original: Celula,
     foco: bool,
+    promessa: Promessa<Gravado<LinhaGravada>>,
+}
+
+/// O Desfazer da última edição, a caminho do banco.
+struct Desfazendo {
+    edicao: UltimaEdicao,
     promessa: Promessa<Gravado<LinhaGravada>>,
 }
 
@@ -187,6 +201,8 @@ pub struct Retrato {
     pub filtros: usize,
     /// O popover da condição está aberto.
     pub condicao_aberta: bool,
+    /// O Desfazer da última edição está a caminho do banco.
+    pub desfazendo: bool,
 }
 
 /// A aba Dados de uma tabela ou visão.
@@ -243,6 +259,15 @@ pub struct AbaDados {
     pergunta: Option<Pergunta>,
     exclusao: Option<Promessa<Gravado<usize>>>,
     opcoes_por_pagina: Vec<(u64, String)>,
+
+    /// A impressão da estrutura da tabela ([`desfazer::estrutura_de`]): mudou, o Desfazer desliga.
+    estrutura: u64,
+    /// O registro do Desfazer como estava no começo do quadro (as ofertas o leem sem o contexto do egui).
+    desfazivel: Option<Desfazivel>,
+    desfazendo: Option<Desfazendo>,
+    /// A aba está à vista neste quadro (fora dela, o toast da gravação vai sem a ação: um clique nele não acharia
+    /// a aba).
+    em_vista: bool,
 
     ganchos: Ganchos,
     substituidas: usize,
@@ -337,6 +362,10 @@ impl AbaDados {
             pergunta: None,
             exclusao: None,
             opcoes_por_pagina,
+            estrutura: desfazer::estrutura_de(info),
+            desfazivel: None,
+            desfazendo: None,
+            em_vista: false,
             ganchos: Ganchos::default(),
             substituidas: 0,
         }
@@ -377,6 +406,9 @@ impl AbaDados {
             self.carregar();
         }
         self.sincronizar_rota(tabela);
+        self.desfazivel = desfazer::ler(&ectx);
+        self.em_vista = true;
+        self.acao_do_toast(&ectx, ctx);
         self.receber(&ectx, ctx, tabela, agora);
         self.temporizadores(&ectx, ctx, tabela, agora);
         // o foco pedido no quadro anterior vai para um campo que este quadro desenha (pedir o foco de algo que
@@ -554,6 +586,7 @@ impl AbaDados {
         self.receber_abertura(ectx, ctx, tabela);
         self.receber_janela(ectx, ctx, tabela, agora);
         self.receber_exclusao(ectx, ctx, tabela);
+        self.receber_desfazer(ectx, ctx, agora);
     }
 
     fn receber_pagina(&mut self, ectx: &egui::Context, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
@@ -1438,6 +1471,7 @@ impl AbaDados {
             linha: ed.linha,
             coluna: ed.coluna,
             nome_coluna,
+            original: ed.original,
             foco,
             promessa,
         });
@@ -1454,10 +1488,26 @@ impl AbaDados {
             let aqui = self.dados.as_ref().is_some_and(|d| d.geracao == g.geracao);
             match r {
                 Ok(gravado) => {
-                    // dentro de um BEGIN aberto na Consulta SQL a célula pisca igual, mas o arquivo só muda com o COMMIT
-                    let frase = ctx.aviso_de_gravacao(gravado.transacao_aberta, "");
-                    if !frase.is_empty() {
-                        toast_concluido(ectx, frase);
+                    // o toast diz onde gravou e oferece o Desfazer; dentro de um BEGIN aberto na Consulta SQL a célula
+                    // pisca igual, mas o arquivo só muda com o COMMIT
+                    match self.registrar_edicao(ectx, ctx, &g, &gravado) {
+                        Some(u) => {
+                            let frase = frase_gravado(&u.tabela, &u.chave, &u.coluna);
+                            let frase = ctx.aviso_de_gravacao(gravado.transacao_aberta, &frase);
+                            if self.em_vista {
+                                let carga = desfazer::carga(u.serial);
+                                let acao = AcaoToast { rotulo: ROTULO_ACAO.to_string(), carga };
+                                toast_concluido_com_acao_por(ectx, frase, acao, PRAZO_TOAST);
+                            } else {
+                                toast_concluido(ectx, frase);
+                            }
+                        }
+                        None => {
+                            let frase = ctx.aviso_de_gravacao(gravado.transacao_aberta, "");
+                            if !frase.is_empty() {
+                                toast_concluido(ectx, frase);
+                            }
+                        }
                     }
                     if aqui {
                         self.aplicar_gravacao(g.linha, gravado.resultado, &[g.coluna], agora);
@@ -1540,6 +1590,121 @@ impl AbaDados {
         }
     }
 
+    // ------------------------------------------------------------------ desfazer no banco
+
+    /// Guarda a edição que acabou de gravar como a última (o Desfazer a volta); sem a linha relida (um gatilho a
+    /// tirou do lugar) não há o que desfazer. Devolve o registro novo.
+    fn registrar_edicao(
+        &self,
+        ectx: &egui::Context,
+        ctx: &Contexto,
+        g: &GravacaoCelula,
+        gravado: &Gravado<LinhaGravada>,
+    ) -> Option<UltimaEdicao> {
+        let r = &gravado.resultado;
+        let novo = r.chave.clone().zip(r.linha.as_ref().and_then(|l| l.get(g.coluna)).cloned());
+        let Some((chave, valor)) = novo else {
+            desfazer::guardar(ectx, None);
+            return None;
+        };
+        let u = UltimaEdicao {
+            serial: desfazer::proximo_serial(),
+            banco_id: ctx.banco_id(),
+            tabela: self.nome.clone(),
+            estrutura: self.estrutura,
+            transacao: gravado.transacao_aberta,
+            chave,
+            coluna: g.nome_coluna.clone(),
+            antigo: g.original.clone(),
+            gravado: valor,
+        };
+        desfazer::guardar(ectx, Some(Desfazivel::Edicao(u.clone())));
+        Some(u)
+    }
+
+    /// A última mudança desta tabela não se desfaz (excluir, incluir): o Desfazer desliga com a dica.
+    fn bloquear_desfazer(&self, ectx: &egui::Context, ctx: &Contexto, dica: &'static str) {
+        let registro = Desfazivel::Bloqueado { banco_id: ctx.banco_id(), tabela: self.nome.clone(), dica };
+        desfazer::guardar(ectx, Some(registro));
+    }
+
+    /// O Desfazer desta aba agora, pelo registro do começo do quadro.
+    fn situacao_desfazer(&self, estado: &estado::Estado) -> Situacao {
+        desfazer::situacao(
+            self.desfazivel.as_ref(),
+            &estado.banco_id(),
+            &self.nome,
+            self.estrutura,
+            estado.transacao_aberta(),
+        )
+    }
+
+    /// O "Desfazer · Ctrl+Z" do toast da gravação; a carga de outro (o CSV) volta para quem a espera.
+    fn acao_do_toast(&mut self, ectx: &egui::Context, ctx: &mut Contexto) {
+        let Some(carga) = acao_do_toast(ectx) else { return };
+        match desfazer::serial_da_carga(&carga) {
+            Some(serial) => self.desfazer(ectx, ctx, Some(serial)),
+            None => devolver_acao_do_toast(ectx, carga),
+        }
+    }
+
+    /// Desfaz a última edição de célula: grava o valor de antes com um UPDATE, se a célula ainda tem o que a
+    /// edição gravou. Só com o Desfazer ligado (nesta tabela, sem gravação na fila) e, vindo do toast, só a edição
+    /// que ele anunciou. Não há Refazer: o registro sai.
+    fn desfazer(&mut self, ectx: &egui::Context, ctx: &Contexto, serial: Option<u64>) {
+        if self.desfazendo.is_some() || !self.gravacoes.is_empty() || !self.grava(ctx.estado) {
+            return;
+        }
+        let registro = desfazer::ler(ectx);
+        let ligado = matches!(
+            desfazer::situacao(
+                registro.as_ref(),
+                &ctx.banco_id(),
+                &self.nome,
+                self.estrutura,
+                ctx.estado.transacao_aberta()
+            ),
+            Situacao::Ligado(_)
+        );
+        let Some(Desfazivel::Edicao(u)) = registro.filter(|_| ligado) else { return };
+        if serial.is_some_and(|s| s != u.serial) {
+            return;
+        }
+        desfazer::guardar(ectx, None);
+        self.desfazivel = None;
+        let e = u.clone();
+        let promessa =
+            ctx.tarefa(ectx, move |s, id| s.desfazer_celula(id, &e.tabela, &e.chave, &e.coluna, &e.gravado, &e.antigo));
+        self.desfazendo = Some(Desfazendo { edicao: u, promessa });
+        ectx.request_repaint();
+    }
+
+    fn receber_desfazer(&mut self, ectx: &egui::Context, ctx: &mut Contexto, agora: f64) {
+        let Some(r) = self.desfazendo.as_mut().and_then(|d| d.promessa.tomar()) else { return };
+        let Some(Desfazendo { edicao: u, .. }) = self.desfazendo.take() else { return };
+        match r {
+            Ok(g) => {
+                let frase = frase_desfeito(&u.tabela, &u.chave, &u.coluna);
+                let frase = ctx.aviso_de_gravacao(g.transacao_aberta, &frase);
+                toast_concluido(ectx, frase);
+                // a célula na página volta e pisca, se a linha está nela
+                let lugar = self.dados.as_ref().and_then(|d| {
+                    let l = d.linha_da_chave(&chave_texto(&u.chave))?;
+                    let c = d.colunas.iter().position(|c| c.nome == u.coluna)?;
+                    Some((l, c))
+                });
+                if let Some((l, c)) = lugar {
+                    self.aplicar_gravacao(l, g.resultado, &[c], agora);
+                }
+            }
+            Err(e) => {
+                if ctx.reagir(&e) == Reacao::Mostrar {
+                    toast_erro(ectx, e.mensagem);
+                }
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ marcação e exclusão
 
     fn excluir_marcadas(&mut self) {
@@ -1569,6 +1734,7 @@ impl AbaDados {
             Ok(g) => {
                 self.marcadas.limpar();
                 self.selecao_mudou = true;
+                self.bloquear_desfazer(ectx, ctx, DICA_EXCLUIR);
                 let frase = format!("{}.", plural(g.resultado, "linha excluída", "linhas excluídas"));
                 let frase = ctx.aviso_de_gravacao(g.transacao_aberta, &frase);
                 toast_concluido(ectx, frase);
@@ -1836,6 +2002,12 @@ impl AbaDados {
                 if self.janela.as_ref().is_some_and(esta) {
                     self.janela = None;
                 }
+                // a ficha muda a linha inteira: incluir não se desfaz, e salvar troca a última edição de célula
+                if nova {
+                    self.bloquear_desfazer(ectx, ctx, DICA_INCLUIR);
+                } else {
+                    desfazer::guardar(ectx, None);
+                }
                 let frase =
                     ctx.aviso_de_gravacao(g.transacao_aberta, if nova { "Linha incluída." } else { "Linha salva." });
                 toast_concluido(ectx, frase);
@@ -1869,6 +2041,7 @@ impl AbaDados {
                 if self.janela.as_ref().is_some_and(esta) {
                     self.janela = None;
                 }
+                self.bloquear_desfazer(ectx, ctx, DICA_EXCLUIR);
                 let frase = ctx.aviso_de_gravacao(g.transacao_aberta, "Linha excluída.");
                 toast_concluido(ectx, frase);
                 self.pedir_foco_depois(ectx, None);
@@ -1928,6 +2101,7 @@ impl AbaDados {
             substituidas: self.substituidas,
             filtros: self.filtros.len(),
             condicao_aberta: self.condicao.is_some(),
+            desfazendo: self.desfazendo.is_some(),
         }
     }
 
@@ -2216,6 +2390,13 @@ impl estado::ParteTabela for AbaDados {
         if !self.grava(estado) {
             return o;
         }
+        let ocupado = self.desfazendo.is_some() || !self.gravacoes.is_empty();
+        let desfazer = match self.situacao_desfazer(estado) {
+            Situacao::Ligado(dica) => Oferta::ligada().ligada_se(!ocupado).com_dica(dica),
+            Situacao::Desligado(dica) => Oferta::default().com_dica(dica),
+            Situacao::Nada => Oferta::default(),
+        };
+        let o = o.com(Verbo::Desfazer, desfazer);
         // chamado a cada quadro: só a contagem das marcadas e, no máximo, uma chave (nenhuma cópia da lista)
         let marcadas = self.marcadas.len();
         let ativa = if marcadas == 0 { self.chave_da_ativa() } else { None };
@@ -2254,6 +2435,7 @@ impl estado::ParteTabela for AbaDados {
                 let ancora = self.rect_condicao.unwrap_or(Rect::ZERO);
                 self.abrir_condicao(None, ancora);
             }
+            Verbo::Desfazer => self.desfazer(egui, ctx, None),
             _ => {}
         }
         egui.request_repaint();
@@ -2268,6 +2450,8 @@ impl estado::ParteTabela for AbaDados {
     /// hora e notam a transação (item 6 do contrato).
     fn em_segundo_plano(&mut self, egui: &egui::Context, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
         let agora = egui.input(|i| i.time);
+        self.desfazivel = desfazer::ler(egui);
+        self.em_vista = false;
         self.receber(egui, ctx, tabela, agora);
         if self.selecao_mudou {
             self.selecao_mudou = false;

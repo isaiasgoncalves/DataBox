@@ -2100,11 +2100,12 @@ impl Editor {
     /// O clique na ação do toast da cópia de segurança ("Mostrar na pasta"): abre o Explorador de Arquivos no arquivo
     /// (nos testes, o gancho que recebe o caminho no lugar dele).
     /// As ações dos toasts dos documentos (o "Marcar as linhas sem par" do CSV, com a carga
-    /// `tela_csv::PREFIXO_ACAO_TOAST…`) voltam para o documento, que as lê no quadro seguinte.
+    /// `tela_csv::PREFIXO_ACAO_TOAST…`, e o "Desfazer · Ctrl+Z" da aba Dados, `tela_dados::PREFIXO_ACAO_TOAST…`)
+    /// voltam para o documento, que as lê no quadro seguinte.
     fn cumprir_acao_do_toast(&mut self, ctx: &egui::Context) {
         let Some(caminho) = acao_do_toast(ctx) else { return };
         #[cfg(feature = "telas")]
-        if caminho.starts_with(tela_csv::PREFIXO_ACAO_TOAST) {
+        if caminho.starts_with(tela_csv::PREFIXO_ACAO_TOAST) || caminho.starts_with(tela_dados::PREFIXO_ACAO_TOAST) {
             interface::pecas::toast::devolver_acao_do_toast(ctx, caminho);
             return;
         }
