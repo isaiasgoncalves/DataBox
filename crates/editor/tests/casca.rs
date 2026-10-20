@@ -2707,13 +2707,15 @@ fn verbos_de_cada_aba_e_os_da_casca() {
     assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
 
     // a Consulta SQL: só o Executar (Exportar fica em cada card); a Nova consulta da barra abre outra, vazia, com o
-    // Executar desligado até haver texto (a sugestão da Consulta vazia põe o SQL no editor)
+    // Executar desligado até haver texto (a sugestão da Consulta vazia põe o SQL no editor; o substituto não tem)
     clicar_primeiro(&mut h, Role::Button, "Nova consulta");
     assentar(&mut h);
     assert_eq!(rotulos_das_abas(&h).1, "Consulta 1");
-    assert!(!botao_ligado(&h, "Executar"));
-    clicar_primeiro(&mut h, Role::Link, "SELECT * FROM clientes LIMIT 100");
-    assentar(&mut h);
+    if telas {
+        assert!(!botao_ligado(&h, "Executar"));
+        clicar_primeiro(&mut h, Role::Link, "SELECT * FROM clientes LIMIT 100");
+        assentar(&mut h);
+    }
     assert!(botao_ligado(&h, "Executar") && !botao_ligado(&h, "Exportar") && !botao_ligado(&h, "Atualizar"));
 
     // o Início: nada da aba
