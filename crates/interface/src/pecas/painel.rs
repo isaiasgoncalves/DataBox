@@ -102,11 +102,41 @@ pub struct Painel<'a> {
     id: Id,
     titulo: &'a str,
     acoes: Option<Acoes<'a>>,
+    encaixe: Option<Encaixe>,
+}
+
+/// Onde mora um painel sem o `.cab` (revisão de UI de 19/10/2026): numa doca ([`crate::pecas::doca`]), com as ações na
+/// fileira de abas e o fio `.sep-doca` antes delas, ou numa janela própria, com as ações no rodapé, sem o fio.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Encaixe {
+    /// O lugar das ações (os botões de 20px, da direita para a esquerda); vazio, o painel não mostra as ações.
+    pub acoes: Rect,
+    /// Com o fio `.sep-doca` antes das ações.
+    pub fio: bool,
+}
+
+impl Encaixe {
+    /// Na fileira de uma doca ([`crate::pecas::doca::RespostaDoca::acoes`]).
+    pub fn doca(acoes: Rect) -> Encaixe {
+        Encaixe { acoes, fio: true }
+    }
+
+    /// No rodapé da janela própria.
+    pub fn janela(acoes: Rect) -> Encaixe {
+        Encaixe { acoes, fio: false }
+    }
 }
 
 impl<'a> Painel<'a> {
     pub fn new(id_salt: impl std::hash::Hash + std::fmt::Debug, titulo: &'a str) -> Self {
-        Painel { id: Id::new(("databox::painel", id_salt)), titulo, acoes: None }
+        Painel { id: Id::new(("databox::painel", id_salt)), titulo, acoes: None, encaixe: None }
+    }
+
+    /// O painel mora numa doca ou numa janela própria ([`Encaixe`]): quem chama já pintou a superfície e dá ao
+    /// `Ui` só o corpo. Sem o `.cab`, as ações vão para o lugar do encaixe; o nome do painel é o da aba dele.
+    pub fn encaixe(mut self, encaixe: Encaixe) -> Self {
+        self.encaixe = Some(encaixe);
+        self
     }
 
     /// As ações à direita do título (os [`Botao::do_cabecalho`] de 20px com 2px entre eles: Abrir pasta, Recolher
@@ -120,6 +150,9 @@ impl<'a> Painel<'a> {
 
     /// Desenha o painel e o corpo (`corpo` recebe o `Ui` do espaço embaixo do cabeçalho, recortado no painel).
     pub fn mostrar<R>(self, ui: &mut Ui, corpo: impl FnOnce(&mut Ui) -> R) -> R {
+        if let Some(e) = self.encaixe {
+            return self.mostrar_encaixado(ui, e.acoes, e.fio, corpo);
+        }
         let p = paleta(ui);
         let rect = ui.available_rect_before_wrap();
         pintar_painel_fixo(ui.painter(), p, rect, RAIO_CARD);
@@ -163,6 +196,41 @@ impl<'a> Painel<'a> {
             UiBuilder::new().id_salt(self.id.with("corpo")).max_rect(rect_corpo).layout(Layout::top_down(Align::Min)),
         );
         ui_corpo.set_clip_rect(rect_corpo.intersect(ui.clip_rect()));
+        let r = corpo(&mut ui_corpo);
+        ui.allocate_rect(rect, Sense::hover());
+        r
+    }
+}
+
+impl Painel<'_> {
+    fn mostrar_encaixado<R>(self, ui: &mut Ui, lugar: Rect, fio: bool, corpo: impl FnOnce(&mut Ui) -> R) -> R {
+        let p = paleta(ui);
+        let rect = ui.available_rect_before_wrap();
+        if let Some(acoes) = self.acoes
+            && lugar.is_positive()
+        {
+            let mut ui_acoes = ui.new_child(
+                UiBuilder::new()
+                    .id_salt(self.id.with("acoes"))
+                    .max_rect(lugar)
+                    .layout(Layout::right_to_left(Align::Center)),
+            );
+            // o lugar das ações fica fora do corpo (na fileira da doca, no rodapé da janela): o recorte é o dele, com
+            // folga para o anel de foco
+            let recorte = lugar.expand(4.0).intersect(ui.ctx().content_rect());
+            ui_acoes.set_clip_rect(recorte);
+            ui_acoes.spacing_mut().item_spacing.x = 2.0;
+            acoes(&mut ui_acoes);
+            let usado = ui_acoes.min_rect();
+            if fio && usado.is_positive() {
+                let pintor = ui.painter().with_clip_rect(recorte.expand2(vec2(12.0, 8.0)));
+                crate::pecas::doca::pintar_sep(&pintor, p, usado.left(), lugar.bottom() + 4.0);
+            }
+        }
+        let mut ui_corpo = ui.new_child(
+            UiBuilder::new().id_salt(self.id.with("corpo")).max_rect(rect).layout(Layout::top_down(Align::Min)),
+        );
+        ui_corpo.set_clip_rect(rect.intersect(ui.clip_rect()));
         let r = corpo(&mut ui_corpo);
         ui.allocate_rect(rect, Sense::hover());
         r
@@ -224,6 +292,11 @@ impl<'a> Secao<'a> {
     pub fn primeira(mut self, sim: bool) -> Self {
         self.primeira = sim;
         self
+    }
+
+    /// Abre a seção deste `id_salt` no próximo quadro (o "Excluir a tabela" do menu Tabela abre a zona recolhida).
+    pub fn abrir(ctx: &egui::Context, id_salt: impl std::hash::Hash + std::fmt::Debug) {
+        ctx.data_mut(|d| d.insert_temp(Id::new(("databox::secao", id_salt)), true));
     }
 
     /// Está aberta?

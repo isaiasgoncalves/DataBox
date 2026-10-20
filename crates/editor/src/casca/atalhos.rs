@@ -1,6 +1,8 @@
 //! Os atalhos de teclado da casca: Ctrl+O (abrir um arquivo), Ctrl+Shift+O (abrir uma pasta), Alt+← e Alt+→ e os botões laterais do mouse (o
 //! histórico único, que atravessa as abas), Ctrl+W (fechar a aba), Ctrl+Tab e Ctrl+Shift+Tab (a aba seguinte e a
 //! anterior na faixa, com volta), F5 (o Atualizar da aba, se ela o oferece; senão a tecla fica com quem tem o foco),
+//! Alt+Home (a aba Início, como o Exibir › Início; o trilho que a abria saiu em 19/10/2026), Alt+1 a Alt+4 (as
+//! vistas das Propriedades de uma tabela à vista: Resumo, Colunas, Índices e gatilhos, Definição SQL),
 //! Ctrl+B (mostrar ou esconder o Explorador), Ctrl+Alt+B (as Propriedades, com o botão delas ligado) e Ctrl+F (a
 //! busca da barra, quando a aba tem busca; também com um campo de texto ou a grade com o foco) e Ctrl+, (a janela
 //! Preferências, com ou sem campo de texto focado). O Ctrl+Enter continua com a Consulta SQL. Os verbos dos
@@ -27,6 +29,10 @@ pub(crate) struct Atalhos {
     pub proxima: bool,
     pub anterior: bool,
     pub atualizar: bool,
+    /// Alt+Home: a aba Início.
+    pub inicio: bool,
+    /// Alt+1 a Alt+4 (só com uma tabela à vista): a vista das Propriedades, de 1 (Resumo) a 4 (Definição SQL).
+    pub vista: Option<u8>,
     pub explorador: bool,
     pub propriedades: bool,
     /// Ctrl+F: o foco na busca da barra.
@@ -78,6 +84,8 @@ impl Atalhos {
 pub(crate) struct Valem {
     /// Um campo de texto tem o foco: o Ctrl+Alt+B fica com ele.
     pub campo_de_texto: bool,
+    /// Uma tabela ou visão à vista: o Alt+1 a Alt+4 escolhem a vista das Propriedades.
+    pub tabela: bool,
     /// A aba oferece o Atualizar: sem ele, o F5 fica com quem tem o foco (nada sai do campo).
     pub atualizar: bool,
     /// O botão Painel de propriedades está ligado: sem ele (o Início, a janela estreita), o Ctrl+Alt+B não faz nada.
@@ -95,6 +103,7 @@ impl Default for Valem {
     fn default() -> Self {
         Valem {
             campo_de_texto: false,
+            tabela: false,
             atualizar: true,
             propriedades: true,
             buscar: true,
@@ -125,6 +134,15 @@ pub(crate) fn ler(ctx: &egui::Context, valem: Valem) -> Atalhos {
             proxima: consumir(i, Modifiers::COMMAND, Key::Tab),
             anterior: consumir(i, ctrl_shift, Key::Tab),
             atualizar: valem.atualizar && consumir(i, Modifiers::NONE, Key::F5),
+            inicio: consumir(i, Modifiers::ALT, Key::Home),
+            vista: if valem.tabela {
+                [Key::Num1, Key::Num2, Key::Num3, Key::Num4]
+                    .into_iter()
+                    .zip(1u8..)
+                    .find_map(|(k, n)| consumir(i, Modifiers::ALT, k).then_some(n))
+            } else {
+                None
+            },
             explorador: consumir(i, Modifiers::COMMAND, Key::B),
             propriedades: valem.propriedades && !valem.campo_de_texto && consumir(i, ctrl_alt, Key::B),
             buscar: valem.buscar && consumir(i, Modifiers::COMMAND, Key::F),
@@ -291,5 +309,24 @@ mod testes {
         assert!(!com_tecla_valendo(ctrl_alt, Key::B, sem_painel).algum());
         // os outros continuam
         assert_eq!(com_tecla_valendo(CTRL, Key::B, sem_painel), Atalhos { explorador: true, ..Default::default() });
+    }
+
+    #[test]
+    fn alt_home_vai_ao_inicio() {
+        let alt = Modifiers { alt: true, ..Modifiers::NONE };
+        let a = com_tecla(alt, Key::Home);
+        assert_eq!(a, Atalhos { inicio: true, ..Default::default() });
+        assert!(a.sai_do_documento(), "a edição em curso grava antes de a aba sair de vista");
+        // sem o Alt, o Home fica com quem tem o foco
+        assert_eq!(com_tecla(Modifiers::NONE, Key::Home), Atalhos::default());
+    }
+
+    #[test]
+    fn alt_com_numero_so_com_tabela() {
+        let alt = Modifiers { alt: true, ..Modifiers::NONE };
+        let com_tabela = Valem { tabela: true, ..Valem::default() };
+        assert_eq!(com_tecla_valendo(alt, Key::Num2, com_tabela), Atalhos { vista: Some(2), ..Default::default() });
+        assert_eq!(com_tecla_valendo(alt, Key::Num4, com_tabela).vista, Some(4));
+        assert_eq!(com_tecla_valendo(alt, Key::Num2, Valem::default()), Atalhos::default());
     }
 }

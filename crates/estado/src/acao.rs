@@ -86,6 +86,18 @@ pub enum Acao {
     LembrarDiretorio(PathBuf),
     /// Troca o tema e grava nas preferências.
     TrocarTema(prefs::Tema),
+    /// Põe um painel da casca à vista onde ele mora (a doca, a janela própria): os botões "Painéis" do Início.
+    MostrarPainel(PainelCasca),
+    /// Leva um painel da casca para uma janela própria (o Tabela › Propriedades em janela própria).
+    DestacarPainel(PainelCasca),
+    /// Abre a janela Preferências (o botão "Preferências" do Início).
+    AbrirPreferencias,
+    /// Uma manutenção do banco aberto pedida pelo menu Banco (Verificar integridade, Verificar chaves estrangeiras,
+    /// Otimizar, Compactar): a casca põe a Visão geral à vista e ela executa, como no botão das Propriedades dela (o
+    /// Compactar pergunta antes).
+    ManutencaoDoBanco(banco::AcaoManutencao),
+    /// A cópia de segurança pedida pelo menu Banco: a Visão geral à vista, e o diálogo de salvar dela.
+    CopiaDeSeguranca,
 
     /// Abre a janela Exportar.
     AbrirExportacao(PedidoJanelaExportar),
@@ -97,6 +109,15 @@ pub enum Acao {
     /// (cópia).db"). O caminho escolhido volta à Visão geral, que faz a cópia; sem o diálogo do Windows, a casca abre
     /// a janela "Pedir o caminho".
     EscolherCopia { nome_sugerido: String },
+}
+
+/// Um painel da casca (o Explorador, o Histórico de consultas, as Propriedades), para as telas pedirem que ele
+/// apareça.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PainelCasca {
+    Explorador,
+    Historico,
+    Propriedades,
 }
 
 /// O que a janela Exportar recebe de quem a abre (o `abrirExportacao({origem, nomeSugerido, contagens})`).

@@ -12,27 +12,41 @@
 //!   coluna · Duplicar · Excluir | Buscar · Filtrar · Atualizar · Executar · Exportar. O item fica desligado quando a
 //!   aba não oferece o verbo, e o texto é o rótulo da oferta ("Nova tabela"). O escolhido vai para o documento pelo
 //!   mesmo caminho do clique na barra: a casca o executa antes de a aba se desenhar.
-//! - **Exibir** (a prancheta Main, 262px): Explorador (Ctrl+B), Propriedades (Ctrl+Alt+B) e Histórico de consultas,
-//!   marcados quando à vista (as Propriedades seguem o botão da barra: desligadas quando sumiram por falta de
-//!   largura e no Início, que não as tem) | Tema ▸ (210px: Seguir o Windows, Claro e Escuro, com o ponto no
+//! - **Exibir** (a prancheta Main, 262px): Início (Alt+Home; a aba Início, que o trilho abria até 19/10/2026) |
+//!   Explorador (Ctrl+B), Propriedades (Ctrl+Alt+B) e Histórico de consultas, marcados quando à vista na doca ou na
+//!   janela própria (as Propriedades seguem o botão da barra: desligadas quando sumiram por falta de largura e no
+//!   Início, que não as tem) | Tema ▸ (210px: Seguir o Windows, Claro e Escuro, com o ponto no
 //!   escolhido, e "Preferências de aparência", que abre as Preferências na seção Aparência).
+//! - **Banco** (revisão de UI de 19/10/2026, prancheta 3; só com um banco aberto, entre Exibir e Ajuda, o
+//!   `.menu-ctx` de 290px com as silhuetas): Visão geral · Nova consulta SQL · Nova tabela (desligada em só leitura) |
+//!   Verificar integridade · Verificar chaves estrangeiras · Otimizar · Compactar (VACUUM) (os dois últimos só com o
+//!   banco gravando) | Fazer cópia de segurança · Exportar o banco | Abrir só para leitura (ou "Abrir para gravação",
+//!   no banco só leitura) · Fechar o banco. As manutenções e a cópia põem a Visão geral à vista, que as executa.
+//! - **Tabela** (prancheta 2; só com uma tabela ou visão à vista, depois do Banco): as vistas das Propriedades
+//!   Colunas (Alt+2), Índices e gatilhos (Alt+3) e Definição SQL (Alt+4; a visão só tem esta) | Abrir na Consulta
+//!   SQL · Exportar a tabela · Copiar o nome | Propriedades em janela própria | Nova linha · Nova coluna · Novo
+//!   índice | Renomear a tabela · Excluir a tabela (em `--perigo`). O que muda a estrutura fica desligado na visão,
+//!   no banco só leitura e na tabela que o SQLite não deixa editar.
 //! - **Ajuda**: Atalhos do teclado (a janela; quando ela fecha, o foco volta ao botão "Ajuda") e Sobre o DataBox.
 //!
 //! Clicar num item fecha o menu. O que a pessoa escolheu volta como [`PedidoMenu`] para a casca aplicar.
 
+use banco::{AcaoManutencao, BancoInfo};
 use egui::{Id, Ui};
-use estado::{Acao, Ofertas, Verbo};
+use estado::{Acao, Ofertas, Parte, Rota, Verbo};
 use interface::icones::Icone;
 use interface::pecas::casca::{Menu, PainelMenu};
 use interface::tema::Tema;
 
 use super::RecenteMenu;
+use super::docas::{Paineis, Painel};
 use super::ferramentas::EstadoPainel;
-use super::icones::{Paineis, PainelEsquerdo};
 use super::preferencias::Secao;
 
-/// Os ids dos quatro menus, na ordem da barra.
-const IDS: [&str; 4] = ["arquivo", "editar", "exibir", "ajuda"];
+/// Os ids dos menus, na ordem da barra (o Banco e a Tabela só aparecem com banco aberto e tabela à vista).
+const IDS: [&str; 6] = ["arquivo", "editar", "exibir", "banco", "tabela", "ajuda"];
+/// Largura do Banco e da Tabela (`.menu-ctx` de 290px, `Consulta.dc.html` e `Dados.dc.html`).
+const LARGURA_BANCO: f32 = 290.0;
 /// O espaço entre os menus (`nav{gap:2px}`).
 pub(crate) const ESPACO_MENUS: f32 = 2.0;
 /// Largura do painel do Exibir (`width:262px`) e a do submenu Tema (`width:210px`).
@@ -63,9 +77,39 @@ pub(crate) struct Menus<'a> {
     /// A aba ativa pode fechar (o Início sozinho não fecha).
     pub pode_fechar_aba: bool,
     pub paineis: Paineis,
+    /// O documento à vista tem Propriedades (as abas das docas contam com elas).
+    pub tem_propriedades: bool,
     /// O estado do botão Painel de propriedades da barra (a marca e o desligado do item Propriedades).
     pub propriedades: EstadoPainel,
     pub tema: Tema,
+    /// O banco aberto (com ele, o menu Banco).
+    pub banco: Option<&'a BancoInfo>,
+    /// A tabela ou visão à vista (com ela, o menu Tabela).
+    pub tabela: Option<MenuTabela<'a>>,
+}
+
+/// O que o menu Tabela precisa saber da tabela à vista.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct MenuTabela<'a> {
+    pub nome: &'a str,
+    pub e_visao: bool,
+    /// A estrutura pode mudar (tabela, banco gravando, e o SQLite deixa).
+    pub editavel: bool,
+}
+
+/// Um item do menu Tabela.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ItemTabela {
+    /// Uma vista das Propriedades (a parte da tabela).
+    Vista(Parte),
+    AbrirNaConsulta,
+    Exportar,
+    CopiarNome,
+    PropriedadesEmJanela,
+    NovaColuna,
+    NovoIndice,
+    Renomear,
+    Excluir,
 }
 
 /// O que a pessoa escolheu num menu.
@@ -76,9 +120,9 @@ pub(crate) enum PedidoMenu {
     /// Um verbo da aba (Editar, Salvar), para o documento executar antes de se desenhar.
     Verbo(Verbo),
     /// Mostrar ou esconder o Explorador, as Propriedades ou o Histórico de consultas.
-    Explorador,
-    Propriedades,
-    Historico,
+    Painel(Painel),
+    /// Um item do menu Tabela, para a tabela à vista.
+    Tabela(ItemTabela),
     /// A janela "Atalhos do teclado" e a "Sobre o DataBox".
     Atalhos,
     Sobre,
@@ -171,9 +215,13 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
 
     let _ = Menu::new(IDS[2], "Exibir").largura(LARGURA_EXIBIR).mostrar(ui, |p| {
         p.com_marcas();
-        let esquerdo = m.paineis.esquerdo;
-        if p.item_marcado("Explorador", Some("Ctrl+B"), esquerdo == Some(PainelEsquerdo::Explorador)).clicked() {
-            pedido = Some(PedidoMenu::Explorador);
+        if p.item("Início", Some("Alt+Home"), false).clicked() {
+            pedido = Some(PedidoMenu::Acao(Acao::Navegar(Rota::Inicio)));
+        }
+        p.separador();
+        let a_vista = |painel| m.paineis.a_vista(painel, m.tem_propriedades);
+        if p.item_marcado("Explorador", Some("Ctrl+B"), a_vista(Painel::Explorador)).clicked() {
+            pedido = Some(PedidoMenu::Painel(Painel::Explorador));
         }
         let propriedades = match m.propriedades {
             EstadoPainel::AVista => Some(true),
@@ -183,15 +231,15 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
         match propriedades {
             Some(marcado) => {
                 if p.item_marcado("Propriedades", Some("Ctrl+Alt+B"), marcado).clicked() {
-                    pedido = Some(PedidoMenu::Propriedades);
+                    pedido = Some(PedidoMenu::Painel(Painel::Propriedades));
                 }
             }
             None => {
                 p.item_desligado("Propriedades", Some("Ctrl+Alt+B"));
             }
         }
-        if p.item_marcado("Histórico de consultas", None, esquerdo == Some(PainelEsquerdo::Historico)).clicked() {
-            pedido = Some(PedidoMenu::Historico);
+        if p.item_marcado("Histórico de consultas", None, a_vista(Painel::Historico)).clicked() {
+            pedido = Some(PedidoMenu::Painel(Painel::Historico));
         }
         p.separador();
         p.submenu("Tema", LARGURA_TEMA, |p| {
@@ -208,7 +256,130 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
         });
     });
 
-    let (ajuda, _) = Menu::new(IDS[3], "Ajuda").mostrar(ui, |p| {
+    if let Some(b) = m.banco {
+        let somente_leitura = b.somente_leitura;
+        let _ = Menu::new(IDS[3], "Banco").largura(LARGURA_BANCO).mostrar(ui, |p| {
+            p.com_silhuetas();
+            if p.item("Visão geral", None, false).clicked() {
+                pedido = Some(PedidoMenu::Acao(Acao::Navegar(Rota::Banco)));
+            }
+            if p.silhueta(Icone::NovaConsulta).item("Nova consulta SQL", None, false).clicked() {
+                pedido = Some(PedidoMenu::Acao(Acao::NovaConsulta { sql: None }));
+            }
+            p.silhueta(Icone::Novo);
+            if somente_leitura {
+                p.item_desligado("Nova tabela", None);
+            } else if p.item("Nova tabela", None, false).clicked() {
+                pedido = Some(PedidoMenu::Acao(Acao::AbrirNovaTabela));
+            }
+            p.separador();
+            let manutencoes = [
+                (AcaoManutencao::Integridade, "Verificar integridade", false),
+                (AcaoManutencao::Chaves, "Verificar chaves estrangeiras", false),
+                (AcaoManutencao::Otimizar, "Otimizar", true),
+                (AcaoManutencao::Vacuum, "Compactar (VACUUM)", true),
+            ];
+            for (acao, rotulo, escreve) in manutencoes {
+                if escreve && somente_leitura {
+                    p.item_desligado(rotulo, None);
+                } else if p.item(rotulo, None, false).clicked() {
+                    pedido = Some(PedidoMenu::Acao(Acao::ManutencaoDoBanco(acao)));
+                }
+            }
+            p.separador();
+            if p.silhueta(Icone::CopiaSeguranca).item("Fazer cópia de segurança", None, false).clicked() {
+                pedido = Some(PedidoMenu::Acao(Acao::CopiaDeSeguranca));
+            }
+            if p.silhueta(Icone::Exportar).item("Exportar o banco", None, false).clicked() {
+                pedido = Some(PedidoMenu::Acao(Acao::AbrirExportacao(crate::visao_geral::pedido_exportacao(b))));
+            }
+            p.separador();
+            let (rotulo, so_leitura) =
+                if somente_leitura { ("Abrir para gravação", false) } else { ("Abrir só para leitura", true) };
+            if p.item(rotulo, None, false).clicked() {
+                let caminho = b.caminho.clone();
+                pedido = Some(PedidoMenu::Acao(Acao::AbrirBanco { caminho, somente_leitura: so_leitura }));
+            }
+            if p.item("Fechar o banco", None, false).clicked() {
+                pedido = Some(PedidoMenu::Acao(Acao::FecharBanco));
+            }
+        });
+    }
+
+    if let Some(t) = m.tabela {
+        let _ = Menu::new(IDS[4], "Tabela").largura(LARGURA_BANCO).mostrar(ui, |p| {
+            p.com_silhuetas();
+            let vistas: &[(Parte, &str, &str)] = if t.e_visao {
+                &[(Parte::Definicao, "Definição SQL", "Alt+4")]
+            } else {
+                &[
+                    (Parte::Estrutura, "Colunas", "Alt+2"),
+                    (Parte::Indices, "Índices e gatilhos", "Alt+3"),
+                    (Parte::Definicao, "Definição SQL", "Alt+4"),
+                ]
+            };
+            for &(parte, rotulo, atalho) in vistas {
+                if parte == Parte::Estrutura {
+                    p.silhueta(Icone::Editar);
+                }
+                if p.item(rotulo, Some(atalho), false).clicked() {
+                    pedido = Some(PedidoMenu::Tabela(ItemTabela::Vista(parte)));
+                }
+            }
+            p.separador();
+            let itens = [
+                (Some(Icone::NovaConsulta), "Abrir na Consulta SQL", ItemTabela::AbrirNaConsulta),
+                (Some(Icone::Exportar), "Exportar a tabela", ItemTabela::Exportar),
+                (Some(Icone::CopiarCaminho), "Copiar o nome", ItemTabela::CopiarNome),
+            ];
+            for (icone, rotulo, item) in itens {
+                if let Some(i) = icone {
+                    p.silhueta(i);
+                }
+                if p.item(rotulo, None, false).clicked() {
+                    pedido = Some(PedidoMenu::Tabela(item));
+                }
+            }
+            p.separador();
+            if p.silhueta(Icone::Destacar).item("Propriedades em janela própria", None, false).clicked() {
+                pedido = Some(PedidoMenu::Tabela(ItemTabela::PropriedadesEmJanela));
+            }
+            p.separador();
+            p.silhueta(Icone::Novo);
+            if item_do_verbo(p, m.ofertas, Verbo::Novo) {
+                pedido = Some(PedidoMenu::Verbo(Verbo::Novo));
+            }
+            let estrutura = [
+                (Some(Icone::NovaColuna), "Nova coluna", ItemTabela::NovaColuna),
+                (None, "Novo índice", ItemTabela::NovoIndice),
+            ];
+            for (icone, rotulo, item) in estrutura {
+                if let Some(i) = icone {
+                    p.silhueta(i);
+                }
+                if !t.editavel {
+                    p.item_desligado(rotulo, None);
+                } else if p.item(rotulo, None, false).clicked() {
+                    pedido = Some(PedidoMenu::Tabela(item));
+                }
+            }
+            p.separador();
+            p.silhueta(Icone::Editar);
+            if !t.editavel {
+                p.item_desligado("Renomear a tabela", None);
+            } else if p.item("Renomear a tabela", None, false).clicked() {
+                pedido = Some(PedidoMenu::Tabela(ItemTabela::Renomear));
+            }
+            p.silhueta(Icone::Excluir);
+            if !t.editavel {
+                p.item_desligado("Excluir a tabela", None);
+            } else if p.item_perigo("Excluir a tabela", None, false).clicked() {
+                pedido = Some(PedidoMenu::Tabela(ItemTabela::Excluir));
+            }
+        });
+    }
+
+    let (ajuda, _) = Menu::new(IDS[5], "Ajuda").mostrar(ui, |p| {
         if p.item("Atalhos do teclado", None, false).clicked() {
             pedido = Some(PedidoMenu::Atalhos);
         }
@@ -219,7 +390,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
     SaidaMenus { pedido, id_ajuda: ajuda.id }
 }
 
-/// Algum dos quatro menus está aberto?
+/// Algum dos menus está aberto?
 pub fn algum_aberto(ctx: &egui::Context) -> bool {
     IDS.iter().any(|id| egui::Popup::is_id_open(ctx, Id::new(("databox::menu", *id)).with("painel")))
 }

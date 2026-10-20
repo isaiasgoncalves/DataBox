@@ -26,6 +26,11 @@ impl ParteTabela for AbaDados {
     }
 }
 
+/// A tabela pode mudar de estrutura (o substituto: a tabela comum, com o banco gravando).
+pub fn pode_editar(info: &banco::TabelaInfo, somente_leitura: bool) -> bool {
+    info.esquema_editavel && !somente_leitura
+}
+
 pub struct AbaEstrutura;
 pub struct AbaIndices;
 pub struct AbaDefinicao;

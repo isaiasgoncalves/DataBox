@@ -1,6 +1,6 @@
 //! O executável **DataBox.exe**: a casca do aplicativo (a barra de título integrada aos menus, com os controles da
-//! janela sem decoração, a barra de ferramentas com os verbos da aba, a barra de ícones, o Explorador ou o Histórico
-//! de consultas, a faixa de abas de documento com o histórico único, o painel de Propriedades, a barra de status, o
+//! janela sem decoração, a barra de ferramentas com os verbos da aba, as docas e as janelas próprias dos painéis (o
+//! Explorador, o Histórico de consultas e as Propriedades), a faixa de abas de documento com o histórico único, a barra de status, o
 //! aviso de transação aberta, as janelas globais e os toasts), o Início, a Visão geral do banco e o contêiner da tela
 //! de tabela,
 //! ligando as telas dos outros crates (tela_dados, tela_esquema, tela_consulta, tela_exportar). Ver o §5 do
@@ -43,8 +43,10 @@
 //!   com_barra_propria(bool) -> Editor   a janela sem a decoração do sistema: os botões minimizar, maximizar e fechar,
 //!       o arrasto e as bordas de redimensionar na barra de título (padrão: sim; o main.rs passa `BARRA_PROPRIA`,
 //!       que é só do Windows)
-//!   com_larguras(prefs::LarguraPaineis) -> Editor   as larguras do Explorador e das Propriedades da sessão de antes
+//!   com_larguras(prefs::LarguraPaineis) -> Editor   as larguras das docas da sessão de antes
 //!       (`prefs.paineis()`, lidas antes da janela); as divisórias as mudam e a casca as guarda ao fim do gesto
+//!   com_lugares(prefs::LugaresPaineis) -> Editor   onde cada painel morava (a doca da esquerda, a da direita ou a
+//!       janela própria; `prefs.lugares()`); mudar o painel de lugar grava o lugar novo
 //!   desenhar(&mut self, ui: &mut egui::Ui, frame: Option<&eframe::Frame>)
 //!       um quadro inteiro na janela (`ui` = a janela toda, sem margem; frame None nos testes, sem diálogos)
 //!   titulo() -> &str        "vendas.db · DataBox" (sem banco, "DataBox"); vai para a janela sozinho
@@ -56,7 +58,7 @@
 //!   #[doc(hidden)] ir(rota)                 (abre a aba da rota ou foca a aberta, como um clique num link)
 //!   #[doc(hidden)] emitir(Acao)             (uma ação sem aba de origem, aplicada no fim do próximo quadro)
 //!   #[doc(hidden)] emitir_de(IdAba, Acao)   (uma ação como se o documento daquela aba a emitisse)
-//!   #[doc(hidden)] abas_abertas() -> Vec<(String, bool)>   ("clientes · Dados" e se é a ativa, na ordem da faixa)
+//!   #[doc(hidden)] abas_abertas() -> Vec<(String, bool)>   ("clientes" e se é a ativa, na ordem da faixa)
 //!   #[doc(hidden)] id_aba_ativa() -> IdAba · rect_do_documento() -> Option<Rect> (o `.doc` do último quadro)
 //!   #[doc(hidden)] propriedades_a_vista() -> bool · exportacao_aberta() -> Option<&PedidoJanelaExportar>
 //!   #[doc(hidden)] larguras_desenhadas() -> Option<(f32, f32)> (Explorador e Propriedades do último quadro) ·
@@ -117,22 +119,25 @@
 //!    Refazer | busca · Filtrar · Atualizar | Executar · Interromper · Nova consulta · Exportar | Painel de
 //!    propriedades; os verbos da aba vêm do `Documento::ofertas` e o clicado é executado no documento antes de ele
 //!    se desenhar; o Interromper tem o lugar dele em toda aba e só liga com a Consulta executando; a busca é a do
-//!    documento, `Documento::busca`; ela é desenhada antes da barra de ícones, que é a ordem do Tab), o corpo
-//!    (`padding:8px; gap:8px`) e a barra de status. No corpo: a barra de ícones de 52px (`casca::icones`: Início,
-//!    Explorador e Histórico de consultas, e as Preferências no pé), o painel da esquerda (`casca::explorador`, a
+//!    documento, `Documento::busca`; ela é desenhada antes das docas, que é a ordem do Tab), o corpo
+//!    (`padding:8px; gap:8px`) e a barra de status. No corpo (revisão de UI de 19/10/2026, sem o trilho): a doca da
+//!    esquerda e a da direita (`casca::docas`: cada painel mora numa doca ou numa janela própria do sistema; a doca
+//!    tem a fileira de abas `interface::pecas::doca`, só ícone à esquerda e com o nome à direita, as ações do painel e
+//!    o "Destacar em janela"; arrastar a aba prende o painel na outra doca ou, fora da janela, abre a janela própria;
+//!    o lugar fica nas preferências, `"lugares_paineis"`). Os painéis: o Explorador (`casca::explorador`, a
 //!    árvore da pasta aberta, com o banco aberto no lugar dele ou na segunda raiz, ou só a do banco, com rolagem
 //!    própria; o menu de contexto, o Shift+F10 e o Ctrl+Shift+C nos nós; o clique duplo numa pasta a deixa aberta, o →
 //!    num banco fechado não troca de banco, e fechar a pasta esquece os nós abertos dela; ou `casca::historico`, os
-//!    comandos já executados; a escolha fica só na sessão), a seção do documento (a faixa de abas de 35px, `casca::abas`: o clique foca, o × e o clique do meio
+//!    comandos já executados), a seção do documento (a faixa de abas de 35px, `casca::abas`: o clique foca, o × e o clique do meio
 //!    fecham, o "+" abre uma Consulta, tudo no quadro seguinte; e o `.doc` embaixo, que forma uma superfície só com
 //!    a aba ativa, pela peça `interface::pecas::documento`: no alto o aviso da troca de banco que passou de 0,3 s e o
 //!    de transação, fora das Consultas, depois a faixa de 42px, o conteúdo, com a rolagem da casca, de cada aba, ou a
 //!    própria, e o rodapé de 34px, conforme a `Anatomia` do documento) e as Propriedades (`casca::propriedades`;
-//!    não aparecem no Início nem quando o documento ficaria com menos de 560px, sem mudar a escolha da pessoa;
-//!    escondidas, nas telas de rolagem de página as seções vão para o fim do documento,
-//!    `estado::propriedades_no_fim`). O painel da esquerda (258px) e as Propriedades (272px) mudam de largura pelas
-//!    divisórias (`casca::larguras`, de 200 a 45% da janela; duplo clique volta à padrão), e as larguras escolhidas
-//!    ficam nas preferências (`"larguras_paineis"`). A barra de status (`casca::status`, 26px com `margin:0 8px 8px`): o
+//!    não aparecem no Início; a doca da direita some quando o documento ficaria com menos de 560px, sem mudar a
+//!    escolha da pessoa; escondidas, nas telas de rolagem de página as seções vão para o fim do documento,
+//!    `estado::propriedades_no_fim`). As docas (258px e 272px) mudam de largura pelas divisórias (`casca::larguras`,
+//!    de 200 a 45% da janela; duplo clique volta à padrão), e as larguras escolhidas ficam nas preferências
+//!    (`"larguras_paineis"`). A barra de status (`casca::status`, 26px com `margin:0 8px 8px`): o
 //!    banco (sem ele, a pasta aberta com o caminho na dica; sem nada, "Nenhuma pasta aberta"), o modo de gravação
 //!    com a frase na dica, o que a aba diz de si, o SQLite e a codificação (sem o tamanho
 //!    do arquivo, que está nas Propriedades). Depois as janelas globais (Exportar, Nova tabela, Novo índice,
@@ -219,7 +224,8 @@
 //! # Telas deste crate
 //!
 //! Cada tela (estas e a Consulta SQL) é o `Documento` de uma aba (`documento.rs`, guardado nas `estado::Abas`): uma
-//! aba por parte de tabela ou visão ("clientes · Dados", "clientes · Estrutura"), uma Visão geral, um Início e
+//! aba por tabela ou visão ("clientes"; a Estrutura, os Índices e a Definição são vistas das Propriedades, ver
+//! `tabela.rs`), uma Visão geral, um Início e
 //! quantas Consultas SQL a pessoa abrir ("Consulta 1", "Consulta 2", numeradas pelo menor número livre). Cada
 //! Consulta nasce com o id da aba como sal dos ids (`TelaConsulta::com_id`): o texto, o cursor e o desfazer não
 //! passam de uma para outra. A execução que ainda corre quando a aba fecha segue numa tarefa da casca com o id do
@@ -294,9 +300,10 @@
 //!   que valem na hora e gravam no Salvar);
 //! - **Editar**: os verbos da aba, das mesmas `Ofertas` da barra de ferramentas (desligado o que a aba não oferece; o
 //!   texto é o da oferta, "Nova tabela"), executados no documento antes de ele se desenhar;
-//! - **Exibir**: Explorador (Ctrl+B), Propriedades (Ctrl+Alt+B; desligado quando somem por falta de largura e no
-//!   Início) e Histórico de consultas, marcados quando à vista, e Tema ▸ (Seguir o Windows, Claro, Escuro e
+//! - **Exibir**: Início (Alt+Home) | Explorador (Ctrl+B), Propriedades (Ctrl+Alt+B; desligado quando somem por falta
+//!   de largura e no Início) e Histórico de consultas, marcados quando à vista, e Tema ▸ (Seguir o Windows, Claro, Escuro e
 //!   "Preferências de aparência", que abre as Preferências na Aparência);
+//! - **Banco** (com banco aberto) e **Tabela** (com uma tabela ou visão à vista): ver `casca::menus`;
 //! - **Ajuda**: Atalhos do teclado e Sobre o DataBox (casca\sobre.rs, prancheta 13: o logo de 96, a versão, a ficha com Compilação (o `DATABOX_COMPILACAO` do build.rs, do git), Renderizador (`Editor::com_renderizador`), SQLite, Sistema (`std::env::consts`), Licença, Preferências e Arquivo de log (links que abrem a pasta e o arquivo), e as janelas Licença (o LICENSE embutido) e Licenças de terceiros (a lista do Cargo.lock, também feita pelo build.rs); Copiar informações).
 //!
 //! Pelo teclado, com um menu aberto, ↑ e ↓ andam pelos itens ligados dele (com volta, sem sair do painel) e o Esc o

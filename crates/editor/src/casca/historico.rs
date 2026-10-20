@@ -24,7 +24,7 @@ use interface::icones::Icone;
 use interface::pecas::arvore::RAIO_NO;
 use interface::pecas::avisos::{aviso_texto, carregando};
 use interface::pecas::botao::{pintor_de_fora, realce_curvo};
-use interface::pecas::painel::Painel;
+use interface::pecas::painel::{Encaixe, Painel};
 use interface::pecas::rotulos::{TipoPill, pintar_pill, pintar_pill_contorno, tamanho_pill};
 use interface::pecas::texto::formato;
 use interface::pintura;
@@ -192,17 +192,17 @@ impl Historico {
     }
 
     /// Desenha o painel no espaço de `ui`.
-    pub(crate) fn mostrar(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
+    pub(crate) fn mostrar(&mut self, ui: &mut Ui, lugar_acoes: Encaixe, ctx: &mut Contexto) {
         if !ctx.estado.tem_banco() {
             *self = Historico::default();
-            Painel::new("historico", "Histórico").mostrar(ui, |ui| {
+            Painel::new("historico", "Histórico").encaixe(lugar_acoes).mostrar(ui, |ui| {
                 vazio_centrado(ui, "Nenhum banco aberto.", None, None);
             });
             return;
         }
         self.receber(ui, ctx);
         let mut escolhido = None;
-        Painel::new("historico", "Histórico").mostrar(ui, |ui| {
+        Painel::new("historico", "Histórico").encaixe(lugar_acoes).mostrar(ui, |ui| {
             if let Some(erro) = &self.erro {
                 egui::Frame::NONE.inner_margin(egui::Margin::same(12)).show(ui, |ui| {
                     aviso_texto(ui, erro, true);

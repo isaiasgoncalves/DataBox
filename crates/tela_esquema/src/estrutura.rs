@@ -13,7 +13,7 @@ use ddl::{ColunaDef, Gerada, Referencia};
 use egui::text::{CCursor, CCursorRange};
 use egui::text_edit::TextEditState;
 use egui::{Id, Margin, Sense, Ui, WidgetInfo, WidgetType, vec2};
-use estado::{Aba, Acao, Contexto, Oferta, Ofertas, Promessa, Reacao, Rota, TabelaAberta, Verbo};
+use estado::{Aba, Acao, Contexto, Oferta, Ofertas, PedidoTabela, Promessa, Reacao, Rota, TabelaAberta, Verbo};
 use interface::fontes::{self, Peso};
 use interface::formato::{formatar_numero, plural, sem_acento};
 use interface::icones::{self, Icone, TipoColuna};
@@ -198,6 +198,10 @@ impl AbaEstrutura {
             if visiveis.is_empty() {
                 let texto = if colunas.is_empty() { VAZIO_COLUNAS } else { VAZIO_BUSCA_COLUNAS };
                 vazio(ui, texto, true);
+            } else if ui.available_width() < LARGURA_LISTA_LARGA {
+                // a doca estreita (as Propriedades, vista Colunas): a lista compacta
+                let selecionada = self.selecionada.as_deref();
+                lista_colunas_compacta(ui, tabela, &visiveis, editavel, selecionada, &mut acao);
             } else {
                 let selecionada = self.selecionada.as_deref();
                 de_ponta_a_ponta(ui, |ui| lista_colunas(ui, tabela, &visiveis, editavel, selecionada, &mut acao));
@@ -786,6 +790,135 @@ fn lista_colunas(
     }
 }
 
+/// A partir desta largura, as colunas vão na tabela (`.lista-t`: o documento largo, a janela própria das
+/// Propriedades); abaixo, na lista compacta da doca ([`lista_colunas_compacta`], revisão de UI de 19/10/2026).
+pub const LARGURA_LISTA_LARGA: f32 = 560.0;
+/// `.cp-lista{padding:0 6px}` e `.cp-col{padding:6px 8px;border-radius:6px;gap:2px 8px}`.
+const RECUO_LISTA_COMPACTA: f32 = 6.0;
+const RECUO_ITEM_COMPACTO: [f32; 2] = [8.0, 6.0];
+const RAIO_ITEM_COMPACTO: f32 = 6.0;
+/// A pastilha de 16px e o `gap:8px` até o nome: o recuo da segunda linha (as regras) e das ações.
+const RECUO_SEGUNDA_LINHA: f32 = 16.0 + 8.0;
+
+/// A lista compacta de colunas (`.cp-lista` e `.cp-col` de `Dados.dc.html`, a vista Colunas das Propriedades na doca):
+/// cada coluna em duas linhas, a pastilha do tipo, o nome (o `a.link` que abre "Alterar a coluna"; sem edição, só o
+/// nome) e o tipo em `--t3` à direita; embaixo, as regras e o padrão. A coluna clicada fica selecionada (`.sel`, o
+/// fundo `--sel`) e ganha Subir, Descer e Excluir numa terceira linha; no hover, o fundo `--h`.
+fn lista_colunas_compacta(
+    ui: &mut Ui,
+    tabela: &TabelaAberta,
+    visiveis: &[usize],
+    editavel: bool,
+    selecionada: Option<&str>,
+    acao: &mut Option<AcaoLinha>,
+) {
+    let colunas = &tabela.info().colunas;
+    let e = paleta(ui).estudio;
+    let largura = ui.available_width();
+    for &i in visiveis {
+        let Some(col) = colunas.get(i) else { continue };
+        let sel = selecionada == Some(col.nome.as_str());
+        let id = ui.id().with(("cp-col", &col.nome));
+        let topo = ui.cursor().min;
+        let x0 = ui.max_rect().left() + RECUO_LISTA_COMPACTA;
+        let x1 = ui.max_rect().right() - RECUO_LISTA_COMPACTA;
+        // a linha inteira seleciona (registrada antes dos filhos, que ficam por cima: o nome e as ações)
+        let altura_antes: f32 = ui.ctx().data(|d| d.get_temp(id)).unwrap_or(44.0);
+        let fila = egui::Rect::from_min_max(egui::pos2(x0, topo.y), egui::pos2(x1, topo.y + altura_antes));
+        let resp = ui.interact(fila, id, Sense::click());
+        let fundo = ui.painter().add(egui::Shape::Noop);
+        let [rx, ry] = RECUO_ITEM_COMPACTO;
+        let dentro = egui::Rect::from_min_max(egui::pos2(x0 + rx, topo.y + ry), egui::pos2(x1 - rx, f32::INFINITY));
+        let mut filho = ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt(("cp-col-dentro", &col.nome))
+                .max_rect(dentro)
+                .layout(egui::Layout::top_down(egui::Align::Min)),
+        );
+        filho.spacing_mut().item_spacing.y = 2.0;
+        filho.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            pastilha(ui, pastilha_da_coluna(col));
+            // o tipo à direita (`.ti`: 11px em `--t3`), medido antes para o nome saber até onde ir
+            let (t, cor) = if col.tipo.is_empty() { ("sem tipo", e.t3) } else { (col.tipo.as_str(), e.t3) };
+            let g_tipo = galley_cortado(ui, t, fontes::fonte(11.0, Peso::Normal), cor, ui.available_width() / 2.0);
+            let largura_nome = (ui.available_width() - g_tipo.size().x - 8.0).max(24.0);
+            ui.allocate_ui_with_layout(
+                vec2(largura_nome, 18.0),
+                egui::Layout::left_to_right(egui::Align::Center),
+                |ui| {
+                    if editavel {
+                        let r = nome_abre(ui, &col.nome, false);
+                        if r.clicked() {
+                            *acao = Some(AcaoLinha::Abrir(col.nome.clone()));
+                        }
+                        let _ = r.on_hover_text(format!("Alterar a coluna {}", col.nome));
+                    } else {
+                        let g = galley_cortado(ui, &col.nome, fontes::fonte(12.0, Peso::Medio), e.t, largura_nome);
+                        let (rect, r) = ui.allocate_exact_size(g.size(), Sense::hover());
+                        ui.painter().galley(rect.min, g, e.t);
+                        r.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &col.nome));
+                    }
+                },
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let (rect, r) = ui.allocate_exact_size(g_tipo.size(), Sense::hover());
+                ui.painter().galley(rect.min, g_tipo, cor);
+                r.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, t));
+            });
+        });
+        // as regras e o padrão (`.rg`, 11px em `--t3`), embaixo do nome
+        let itens = itens_regras(&filho, col, definicao_de(&tabela.completa, &col.nome));
+        let padrao = col.padrao.as_deref().filter(|p| !p.trim().is_empty());
+        if !itens.is_empty() || padrao.is_some() {
+            filho.horizontal(|ui| {
+                ui.add_space(RECUO_SEGUNDA_LINHA - 8.0);
+                if !itens.is_empty() {
+                    desenhar_regras(ui, &itens);
+                }
+                if padrao.is_some() {
+                    ui.spacing_mut().item_spacing.x = 5.0;
+                    desenhar_padrao(ui, padrao);
+                }
+            });
+        }
+        if sel && editavel {
+            filho.horizontal(|ui| {
+                ui.add_space(RECUO_SEGUNDA_LINHA - 6.0);
+                ui.allocate_ui_with_layout(
+                    vec2(3.0 * LADO_PEQUENO, LADO_PEQUENO),
+                    egui::Layout::right_to_left(egui::Align::Center),
+                    |ui| desenhar_acoes(ui, tabela, i, acao),
+                );
+            });
+        }
+        let altura = (filho.min_rect().height() + 2.0 * ry).ceil();
+        if (altura - altura_antes).abs() > 0.5 {
+            ui.ctx().data_mut(|d| d.insert_temp(id, altura));
+            ui.ctx().request_repaint();
+        }
+        let item = egui::Rect::from_min_max(egui::pos2(x0, topo.y), egui::pos2(x1, topo.y + altura));
+        let cor = if sel {
+            Some(e.sel)
+        } else if resp.hovered() {
+            Some(e.h)
+        } else {
+            None
+        };
+        if let Some(c) = cor {
+            ui.painter().set(fundo, egui::epaint::RectShape::filled(item, RAIO_ITEM_COMPACTO, c));
+        }
+        if resp.has_focus() && interface::pintura::foco_visivel(ui.ctx()) {
+            interface::pintura::anel_foco(ui.painter(), paleta(ui), item, RAIO_ITEM_COMPACTO);
+        }
+        resp.widget_info(|| WidgetInfo::selected(WidgetType::SelectableLabel, true, sel, &col.nome));
+        if resp.clicked() && acao.is_none() {
+            *acao = Some(AcaoLinha::Selecionar(col.nome.clone()));
+        }
+        ui.allocate_space(vec2(largura, altura));
+    }
+}
+
 /// O vazio da lista sem colunas visíveis.
 const VAZIO_COLUNAS: &str = "A tabela não tem colunas visíveis.";
 /// O vazio quando a busca da barra não acha nenhuma.
@@ -851,9 +984,22 @@ impl estado::ParteTabela for AbaEstrutura {
         estado::Anatomia::default().com_faixa()
     }
 
-    fn faixa(&mut self, ui: &mut Ui, _ctx: &mut Contexto, tabela: &mut TabelaAberta) {
+    /// "Colunas · 7 colunas" e, na ponta direita, a Nova coluna (o `.ib.pq` da `.sec` de `Dados.dc.html`), com a
+    /// estrutura editável.
+    fn faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
         let n = tabela.info().colunas.len();
         titulo_da_faixa(ui, "Colunas", &plural(n, "coluna", "colunas"));
+        if !pode_editar(tabela.info(), ctx.estado.somente_leitura()) {
+            return;
+        }
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let botao = Botao::icone(Icone::NovaColuna).pequeno().rotulo("Nova coluna").dica("Nova coluna");
+            if ui.add(botao).clicked() {
+                let egui = ui.ctx().clone();
+                self.janela_coluna = Some(JanelaColuna::nova(&egui, ctx, tabela, None));
+                egui.request_repaint();
+            }
+        });
     }
 
     fn conteudo(&mut self, ui: &mut Ui, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
@@ -921,6 +1067,26 @@ impl estado::ParteTabela for AbaEstrutura {
 
     fn ocupada(&self) -> bool {
         self.tarefa.is_some() || self.excluindo_tabela.is_some()
+    }
+
+    /// O menu Tabela: a Nova coluna e o Renomear abrem as janelas deles; o Excluir abre a zona "Excluir a tabela"
+    /// (recolhida nas Propriedades), que pede o nome digitado.
+    fn pedido(&mut self, pedido: PedidoTabela, egui: &egui::Context, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
+        if !pode_editar(tabela.info(), ctx.estado.somente_leitura()) {
+            return;
+        }
+        match pedido {
+            PedidoTabela::NovaColuna => self.janela_coluna = Some(JanelaColuna::nova(egui, ctx, tabela, None)),
+            PedidoTabela::Renomear => {
+                self.janela_renomear = Some(JanelaRenomear::nova(&tabela.nome, icone_da_tabela(tabela)));
+            }
+            PedidoTabela::Excluir => Secao::abrir(egui, ("propriedades::excluir_tabela", self.instancia)),
+        }
+        egui.request_repaint();
+    }
+
+    fn coluna_escolhida(&self) -> Option<&str> {
+        self.selecionada.as_deref()
     }
 }
 

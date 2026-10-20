@@ -141,6 +141,13 @@ pub trait Documento {
     /// [`propriedades_no_fim`] (a decisão 4; veja o topo do módulo): as seções não sabem onde estão.
     fn propriedades(&mut self, _ui: &mut Ui, _ctx: &mut Contexto) {}
 
+    /// As Propriedades rolam pela casca (o painel põe as seções numa rolagem). Sem ela (false), o documento recebe o
+    /// painel na altura dele e cuida da rolagem: a tabela, nas vistas Colunas, Índices e SQL (revisão de UI de
+    /// 19/10/2026), põe o segmentado fixo em cima e o texto da Definição com a rolagem dele.
+    fn propriedades_rolam(&self) -> bool {
+        true
+    }
+
     /// O que a aba diz de si na barra de status ("clientes · 60 linhas · 7 colunas", "SQL").
     fn status(&self, _estado: &Estado) -> Option<String> {
         None
@@ -267,6 +274,14 @@ pub struct InfoArquivo {
 /// O toast do Copiar caminho da seção "Arquivo".
 pub const MSG_CAMINHO_COPIADO: &str = "Caminho copiado.";
 
+/// O que o menu Tabela pede à parte da tabela que cuida da estrutura (ver [`ParteTabela::pedido`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PedidoTabela {
+    NovaColuna,
+    Renomear,
+    Excluir,
+}
+
 /// Uma parte de uma tabela ou visão (Dados, Estrutura, Índices e gatilhos, Definição SQL): o mesmo contrato do
 /// [`Documento`], com a [`TabelaAberta`] que a tela de tabela carrega e empresta. A tela de tabela junta as ofertas
 /// de toda tabela (Atualizar, Exportar) com as da parte e desenha a seção "Tabela" das Propriedades
@@ -308,6 +323,25 @@ pub trait ParteTabela {
     /// As seções da parte, depois da seção "Tabela", que é comum e desenhada pela tela de tabela. Sem o painel, nas
     /// partes de [`Rolagem::Pagina`], ficam no fim da página, como as do [`Documento::propriedades`].
     fn propriedades(&mut self, _ui: &mut Ui, _ctx: &mut Contexto, _tabela: &mut TabelaAberta) {}
+
+    /// Um pedido do menu Tabela (revisão de UI de 19/10/2026) à parte que cuida dele: a Estrutura abre a Nova coluna
+    /// ou o Renomear e abre a zona "Excluir a tabela". A tela de tabela já pôs a vista da parte à vista.
+    fn pedido(
+        &mut self,
+        _pedido: PedidoTabela,
+        _egui: &egui::Context,
+        _ctx: &mut Contexto,
+        _tabela: &mut TabelaAberta,
+    ) {
+    }
+
+    /// A coluna escolhida na parte (a linha selecionada da Estrutura), que acende na grade dos Dados.
+    fn coluna_escolhida(&self) -> Option<&str> {
+        None
+    }
+
+    /// Acende uma coluna na grade (os Dados: o `th.selcol` e o `td.selcol`); None apaga.
+    fn destacar_coluna(&mut self, _coluna: Option<&str>) {}
 
     fn ocupada(&self) -> bool {
         false

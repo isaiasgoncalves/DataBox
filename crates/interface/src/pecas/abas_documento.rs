@@ -1,6 +1,10 @@
 //! As abas de documento da casca (o `div[role=tablist]` e as `.aba` de `Main.dc.html` e `Dados.dc.html`): a faixa
 //! de 35px ([`ALTURA_FAIXA`]) com as abas de 34px encostadas embaixo, cada uma com o ícone de 16px, o nome, o sub em
-//! `--t3` ("Dados", "Visão geral") e o × redondo de 20px; no fim, o `.ib.pq` "+" (Nova consulta).
+//! `--t3` e o × redondo de 20px; depois da última, o `.ib.pq` "+" (Nova consulta) e, na ponta direita, o "Todas as
+//! abas" ([`FaixaAbas::todas`], a seta que abre o menu com todas as abas abertas).
+//!
+//! - A primeira aba começa na quina do documento (`padding-left:0`, revisão de UI de 19/10/2026): com ela ativa, o
+//!   canto de cima à esquerda do documento fica reto ([`pintar_documento`]).
 //!
 //! - A aba ativa sobe na superfície com textura (o degradê `--bt1` → meio, as riscas e o realce) e forma uma
 //!   superfície só com o documento embaixo, sem barrinha colorida: [`RespostaAbas::juncao`] diz onde ela está, e
@@ -32,6 +36,7 @@ use crate::fontes::{self, Peso};
 use crate::icones::{self, Icone};
 use crate::pecas::botao::{Botao, LADO_PEQUENO, pintor_de_fora};
 use crate::pecas::cartao::RAIO_CARD;
+use crate::pecas::menu_contexto::MenuContexto;
 use crate::pecas::navegacao::{
     ALTURA_ABA, ALTURA_ABAS, ESPACO_ABAS, RAIO_ABA, RECUO_ABAS, cantos_aba, pintar_aba_ativa,
 };
@@ -134,6 +139,8 @@ pub struct RespostaAbas {
     pub fechar: Option<usize>,
     /// O "+" foi clicado.
     pub nova: bool,
+    /// Uma aba foi escolhida no menu "Todas as abas" (o índice; quem chama a foca, como [`RespostaAbas::clicada`]).
+    pub escolhida: Option<usize>,
     /// A faixa inteira.
     pub rect: Rect,
     /// O trecho da aba ativa (à vista) sobre o documento, para o [`pintar_documento`].
@@ -147,11 +154,12 @@ pub struct FaixaAbas<'a> {
     abas: &'a [AbaDocumento<'a>],
     ativa: Option<usize>,
     nova: Option<bool>,
+    todas: bool,
 }
 
 impl<'a> FaixaAbas<'a> {
     pub fn new(id_salt: impl std::hash::Hash + std::fmt::Debug, abas: &'a [AbaDocumento<'a>]) -> Self {
-        FaixaAbas { id: Id::new(("databox::abas_documento", id_salt)), abas, ativa: None, nova: None }
+        FaixaAbas { id: Id::new(("databox::abas_documento", id_salt)), abas, ativa: None, nova: None, todas: false }
     }
 
     /// A aba ativa.
@@ -166,11 +174,19 @@ impl<'a> FaixaAbas<'a> {
         self
     }
 
+    /// Com o "Todas as abas" na ponta direita (`.ib.pq` com a seta de 14px, `margin:0 0 4px 0`): o menu com cada aba
+    /// aberta ("nome · sub"), a ativa marcada.
+    pub fn todas(mut self, sim: bool) -> Self {
+        self.todas = sim;
+        self
+    }
+
     pub fn mostrar(self, ui: &mut Ui) -> RespostaAbas {
         let p = paleta(ui);
         let e = &p.estudio;
         let (faixa, faixa_resp) = ui.allocate_exact_size(vec2(ui.available_width(), ALTURA_FAIXA), Sense::hover());
-        let mut resposta = RespostaAbas { clicada: None, fechar: None, nova: false, rect: faixa, juncao: None };
+        let mut resposta =
+            RespostaAbas { clicada: None, fechar: None, nova: false, escolhida: None, rect: faixa, juncao: None };
         let fonte = fontes::fonte(12.0, Peso::Normal);
         let medir = |texto: &str| galley(ui, texto, fonte.clone(), Color32::PLACEHOLDER).size().x;
         let medidas: Vec<(f32, f32)> = self.abas.iter().map(|a| (medir(a.nome), a.sub.map_or(0.0, medir))).collect();
@@ -183,9 +199,11 @@ impl<'a> FaixaAbas<'a> {
         let fixas: Vec<f32> =
             self.abas.iter().map(|a| ANTES_DO_TEXTO + if a.fechavel { DEPOIS_COM_X } else { DEPOIS_SEM_X }).collect();
         let reserva_nova = if self.nova.is_some() { LARGURA_NOVA } else { 0.0 };
+        let reserva_todas = if self.todas { ESPACO_ABAS + LADO_PEQUENO } else { 0.0 };
+        // a primeira aba na quina do documento (`padding-left:0`); à direita, o `padding-right:10px`
         let area = Rect::from_min_max(
-            pos2(faixa.left() + RECUO_ABAS, faixa.top()),
-            pos2((faixa.right() - RECUO_ABAS - reserva_nova).max(faixa.left() + RECUO_ABAS), faixa.bottom()),
+            faixa.left_top(),
+            pos2((faixa.right() - RECUO_ABAS - reserva_nova - reserva_todas).max(faixa.left()), faixa.bottom()),
         );
         let textos = larguras_texto(&naturais, &fixas, ESPACO_ABAS, area.width(), TEXTO_MINIMO);
         let larguras: Vec<f32> = fixas.iter().zip(&textos).map(|(f, t)| (f + t).ceil()).collect();
@@ -351,6 +369,34 @@ impl<'a> FaixaAbas<'a> {
             let botao = Botao::icone(Icone::Mais).pequeno().rotulo("Nova consulta SQL").dica("Nova consulta SQL");
             resposta.nova = filho.add(botao.habilitado(habilitada)).clicked();
         }
+        if self.todas {
+            let x = faixa.right() - RECUO_ABAS - LADO_PEQUENO;
+            let rect =
+                Rect::from_min_size(pos2(x, faixa.bottom() - 4.0 - LADO_PEQUENO), vec2(LADO_PEQUENO, LADO_PEQUENO));
+            let mut filho = ui.new_child(
+                UiBuilder::new()
+                    .id_salt(self.id.with("todas"))
+                    .max_rect(rect)
+                    .layout(Layout::left_to_right(Align::Center)),
+            );
+            let botao =
+                filho.add(Botao::icone(Icone::SetaBaixo).pequeno().rotulo("Todas as abas").dica("Todas as abas"));
+            let rotulos: Vec<String> = self.abas.iter().map(AbaDocumento::rotulo).collect();
+            let escolhida = MenuContexto::new(self.id.with("menu-todas")).rotulo("Todas as abas").no_clique().mostrar(
+                &botao,
+                |m| {
+                    let mut escolhida = None;
+                    m.com_marcas();
+                    for (i, rotulo) in rotulos.iter().enumerate() {
+                        if m.item_opcao(rotulo, Some(i) == self.ativa).clicked() {
+                            escolhida = Some(i);
+                        }
+                    }
+                    escolhida
+                },
+            );
+            resposta.escolhida = escolhida.flatten();
+        }
         resposta
     }
 }
@@ -388,8 +434,13 @@ pub(crate) fn larguras_texto(naturais: &[f32], fixas: &[f32], espaco: f32, dispo
 /// `margin-bottom:-1px` da faixa das pranchetas: o retângulo do documento começa 1px antes do fim da faixa.
 pub fn pintar_documento(painter: &Painter, p: &Paleta, rect: Rect, juncao: Option<Rangef>) {
     let e = &p.estudio;
-    painter.rect_filled(rect, RAIO_CARD, e.doc);
-    painter.rect_stroke(rect, RAIO_CARD, Stroke::new(1.0, e.vidrob), StrokeKind::Inside);
+    // a aba ativa encostada na quina: o canto de cima à esquerda fica reto (`border-top-left-radius:0`)
+    let mut cantos = pintura::canto(rect, RAIO_CARD);
+    if juncao.is_some_and(|j| j.min <= rect.left() + 0.5) {
+        cantos.nw = 0;
+    }
+    painter.rect_filled(rect, cantos, e.doc);
+    painter.rect_stroke(rect, cantos, Stroke::new(1.0, e.vidrob), StrokeKind::Inside);
     if let Some(j) = juncao {
         // por dentro das bordas laterais da aba, na cor do pé dela (o meio do degradê da aba ativa)
         let x = Rangef::new(j.min + 1.0, j.max - 1.0);
