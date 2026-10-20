@@ -2,203 +2,194 @@
   "v": 3,
   "attachments": {},
   "boards": {
+    "Colunas.dc.html": {
+      "expand": "fill",
+      "h": 2740,
+      "page": "janelas",
+      "title": "16 · Copiar, colar e trazer colunas (escuro)",
+      "w": 1440,
+      "x": 1520,
+      "y": 1620
+    },
+    "Componentes.dc.html": {
+      "expand": "fill",
+      "h": 1320,
+      "page": "fundamentos",
+      "title": "Componentes: botões, campos, abas, menus, grade, mensagens",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
     "Consulta.dc.html": {
       "expand": "fill",
       "h": 900,
+      "page": "telas",
       "title": "3 · Aba Consulta 1, Histórico à esquerda, menu Banco aberto (escuro)",
       "w": 1440,
       "x": 0,
-      "y": 2040,
-      "page": "telas"
+      "y": 2040
     },
     "Csv.dc.html": {
       "expand": "fill",
       "h": 900,
+      "page": "telas",
       "title": "7 · Editor tabular de CSV (escuro)",
       "w": 1440,
       "x": 1840,
-      "y": 2040,
-      "page": "telas"
+      "y": 2040
     },
     "Dados.dc.html": {
       "expand": "fill",
       "h": 900,
+      "page": "telas",
       "title": "2 · Aba clientes · Dados: colunas nas Propriedades, menu Tabela aberto (escuro)",
       "w": 1440,
       "x": 0,
-      "y": 1020,
-      "page": "telas"
-    },
-    "DadosClaro.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "6 · clientes com as Propriedades em janela própria, transação aberta (claro)",
-      "w": 1760,
-      "x": 1840,
-      "y": 1020,
-      "page": "telas"
-    },
-    "Exportar.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "5 · Janela Exportar (escuro)",
-      "w": 1440,
-      "x": 0,
-      "y": 0,
-      "page": "janelas"
-    },
-    "Icones.dc.html": {
-      "expand": "fill",
-      "h": 4100,
-      "title": "9 · Ícones sólidos: arquivos, objetos, tipos, estados, gráficos e bancos (escuro)",
-      "w": 1482,
-      "x": 3040,
-      "y": 0,
-      "page": "fundamentos"
-    },
-    "Inicio.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "4 · Início sem pasta, menu Arquivo aberto (escuro)",
-      "w": 1440,
-      "x": 1840,
-      "y": 0,
-      "page": "telas"
-    },
-    "Janelas.dc.html": {
-      "expand": "fill",
-      "h": 1500,
-      "title": "12 · Janelas: linha, coluna e Nova tabela (escuro)",
-      "w": 1440,
-      "x": 1520,
-      "y": 0,
-      "page": "janelas"
-    },
-    "Json.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "8 · Editor de texto com JSON (claro)",
-      "w": 1440,
-      "x": 0,
-      "y": 3060,
-      "page": "telas"
-    },
-    "Logo.dc.html": {
-      "expand": "fill",
-      "h": 1180,
-      "title": "10 · Logo do aplicativo",
-      "w": 1471,
-      "x": 4600,
-      "y": 0,
-      "page": "fundamentos"
-    },
-    "LogoEditavel.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "11 · Logo editável (camadas soltas)",
-      "w": 1440,
-      "x": 6150,
-      "y": 0,
-      "page": "fundamentos"
-    },
-    "Main.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "1 · Pasta aberta, aba Visão geral do banco (escuro)",
-      "w": 1440,
-      "x": 0,
-      "y": 0,
-      "page": "telas"
-    },
-    "Preferencias.dc.html": {
-      "expand": "fill",
-      "h": 900,
-      "title": "13 · Preferências e Sobre o DataBox (escuro)",
-      "w": 1440,
-      "x": 3040,
-      "y": 0,
-      "page": "janelas"
-    },
-    "Estados.dc.html": {
-      "expand": "fill",
-      "h": 3560,
-      "title": "15 · Estados a implementar (escuro)",
-      "w": 1440,
-      "x": 0,
-      "y": 1620,
-      "page": "janelas"
-    },
-    "Colunas.dc.html": {
-      "expand": "fill",
-      "h": 2740,
-      "title": "16 · Copiar, colar e trazer colunas (escuro)",
-      "w": 1440,
-      "x": 1520,
-      "y": 1620,
-      "page": "janelas"
-    },
-    "Planilha.dc.html": {
-      "expand": "fill",
-      "h": 3444,
-      "title": "17 · Planilha do Excel, só leitura (escuro)",
-      "w": 1440,
-      "x": 1840,
-      "y": 3060,
-      "page": "telas"
+      "y": 1020
     },
     "DadosArrastar.dc.html": {
       "expand": "fill",
       "h": 900,
+      "page": "janelas",
       "title": "2b · Arrastar a aba de um painel: prender numa doca ou abrir janela própria",
       "w": 1440,
       "x": 3040,
-      "y": 1620,
-      "page": "janelas"
+      "y": 1620
     },
-    "Regras.dc.html": {
+    "DadosClaro.dc.html": {
       "expand": "fill",
-      "w": 1440,
-      "h": 1780,
-      "x": 0,
-      "y": 0,
-      "page": "fundamentos",
-      "title": "Regras: anatomia, cores, medidas e padrões"
-    },
-    "Componentes.dc.html": {
-      "expand": "fill",
-      "w": 1440,
-      "h": 1320,
-      "x": 1520,
-      "y": 0,
-      "page": "fundamentos",
-      "title": "Componentes: botões, campos, abas, menus, grade, mensagens"
-    },
-    "FuturoPerfil.dc.html": {
-      "expand": "fill",
-      "w": 1440,
       "h": 900,
-      "x": 0,
-      "y": 0,
-      "page": "futuro",
-      "title": "Perfil de colunas nas Propriedades (roadmap)"
+      "page": "telas",
+      "title": "6 · clientes com as Propriedades em janela própria, transação aberta (claro)",
+      "w": 1760,
+      "x": 1840,
+      "y": 1020
     },
-    "FuturoGrafico.dc.html": {
+    "Estados.dc.html": {
       "expand": "fill",
+      "h": 3560,
+      "page": "janelas",
+      "title": "15 · Estados a implementar (escuro)",
       "w": 1440,
+      "x": 0,
+      "y": 1620
+    },
+    "Exportar.dc.html": {
+      "expand": "fill",
       "h": 900,
-      "x": 1520,
-      "y": 0,
-      "page": "futuro",
-      "title": "Gráfico de uma consulta, com Abrir no Python (roadmap)"
+      "page": "janelas",
+      "title": "5 · Janela Exportar (escuro)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
     },
     "FuturoConexao.dc.html": {
       "expand": "fill",
-      "w": 1440,
       "h": 900,
-      "x": 3040,
-      "y": 0,
       "page": "futuro",
-      "title": "Conexão a outro banco: PostgreSQL primeiro (roadmap)"
+      "title": "Conexão a outro banco: PostgreSQL primeiro (roadmap)",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "FuturoGrafico.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "futuro",
+      "title": "Gráfico de uma consulta, com Abrir no Python (roadmap)",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "FuturoPerfil.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "futuro",
+      "title": "Perfil de colunas nas Propriedades (roadmap)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Icones.dc.html": {
+      "expand": "fill",
+      "h": 4100,
+      "page": "fundamentos",
+      "title": "9 · Ícones sólidos: arquivos, objetos, tipos, estados, gráficos e bancos (escuro)",
+      "w": 1482,
+      "x": 3040,
+      "y": 0
+    },
+    "Inicio.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "telas",
+      "title": "4 · Início sem pasta, menu Arquivo aberto (escuro)",
+      "w": 1440,
+      "x": 1840,
+      "y": 0
+    },
+    "Janelas.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "page": "janelas",
+      "title": "12 · Janelas: linha, coluna e Nova tabela (escuro)",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Json.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "telas",
+      "title": "8 · Editor de texto com JSON (claro)",
+      "w": 1440,
+      "x": 0,
+      "y": 3060
+    },
+    "Logo.dc.html": {
+      "expand": "fill",
+      "h": 1180,
+      "page": "fundamentos",
+      "title": "10 · Logo do aplicativo",
+      "w": 1471,
+      "x": 4600,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "telas",
+      "title": "1 · Pasta aberta, aba Visão geral do banco (escuro)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Planilha.dc.html": {
+      "expand": "fill",
+      "h": 3444,
+      "page": "telas",
+      "title": "17 · Planilha do Excel, só leitura (escuro)",
+      "w": 1440,
+      "x": 1840,
+      "y": 3060
+    },
+    "Preferencias.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "janelas",
+      "title": "13 · Preferências e Sobre o DataBox (escuro)",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Regras.dc.html": {
+      "expand": "fill",
+      "h": 1780,
+      "page": "fundamentos",
+      "title": "Regras: anatomia, cores, medidas e padrões",
+      "w": 1440,
+      "x": 0,
+      "y": 0
     }
   },
   "createdOnFiles": {
@@ -212,35 +203,39 @@
   "notes": {
     "fundamentos": {
       "kind": "title1",
-      "text": "Fundamentos: regras, componentes, ícones e logo",
-      "x": 0,
-      "y": -300,
       "maxW": 7600,
-      "page": "fundamentos"
-    },
-    "telas": {
-      "kind": "title1",
-      "text": "Telas do DataBox",
+      "page": "fundamentos",
+      "text": "Fundamentos: regras, componentes, ícones e logo",
+      "w": 240,
       "x": 0,
-      "y": -300,
-      "maxW": 3600,
-      "page": "telas"
-    },
-    "janelas": {
-      "kind": "title1",
-      "text": "Janelas, estados e fluxos",
-      "x": 0,
-      "y": -300,
-      "maxW": 4480,
-      "page": "janelas"
+      "y": -300
     },
     "futuro": {
       "kind": "title1",
-      "text": "Telas futuras (roadmap)",
-      "x": 0,
-      "y": -300,
       "maxW": 4480,
-      "page": "futuro"
+      "page": "futuro",
+      "text": "Telas futuras (roadmap)",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "janelas": {
+      "kind": "title1",
+      "maxW": 4480,
+      "page": "janelas",
+      "text": "Janelas, estados e fluxos",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "telas": {
+      "kind": "title1",
+      "maxW": 3600,
+      "page": "telas",
+      "text": "Telas do DataBox",
+      "w": 240,
+      "x": 0,
+      "y": -300
     }
   },
   "order": [
@@ -248,7 +243,6 @@
     "Componentes.dc.html",
     "Icones.dc.html",
     "Logo.dc.html",
-    "LogoEditavel.dc.html",
     "Main.dc.html",
     "Inicio.dc.html",
     "Dados.dc.html",

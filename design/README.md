@@ -11,7 +11,7 @@ referência visual; o crate `interface` é a implementação em egui.
 
 | Pasta | Conteúdo |
 |---|---|
-| `canvas/` | As 22 pranchetas (`*.dc.html`) e o `canvas.json`, publicados no [canvas do DataBox](https://claude.ai/artifact/TCdgEPdRzEzWEmC6XTJVu9) em quatro páginas: Fundamentos, Telas, Janelas e estados, Telas futuras. São páginas do formato de canvas de design: só abrem completas dentro do canvas (dependem do `support.js` dele), mas o HTML, o CSS (tokens e componentes) e o SVG de cada ícone estão inteiros e servem de fonte para a implementação. |
+| `canvas/` | As 21 pranchetas do canvas (mais a `LogoEditavel.dc.html`, fonte do logo, fora dele) (`*.dc.html`) e o `canvas.json`, publicados no [canvas do DataBox](https://claude.ai/artifact/TCdgEPdRzEzWEmC6XTJVu9) em quatro páginas: Fundamentos, Telas, Janelas e estados, Telas futuras. São páginas do formato de canvas de design: só abrem completas dentro do canvas (dependem do `support.js` dele), mas o HTML, o CSS (tokens e componentes) e o SVG de cada ícone estão inteiros e servem de fonte para a implementação. |
 | `icones/` | Os ícones do app em SVG autônomo: `<nome>.svg` (o desenho de até 24 px) e `<nome>-grande.svg` (o de 48), e as silhuetas da barra em `sil/`. São a fonte dos PNG de `crates/interface/assets/icones` (ver `icones_app.py`, abaixo). |
 | `logo/` | `databox.svg` (o logo, sempre o completo) e `databox-simples.svg` (a versão simplificada, **fora de uso** desde 17/10/2026, só como registro), em viewBox 512 e sem dependências. Em `fragmentos/` ficam os pedaços que os geradores embutem nas pranchetas. |
 | `ferramentas/` | Os geradores em Python que montam o logo, os ícones e as pranchetas que ainda se refazem. Só biblioteca padrão. |
@@ -19,14 +19,15 @@ referência visual; o crate `interface` é a implementação em egui.
 ### As pranchetas
 
 Organizadas em páginas do canvas (`pages` no `canvas.json`). A antiga 14 (`TrilhoOpcoes.dc.html`, as opções do trilho)
-saiu em 19/10/2026 junto com o trilho.
+saiu em 19/10/2026 junto com o trilho. A `LogoEditavel.dc.html` (o logo em camadas soltas) saiu do canvas em 20/10/2026, mas
+fica na pasta: é a fonte que o `logo_final.py` lê.
 
 | Página | Arquivo | O que mostra |
 |---|---|---|
 | Fundamentos | `Regras.dc.html` | Anatomia da janela, cores (tokens), medidas e tipografia, e os padrões com exemplos de sim e não |
 | Fundamentos | `Componentes.dc.html` | Botões, botões de ícone, seleção, campos, etiquetas, peças de dados, abas, menu, grade e mensagens |
 | Fundamentos | `Icones.dc.html` | A biblioteca: ícones sólidos, silhuetas da barra e glifos de traço. Todo ícone de uma prancheta está nela |
-| Fundamentos | `Logo.dc.html` · `LogoEditavel.dc.html` | O logo (só o completo, todos os tamanhos) e a fonte dele em camadas soltas |
+| Fundamentos | `Logo.dc.html` | O logo (só o completo, todos os tamanhos) |
 | Telas | `Main.dc.html` | Visão geral do banco, docas com abas, menu Exibir aberto (escuro) |
 | Telas | `Inicio.dc.html` | Início sem pasta, botões "Painéis", menu Arquivo aberto (escuro) |
 | Telas | `Dados.dc.html` | Tabela clientes: grade com filtro, colunas nas Propriedades, menu Tabela aberto (escuro) |
