@@ -359,8 +359,8 @@ mod testes {
         assert_eq!(ligados(&o), [Verbo::Atualizar]);
         assert_eq!(o.dica(Verbo::Exportar), "Exportar clientes");
         assert_eq!(o.rotulo(Verbo::Novo), "Novo");
-        // a Consulta SQL: o Executar, principal, com a dica do trecho selecionado
-        let consulta = Documento::novo(IdAba(4), &Rota::Consulta { sql: None }, None);
+        // a Consulta SQL com texto (vazia, o Executar desliga): o Executar, principal, com a dica do trecho selecionado
+        let consulta = Documento::novo(IdAba(4), &Rota::Consulta { sql: Some("SELECT 1".into()) }, None);
         let o = consulta.ofertas(estado);
         // a Consulta de verdade busca no editor; o substituto não tem busca
         let esperados: &[Verbo] =

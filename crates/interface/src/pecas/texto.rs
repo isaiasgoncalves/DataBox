@@ -345,9 +345,21 @@ pub fn link_tamanho(ui: &mut Ui, texto: &str, tamanho: f32) -> Response {
 /// `--acct` numa linha (cortado com "…", com o texto inteiro na dica); no hover, a borda `--acc` e o halo de 12px em
 /// `--brilho` (`.atalho:hover`). É um link para o leitor de tela.
 pub fn atalho(ui: &mut Ui, texto: &str) -> Response {
+    let largura = ui.available_width();
+    atalho_na_largura(ui, texto, largura)
+}
+
+/// O [`atalho`] com a largura do texto (até a disponível), para uma fileira que quebra (`display:flex;
+/// flex-wrap:wrap; gap:8px`): as sugestões da Consulta vazia (prancheta 15, "Para começar").
+pub fn atalho_justo(ui: &mut Ui, texto: &str) -> Response {
+    let natural = galley(ui, texto, fontes::fonte(12.0, Peso::Normal), paleta(ui).estudio.acct).size().x;
+    let largura = (natural + 2.0 * (10.0 + 1.0)).ceil().min(ui.available_width());
+    atalho_na_largura(ui, texto, largura)
+}
+
+fn atalho_na_largura(ui: &mut Ui, texto: &str, largura: f32) -> Response {
     let p = paleta(ui);
     let e = &p.estudio;
-    let largura = ui.available_width();
     // `padding:7px 10px` e a borda de 1px
     let (recuo_x, recuo_y) = (10.0 + 1.0, 7.0 + 1.0);
     let g = galley_cortado(ui, texto, fontes::fonte(12.0, Peso::Normal), e.acct, (largura - 2.0 * recuo_x).max(1.0));

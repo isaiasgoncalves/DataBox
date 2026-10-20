@@ -28,8 +28,12 @@
 //!   núcleo num aviso, com os botões da ficha).
 //! - **Faixa** (42 px): a folha do tipo e o nome; no JSON, a migalha do cursor (`conexoes › 0 › tempo_limite`) e, à
 //!   direita, o círculo de estado de 26 px (✓ verde e a dica "JSON válido", ou o ícone de erro com a frase na dica e no
-//!   rótulo; o clique leva o cursor ao erro) e o botão **Formatar** (desligado com o JSON inválido). No leitor, a
-//!   etiqueta "Somente leitura" no lugar do Formatar.
+//!   rótulo; o clique leva o cursor ao erro) e o botão **Formatar** (desligado com o JSON inválido, com a dica
+//!   "Corrija o erro para formatar"). No leitor, a etiqueta "Somente leitura" no lugar do Formatar.
+//! - **Faixa de erro** (JSON inválido, prancheta 15, revisão de UI de 19/10/2026): embaixo da faixa, enquanto o JSON
+//!   estiver inválido, a faixa de erro da Consulta SQL (`.erro`) com "Linha 14, coluna 7:" em `--perigo`, o motivo em
+//!   `--t2` e o botão [`IR_PARA_O_ERRO`], que põe o cursor no erro (no leitor, rola até a linha dele). O editor e o
+//!   leitor ficam com o que sobra embaixo dela.
 //! - **Rodapé** (34 px): "24 linhas", "· Espaços: 2" (JSON; "Tabulação", "Sem recuo"), "· Sem cores acima de 200 KB" e,
 //!   à direita, "Linha 9, coluna 25".
 //! - **Propriedades**: no JSON, a *Estrutura do documento* (árvore sob demanda, 200 filhos por página, o nó ativo é o
@@ -58,19 +62,19 @@ mod leitor;
 
 use std::path::{Path, PathBuf};
 
-use ::texto::json::{Recuo, detectar_recuo, formatar};
+use ::texto::json::{ErroJson, Recuo, detectar_recuo, formatar};
 use ::texto::limites::tamanho_em_texto;
 use ::texto::posicao::caractere_do_byte;
 use comum::ErroBanco;
-use egui::{Align, Context, Id, Layout, Sense, Ui, WidgetInfo, WidgetType, vec2};
+use egui::{Align, Context, CornerRadius, Id, Layout, Rect, Sense, Ui, UiBuilder, WidgetInfo, WidgetType, vec2};
 use estado::{Anatomia, Contexto, InfoArquivo, Oferta, Ofertas, Promessa, Situacao, StatusDeArquivo, Verbo};
 use interface::codigo::{LIMITE_REALCE, Linguagem};
 use interface::fontes::{self, Peso};
 use interface::formato::formatar_numero;
 use interface::icones::{self, EstadoIcone, Icone, TipoArquivo};
 use interface::pecas::arranjo::em_linha;
-use interface::pecas::avisos::{TomAviso, aviso_texto, carregando};
-use interface::pecas::botao::Botao;
+use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando};
+use interface::pecas::botao::{ALTURA_PEQUENO, Botao};
 use interface::pecas::campos::AreaTexto;
 use interface::pecas::detalhes::Detalhes;
 use interface::pecas::documento::Documento as DocumentoPeca;
@@ -94,6 +98,11 @@ pub const MSG_NADA_A_SALVAR: &str = "Nenhuma alteração para salvar.";
 /// A pergunta do Salvar quando o arquivo mudou no disco.
 pub const MSG_MUDOU_NO_DISCO: &str =
     "O arquivo mudou no disco desde que foi aberto. Salvar mesmo assim substitui o que está lá.";
+
+/// O botão da faixa de erro do JSON inválido, que leva o cursor ao erro.
+pub const IR_PARA_O_ERRO: &str = "Ir para o erro";
+/// A dica do Formatar desligado pelo JSON inválido.
+const DICA_FORMATAR_COM_ERRO: &str = "Corrija o erro para formatar";
 
 /// O Formatar com o JSON que já está formatado.
 const MSG_JA_FORMATADO: &str = "O JSON já está formatado.";
@@ -584,6 +593,19 @@ impl TelaTexto {
         }
     }
 
+    /// A faixa de erro do JSON inválido, no alto do conteúdo (logo embaixo da faixa do documento), enquanto o JSON
+    /// estiver inválido; o "Ir para o erro" leva o cursor (ou a rolagem do leitor) ao erro. O editor e o leitor
+    /// ocupam o que sobra, encostados nela.
+    fn desenhar_faixa_de_erro(&mut self, ui: &mut Ui) {
+        let Some(erro) = self.erro_de_json().cloned() else {
+            return;
+        };
+        ui.spacing_mut().item_spacing.y = 0.0;
+        if faixa_de_erro(ui, self.sal, &erro) {
+            self.ir_para_o_byte(erro.byte);
+        }
+    }
+
     /// Um quadro do corpo de um arquivo que não abriu: o erro do núcleo e os botões da ficha, centrados.
     fn desenhar_falha(&mut self, ui: &mut Ui) {
         let Corpo::Falhou(erro) = &self.corpo else {
@@ -670,7 +692,11 @@ impl TelaTexto {
                 pill(ui, "Somente leitura", TipoPill::Neutra);
             } else if veredito.is_some() {
                 let pode = matches!(veredito, Some(json::Veredito::Valido));
-                let b = Botao::ghost("Formatar").pequeno().habilitado(pode).dica("Formatar o JSON");
+                let dica = match veredito {
+                    Some(json::Veredito::Invalido(_)) => DICA_FORMATAR_COM_ERRO,
+                    _ => "Formatar o JSON",
+                };
+                let b = Botao::ghost("Formatar").pequeno().habilitado(pode).dica(dica);
                 formatar_clicado = ui.add(b).clicked();
             }
             if let Some(v) = &veredito {
@@ -812,8 +838,12 @@ impl estado::Documento for TelaTexto {
                 carregando(ui, "Lendo o arquivo…");
             }
             Corpo::Falhou(_) => self.desenhar_falha(ui),
-            Corpo::Editor(_) => self.desenhar_editor(ui),
+            Corpo::Editor(_) => {
+                self.desenhar_faixa_de_erro(ui);
+                self.desenhar_editor(ui);
+            }
             Corpo::Leitor(_) => {
+                self.desenhar_faixa_de_erro(ui);
                 let rect = ui.available_rect_before_wrap();
                 let linguagem = if self.tipo == TipoDeTexto::Json { Linguagem::Json } else { Linguagem::Texto };
                 let sal = self.sal;
@@ -985,6 +1015,47 @@ fn circulo_de_estado(ui: &mut Ui, veredito: &json::Veredito) -> Option<usize> {
     resp.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &frase));
     let resp = resp.on_hover_text(&frase);
     (resp.clicked() && byte.is_some()).then(|| byte.unwrap_or(0))
+}
+
+/// A faixa de erro do JSON inválido (prancheta 15, revisão de 19/10/2026): a `.erro` da Consulta SQL, de ponta a
+/// ponta, com o sólido de erro de 24px, "Linha 14, coluna 7:" em 600 `--perigo`, o motivo em `--t2` e, na ponta
+/// direita, o "Ir para o erro" (`.btn.pq`), os três centrados na altura da linha (`align-items:center`). Devolve se o
+/// botão foi clicado.
+fn faixa_de_erro(ui: &mut Ui, sal: Id, erro: &ErroJson) -> bool {
+    // `gap:12px` entre o texto e o botão
+    const GAP: f32 = 12.0;
+    let lugar = format!("Linha {}, coluna {}:", erro.linha, erro.coluna);
+    let motivo = format!(" {}.", erro.motivo.trim_end_matches('.'));
+    let trechos = [Trecho::Forte(&lugar), Trecho::Normal(&motivo)];
+    let id = sal.with("tela_texto::faixa_de_erro");
+    let mut ir = false;
+    let resp = Aviso::com_tom(TomAviso::Erro).faixa_do_documento(CornerRadius::ZERO).mostrar(ui, |ui, cores| {
+        let largura = ui.available_width();
+        let topo = ui.cursor().min;
+        // a linha tem a altura do mais alto (o texto ou o botão); a do texto é a do quadro anterior (no primeiro, uma
+        // linha de 18px), e quando muda o quadro seguinte já sai certo
+        let alto_texto: f32 = ui.ctx().data(|d| d.get_temp(id)).unwrap_or(18.0);
+        let alto = alto_texto.max(ALTURA_PEQUENO);
+        let linha = Rect::from_min_size(topo, vec2(largura, alto));
+        let mut direita = ui.new_child(UiBuilder::new().max_rect(linha).layout(Layout::right_to_left(Align::Center)));
+        ir = direita.add(Botao::new(IR_PARA_O_ERRO).pequeno()).clicked();
+        let largura_texto = (largura - direita.min_rect().width() - GAP).max(40.0);
+        let caixa = Rect::from_min_size(
+            topo + vec2(0.0, ((alto - alto_texto) / 2.0).max(0.0)),
+            vec2(largura_texto, f32::INFINITY),
+        );
+        let mut esquerda = ui.new_child(UiBuilder::new().max_rect(caixa).layout(Layout::top_down(Align::Min)));
+        texto_rico(&mut esquerda, &trechos, 12.0, cores.texto, cores.forte);
+        let medido = esquerda.min_rect().height();
+        if (medido - alto_texto).abs() > 0.5 {
+            ui.ctx().data_mut(|d| d.insert_temp(id, medido));
+            ui.ctx().request_repaint();
+        }
+        ui.allocate_rect(Rect::from_min_size(topo, vec2(largura, medido.max(ALTURA_PEQUENO))), Sense::hover());
+    });
+    // `role="alert"`, como na prancheta
+    ui.ctx().accesskit_node_builder(resp.id, |n| n.set_role(egui::accesskit::Role::Alert));
+    ir
 }
 
 /// Os dois botões da ficha numa linha centrada (a largura dela vem do quadro anterior: o primeiro quadro a mede).

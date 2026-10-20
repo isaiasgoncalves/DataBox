@@ -229,6 +229,27 @@ fn atalho_de_sql_e_um_link_da_largura_toda() {
 }
 
 #[test]
+fn atalho_justo_tem_a_largura_do_texto() {
+    use interface::pecas::texto::{atalho, atalho_justo};
+    let mut h = harness((None::<egui::Rect>, None::<egui::Rect>), |ui, s| {
+        ui.set_width(600.0);
+        s.0 = Some(atalho_justo(ui, "SELECT count(*) FROM clientes").rect);
+        s.1 = Some(atalho(ui, "SELECT count(*) FROM clientes").rect);
+    });
+    h.run_steps(1);
+    let (justo, cheio) = (h.state().0.unwrap(), h.state().1.unwrap());
+    // a mesma altura; a largura do texto com o `padding:0 10px` e a borda, bem menos que a da linha
+    assert_eq!(justo.height(), cheio.height());
+    assert!(justo.width() < 300.0 && justo.width() > 150.0, "{justo:?}");
+    assert!(cheio.width() >= 599.0, "{cheio:?}");
+    assert_eq!(
+        h.query_all_by_role_and_label(Role::Link, "SELECT count(*) FROM clientes").count(),
+        2,
+        "os dois são links"
+    );
+}
+
+#[test]
 fn cabecalho_com_a_pastilha_antes_do_nome() {
     use interface::grade::{LARGURA_PASTILHA_TH, Th, largura_cabecalho, pintar_cabecalho_coluna};
     use interface::icones::TipoColuna;
