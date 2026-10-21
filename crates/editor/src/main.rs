@@ -1,11 +1,12 @@
 //! DataBox.exe:
 //!
 //! ```text
-//! DataBox.exe [caminho] [--somente-leitura] [--renderizador glow|wgpu] [--criar-atalho]
+//! DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador glow|wgpu] [--criar-atalho]
 //! ```
 //!
 //! Liga o registro (com o gancho de pânico), abre as preferências e o serviço, e abre a janela com o tema das preferências e o movimento reduzido do Windows.
-//! No Windows, a janela fica sem a decoração do sistema, com a barra de título própria ([`BARRA_PROPRIA`]).
+//! No Windows e no Linux, a janela fica sem a decoração do sistema, com a barra de título própria ([`BARRA_PROPRIA`]);
+//! o `--moldura-do-sistema` volta à do sistema ([`barra_propria`]).
 //! O caminho da linha de comando (uma pasta, um banco ou um arquivo de dados) é aberto no começo (se não abrir, o
 //! aplicativo abre sem ele e mostra o motivo no Início). O renderizador padrão é o glow (OpenGL); se ele não abrir (máquina virtual sem driver), o executável
 //! se relança com `--renderizador wgpu` e sai. Sem console: ajuda, versão, erros de argumento e falhas fatais
@@ -26,10 +27,18 @@ use editor::{Editor, Partida, atalho, registro, tema_da_interface};
 /// Tamanho inicial e mínimo da janela: o inicial deixa as Propriedades à vista, na proporção 16:10.
 const TAMANHO_INICIAL: [f32; 2] = [1280.0, 800.0];
 const TAMANHO_MINIMO: [f32; 2] = [960.0, 600.0];
-/// No Windows, a janela fica sem a decoração do sistema e a barra de título é a do DataBox (os menus, o título e os
-/// botões minimizar, maximizar e fechar numa faixa só; o app cuida do arrasto e das bordas). Fora dele, a barra do
-/// sistema continua, e a faixa fica só com o logo, os menus e o título.
-const BARRA_PROPRIA: bool = cfg!(windows);
+/// No Windows e no Linux (revisão de 20/10/2026: no GNOME, a barra do sistema ficava em cima da faixa dos menus), a
+/// janela fica sem a decoração do sistema e a barra de título é a do DataBox (os menus, o título e os botões
+/// minimizar, maximizar e fechar numa faixa só; o app cuida do arrasto e das bordas, pelo `drag_window` e o
+/// `drag_resize_window` do winit, que valem no X11 e no Wayland). Nos outros sistemas, a barra do sistema continua, e a
+/// faixa fica só com o logo, os menus e o título.
+const BARRA_PROPRIA: bool = cfg!(any(windows, target_os = "linux"));
+
+/// A barra própria vale nesta execução: a do sistema ([`BARRA_PROPRIA`]), menos com o `--moldura-do-sistema` (a saída
+/// para um gerenciador de janelas em que a janela sem decoração não se comporta).
+fn barra_propria(args: &Argumentos) -> bool {
+    BARRA_PROPRIA && !args.moldura_do_sistema
+}
 
 /// Caixa de mensagem do Windows (sem console é o único jeito de a pessoa ver o que houve).
 fn caixa(texto: &str, erro: bool) {
@@ -108,7 +117,7 @@ fn criar_atalho() -> ExitCode {
     }
 }
 
-fn opcoes_nativas(renderizador: Renderizador) -> eframe::NativeOptions {
+fn opcoes_nativas(renderizador: Renderizador, barra_propria: bool) -> eframe::NativeOptions {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(NOME)
         // sem o recurso `persistence` do eframe, o app_id só vale no Wayland (o nome da janela), para o porte futuro
@@ -118,7 +127,7 @@ fn opcoes_nativas(renderizador: Renderizador) -> eframe::NativeOptions {
     if let Some(icone) = interface::marca::icone_janela() {
         viewport = viewport.with_icon(Arc::new(icone));
     }
-    if BARRA_PROPRIA {
+    if barra_propria {
         // o winit mantém os estilos de legenda e de borda (o Aero Snap, o Win+setas e o Alt+F4 continuam) e o
         // egui-winit pede a sombra da janela sem decoração
         viewport = viewport.with_decorations(false);
@@ -147,11 +156,12 @@ fn executar(args: &Argumentos) -> ExitCode {
     let reduzido = movimento_reduzido_do_windows();
     let partida = Partida { caminho: args.caminho.clone(), somente_leitura: args.somente_leitura };
     let renderizador = args.renderizador;
+    let propria = barra_propria(args);
     let criado = Arc::new(AtomicBool::new(false));
     let marcador = Arc::clone(&criado);
     let resultado = eframe::run_native(
         NOME,
-        opcoes_nativas(args.renderizador),
+        opcoes_nativas(args.renderizador, barra_propria(args)),
         Box::new(move |cc| {
             marcador.store(true, Ordering::SeqCst);
             // o tema das preferências vale antes do primeiro quadro (a janela não pisca clara)
@@ -168,7 +178,7 @@ fn executar(args: &Argumentos) -> ExitCode {
             // e as larguras das docas que a pessoa deixou (as divisórias) e onde ela pôs cada painel
             Ok(Box::new(
                 Editor::novo(servico, tema, partida)
-                    .com_barra_propria(BARRA_PROPRIA)
+                    .com_barra_propria(propria)
                     .com_renderizador(renderizador)
                     .com_larguras(paineis)
                     .com_lugares(lugares)

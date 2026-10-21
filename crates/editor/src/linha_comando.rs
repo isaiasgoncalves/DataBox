@@ -1,7 +1,7 @@
 //! A linha de comando do DataBox.exe:
 //!
 //! ```text
-//! DataBox.exe [caminho] [--somente-leitura] [--renderizador glow|wgpu] [--criar-atalho]
+//! DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador glow|wgpu] [--criar-atalho]
 //! ```
 //!
 //! O `caminho` é uma pasta, um banco ou um arquivo de dados (quem classifica é a casca, pelo
@@ -15,10 +15,10 @@ use std::path::PathBuf;
 
 /// A linha de uso (a primeira linha da ajuda e de todo erro de argumento). O `--renderizador glow|wgpu` continua
 /// aceito, mas fica fora da ajuda: é a reserva que o próprio executável usa quando o OpenGL não abre.
-pub const USO: &str = "Uso: DataBox.exe [caminho] [--somente-leitura] [--criar-atalho]";
+pub const USO: &str = "Uso: DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]";
 
 /// O texto da ajuda (`-h`, `--ajuda`, `--help`); a descrição é a do Sobre.
-pub const AJUDA: &str = "Uso: DataBox.exe [caminho] [--somente-leitura] [--criar-atalho]
+pub const AJUDA: &str = "Uso: DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]
 
 Toolkit de dados gratuito e aberto para desenvolvedores, cientistas e engenheiros de dados.
 
@@ -27,6 +27,7 @@ Argumentos:
 
 Opções:
   --somente-leitura    abre o banco sem permitir gravação
+  --moldura-do-sistema usa a barra de título e as bordas do sistema no lugar das do DataBox
   --criar-atalho       cria o atalho \"DataBox\" na Área de Trabalho e no Menu Iniciar e sai
   -h, --ajuda          mostra esta ajuda e sai
   --versao             mostra a versão e sai";
@@ -69,6 +70,9 @@ pub struct Argumentos {
     pub renderizador: Renderizador,
     /// Só cria os atalhos e sai.
     pub criar_atalho: bool,
+    /// A janela com a decoração do sistema (a barra de título e as bordas dele), no lugar da barra própria: a saída
+    /// para um gerenciador de janelas em que a barra própria não se comporta.
+    pub moldura_do_sistema: bool,
 }
 
 /// O que a linha de comando pede.
@@ -130,6 +134,7 @@ pub fn analisar(argv: &[OsString]) -> Result<Comando, ErroArgumentos> {
             "--versao" | "--version" => return Ok(Comando::Versao),
             "--somente-leitura" => args.somente_leitura = true,
             "--criar-atalho" => args.criar_atalho = true,
+            "--moldura-do-sistema" => args.moldura_do_sistema = true,
             "--renderizador" => {
                 let valor = match valor_junto {
                     Some(v) => v,
@@ -160,6 +165,9 @@ pub fn argumentos_para_relancar(args: &Argumentos, renderizador: Renderizador) -
     let mut saida = Vec::new();
     if args.somente_leitura {
         saida.push(OsString::from("--somente-leitura"));
+    }
+    if args.moldura_do_sistema {
+        saida.push(OsString::from("--moldura-do-sistema"));
     }
     saida.push(OsString::from("--renderizador"));
     saida.push(OsString::from(renderizador.como_str()));
@@ -197,8 +205,9 @@ mod testes {
         let vendas = estado::apoio_testes::abs_texto("dados/vendas.db");
         let args = executar(&[&vendas, "--somente-leitura", "--renderizador", "wgpu", "--criar-atalho"]);
         assert_eq!(args.caminho, Some(PathBuf::from(&vendas)));
-        assert!(args.somente_leitura && args.criar_atalho);
+        assert!(args.somente_leitura && args.criar_atalho && !args.moldura_do_sistema);
         assert_eq!(args.renderizador, Renderizador::Wgpu);
+        assert!(executar(&["--moldura-do-sistema"]).moldura_do_sistema);
         assert_eq!(executar(&["--renderizador=GLOW"]).renderizador, Renderizador::Glow);
     }
 
@@ -259,5 +268,11 @@ mod testes {
             }
             outro => panic!("{outro:?}"),
         }
+        // a moldura do sistema vai junto
+        let com_moldura = Argumentos { moldura_do_sistema: true, ..Argumentos::default() };
+        assert_eq!(
+            argumentos_para_relancar(&com_moldura, Renderizador::Wgpu),
+            a(&["--moldura-do-sistema", "--renderizador", "wgpu"])
+        );
     }
 }

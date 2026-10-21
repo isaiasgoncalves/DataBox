@@ -39,6 +39,13 @@
 //!
 //! Continuam com o sistema: o Aero Snap ao arrastar, arrastar a janela maximizada para restaurar, Win+setas, Alt+F4
 //! e a sombra (`drag_window` e `drag_resize_window` do winit entram no laço do próprio Windows).
+//!
+//! **No Linux** (desde 20/10/2026; antes, a barra do GNOME ficava em cima da faixa dos menus) vale a mesma barra: o
+//! `drag_window` e o `drag_resize_window` do winit passam o arrasto ao compositor (o `xdg_toplevel.move`/`resize` no
+//! Wayland, o `_NET_WM_MOVERESIZE` no X11), e o encaixe nas bordas da tela e o Super+setas continuam com ele. Perde-se
+//! o menu da janela no clique direito do título e, no Wayland do GNOME, a sombra e os cantos arredondados (o Mutter
+//! não desenha sombra em janela sem decoração); os botões seguem o desenho do DataBox, não o `button-layout` do
+//! sistema. O `--moldura-do-sistema` volta à decoração do sistema.
 
 use egui::{
     Align, CursorIcon, Id, LayerId, Layout, Order, PointerButton, Pos2, Rangef, Rect, ResizeDirection, Sense, Ui,

@@ -19,7 +19,8 @@
 //! (`SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION)`, o único `unsafe` do crate, no main.rs, sob
 //! `cfg(windows)`; fora dele, sem movimento reduzido) para o `interface::tema::definir_movimento_reduzido`, e
 //! abre a janela (título `comum::app::NOME`, 1280×800, mínimo 960×600, ícone `interface::marca::icone_janela`; no
-//! Windows, sem a decoração do sistema, com a barra de título própria: `BARRA_PROPRIA` e `com_barra_propria`)
+//! Windows e no Linux, sem a decoração do sistema, com a barra de título própria: `BARRA_PROPRIA` e
+//! `com_barra_propria`; o `--moldura-do-sistema` volta à do sistema)
 //! com o tema das preferências aplicado antes do primeiro quadro (e o `sync_window_theme` do egui ligado: a borda e
 //! a sombra do DWM seguem o tema do app). O caminho da
 //! linha de comando (pasta, banco ou arquivo de dados, pelo `Servico::alvo_do_caminho`) é aberto na primeira tarefa;
@@ -42,7 +43,7 @@
 //!       não toca no disco: o estado (e o banco da partida) chegam numa tarefa no primeiro quadro
 //!   com_barra_propria(bool) -> Editor   a janela sem a decoração do sistema: os botões minimizar, maximizar e fechar,
 //!       o arrasto e as bordas de redimensionar na barra de título (padrão: sim; o main.rs passa `BARRA_PROPRIA`,
-//!       que é só do Windows)
+//!       do Windows e do Linux, menos com o `--moldura-do-sistema`)
 //!   com_larguras(prefs::LarguraPaineis) -> Editor   as larguras das docas da sessão de antes
 //!       (`prefs.paineis()`, lidas antes da janela); as divisórias as mudam e a casca as guarda ao fim do gesto
 //!   com_lugares(prefs::LugaresPaineis) -> Editor   onde cada painel morava (a doca da esquerda, a da direita ou a
