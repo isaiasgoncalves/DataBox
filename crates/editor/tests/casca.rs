@@ -1418,7 +1418,14 @@ fn casca_explorador_e_status() {
     clicar_link(&mut h, "clientes");
     assentar(&mut h);
     assert!(existe(&h, Role::Label, "clientes · 60 linhas · 7 colunas"), "{:?}", textos(&h));
-    assert!(textos_das_propriedades(&h).contains(&tamanho));
+    // no fim da seção Arquivo, depois do caminho: no Windows o caminho temporário quebra em mais linhas (e quantas
+    // depende do número do processo), e o tamanho pode cair abaixo da dobra do painel, que rola
+    let doc = documento(&h);
+    assert!(
+        h.query_all(by().role(Role::Label).label(&tamanho)).any(|n| n.rect().left() > doc.right()),
+        "o tamanho nas Propriedades da tabela: {:?}",
+        textos_das_propriedades(&h)
+    );
     h.key_press_modifiers(Modifiers { alt: true, ..CTRL }, Key::B);
     h.run_steps(2);
     assert!(!h.state().propriedades_a_vista());
