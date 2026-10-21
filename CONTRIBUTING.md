@@ -36,12 +36,16 @@ toolchain GNU e o MinGW da WinLibs, e **sempre** `.\cargo.ps1` no lugar de `carg
 ```powershell
 .\cargo.ps1 fmt --all
 .\cargo.ps1 clippy --workspace --all-targets '--' -D warnings
-.\cargo.ps1 test --workspace
-.\cargo.ps1 test -p editor --no-default-features
+.\cargo.ps1 test --workspace --exclude editor --exclude interface --exclude 'tela_*'
+.\cargo.ps1 test -p editor -p interface -p 'tela_*' '--' --test-threads=1
+.\cargo.ps1 test -p editor --no-default-features '--' --test-threads=1
 ```
 
-O CI roda os mesmos passos no Windows. Testes de tela que caem com `STATUS_ACCESS_VIOLATION` (0xC0000005) são do
-renderizador de software do Windows sob carga: rode o mesmo alvo de novo com `'--' --test-threads=1`.
+O CI roda os mesmos passos no Windows: os testes de núcleo em paralelo e os de tela (os crates `editor`, `interface` e
+`tela_*`, que criam o wgpu) numa thread só, porque o renderizador de software do Windows (WARP) cai com
+`STATUS_ACCESS_VIOLATION` (0xC0000005) quando vários testes o criam ao mesmo tempo. No Linux tudo roda em paralelo
+(`cargo test --workspace`), e as capturas de lá são a referência. O CI não repete testes: um teste que cair duas
+vezes por causa do ambiente, e não do código, ganha `#[ignore]` com uma issue aberta, nunca uma retentativa.
 
 ## Mensagens de commit
 

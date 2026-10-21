@@ -382,8 +382,11 @@ Para rodar, ele usa os diálogos de arquivo da área de trabalho (`xdg-desktop-p
 - Os testes de tela renderizam cada tela sem abrir janela, com o `egui_kittest`, e gravam capturas PNG em
   `capturas\rust\` (fora do git) para comparar com as pranchetas de `design/canvas`. As imagens deste README, em
   [`docs/imagens/`](docs/imagens), saíram dessas capturas.
-- Se um teste de tela cair com `STATUS_ACCESS_VIOLATION` (0xC0000005), é o renderizador de software do Windows
-  (WARP) sob carga, não defeito do código: rode o mesmo alvo de novo com `'--' --test-threads=1`.
+- No Windows, rode os testes de tela (os crates `editor`, `interface` e `tela_*`) numa thread só, como o CI:
+  `.\cargo.ps1 test -p editor -p interface -p 'tela_*' '--' --test-threads=1`. Em paralelo, o renderizador de
+  software do Windows (WARP) cai com `STATUS_ACCESS_VIOLATION` (0xC0000005). No Linux tudo roda em paralelo, e as
+  capturas de lá são a referência. Um teste que cair duas vezes por causa do ambiente ganha `#[ignore]` com uma
+  issue aberta, nunca uma retentativa.
 - Os testes nunca usam o `%APPDATA%` real. Para testar o executável à mão sem sujar os seus recentes, aponte
   `APPDATA` e `LOCALAPPDATA` para uma pasta temporária antes de abrir.
 
