@@ -7,7 +7,8 @@
 //! e o rodapé deles, o Atualizar e o Exportar ("Exportar clientes") junto das ofertas deles). As outras partes viram
 //! **vistas das Propriedades** ([`Vista`]), no segmentado do topo do painel: Resumo (a seção "Tabela", as dos Dados e
 //! o "Arquivo" curto), Colunas (a Estrutura), Índices (os Índices e gatilhos) e SQL (a Definição); a visão só tem
-//! Resumo e SQL. Na doca o segmentado usa os rótulos curtos; na janela própria (a forma larga, a partir de
+//! Resumo e SQL. Na doca o segmentado usa os rótulos curtos (sem espaço nem para eles, só os ícones, com o nome na
+//! dica: [`Vista::icone`]); na janela própria (a forma larga, a partir de
 //! [`LARGURA_FORMA_LARGA`]), por extenso. A rota com outra parte (`#/t/clientes/estrutura`, o "Colunas" da Visão
 //! geral, o Renomear) abre a aba do objeto com aquela vista; o endereço da aba fica o dos Dados. A coluna escolhida
 //! na vista Colunas acende na grade.
@@ -20,9 +21,10 @@ use estado::{
 };
 use interface::formato::formatar_bytes;
 use interface::formato::plural;
+use interface::icones::Icone;
 use interface::pecas::avisos::{aviso_texto, carregando, vazio};
 use interface::pecas::cartao::Cartao;
-use interface::pecas::navegacao::{Cabecalho, Passo, TamanhoTrilho, trilho};
+use interface::pecas::navegacao::{Cabecalho, ParteSeletor, Passo, TamanhoTrilho, trilho_com_partes};
 use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::texto::link;
 use servico::TabelaCompleta;
@@ -83,6 +85,18 @@ impl Vista {
             Aba::Estrutura => Vista::Colunas,
             Aba::Indices => Vista::Indices,
             Aba::Definicao => Vista::Sql,
+        }
+    }
+
+    /// O ícone que fica no lugar do rótulo quando ele não cabe (a doca mais estreita, revisão de 20/10/2026): a ficha
+    /// da tabela (ou da visão) no Resumo, as colunas, os índices e a folha SQL.
+    pub(crate) fn icone(self, e_visao: bool) -> Icone {
+        match self {
+            Vista::Resumo if e_visao => Icone::Visao,
+            Vista::Resumo => Icone::Tabela,
+            Vista::Colunas => Icone::Estrutura,
+            Vista::Indices => Icone::Indices,
+            Vista::Sql => Icone::Definicao,
         }
     }
 
@@ -529,12 +543,14 @@ impl estado::Documento for TelaTabela {
         // o segmentado das vistas (`.seg` de ponta a ponta, `padding:8px 10px 6px`)
         let vistas: &[Vista] = if p.tabela.e_visao { &Vista::DA_VISAO } else { &Vista::DA_TABELA };
         let larga = ui.available_width() >= LARGURA_FORMA_LARGA;
-        let rotulos: Vec<&str> = vistas.iter().map(|v| v.rotulo(larga)).collect();
+        let e_visao = p.tabela.e_visao;
+        let partes: Vec<ParteSeletor<'_>> =
+            vistas.iter().map(|v| ParteSeletor::new(v.rotulo(larga)).reserva(v.icone(e_visao))).collect();
         let atual = vistas.iter().position(|v| *v == self.vista);
         let mut escolhida = None;
         recuado(ui, [8.0, 10.0, 6.0], |ui| {
             let id = ui.id().with(("vistas-da-tabela", &nome));
-            let (clicada, _) = trilho(ui, id, &rotulos, atual, TamanhoTrilho::CompactoCheio, false);
+            let (clicada, _) = trilho_com_partes(ui, id, &partes, atual, TamanhoTrilho::CompactoCheio, false);
             escolhida = clicada.and_then(|i| vistas.get(i).copied());
         });
         if let Some(v) = escolhida {
