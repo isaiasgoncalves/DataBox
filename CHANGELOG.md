@@ -22,6 +22,8 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 - **A barra de status fica escondida por padrão:** o que ela mostrava já está nas Propriedades (o modo de gravação, a
   versão do SQLite, a codificação), nos rodapés dos documentos e nas abas. Sem ela, o aviso que aparece embaixo fica
   logo acima do rodapé do documento.
+- **Menus com o mesmo tipo de ícone:** o Arquivo troca os ícones coloridos pelas silhuetas da barra de ferramentas,
+  como os menus Banco e Tabela, e as manutenções do Banco ganham as silhuetas que já tinham nas Propriedades.
 - Na doca mais estreita, o seletor Resumo · Colunas · Índices · SQL das Propriedades mostra só os ícones, com o nome
   na dica, em vez de cortar os nomes com "…".
 
