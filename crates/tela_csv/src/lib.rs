@@ -107,6 +107,12 @@
 //!   posições que passam, na ordem) é calculada numa tarefa com um instantâneo e uma passada pelo arquivo
 //!   (`Leitor::varrer`) e refeita a cada alteração; o número da linha continua a posição no arquivo, e os Colar por
 //!   posição ficam desligados (o Ctrl+V explica com a dica da prancheta).
+//! - **Buscar** (Ctrl+F, "Buscar em vendas.csv"; o módulo `busca`): no arquivo inteiro, numa tarefa com a cópia da
+//!   tabela (`Tabela::copia_para_buscar` e `achar_todos`: pelo índice, sem montar páginas, com as alterações por cima),
+//!   sem diferenciar maiúsculas nem acentos, só nas linhas que o filtro mostra e na ordem da vista. A célula achada
+//!   vira a ativa e a grade rola até ela; Enter e Shift+Enter andam (com volta); a faixa diz "3 de 41" ("41+"
+//!   enquanto conta); Esc limpa e volta à célula de antes. Cada tecla troca a busca (a de antes é cancelada), e uma
+//!   alteração, o filtro ou a ordem a refazem.
 //! - **Atualizar (F5):** relê; com alterações, pergunta "Descartar as alterações de {nome} e ler o arquivo de novo?".
 //!   A volta do foco confere se o arquivo mudou no disco (o aviso de topo "O arquivo mudou no disco." com Ler de novo
 //!   e Ignorar).
@@ -119,6 +125,7 @@
 
 #![forbid(unsafe_code)]
 
+mod busca;
 mod colunas;
 mod edicao;
 mod faixa;

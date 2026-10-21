@@ -447,41 +447,10 @@ pub fn nome_do_caminho(caminho: &str) -> &str {
     caminho.split(['\\', '/']).rfind(|p| !p.is_empty()).unwrap_or(caminho)
 }
 
-/// A letra sem acento de uma letra latina acentuada (o `normalize("NFD")` do JavaScript seguido da remoção das
-/// marcas): a base sai em minúscula (`'Ç'` → `'c'`, `'ã'` → `'a'`) e qualquer outro caractere fica como está
-/// (`'B'` → `'B'`). `None` para as marcas combinantes soltas (U+0300 a U+036F), que somem.
-pub fn letra_sem_acento(c: char) -> Option<char> {
-    let base = match c {
-        '\u{300}'..='\u{36f}' => return None,
-        'À'..='Å' | 'à'..='å' | 'Ā'..='ą' => 'a',
-        'Ç' | 'ç' | 'Ć'..='č' => 'c',
-        'Ď' | 'ď' => 'd',
-        'È'..='Ë' | 'è'..='ë' | 'Ē'..='ě' => 'e',
-        'Ĝ'..='ģ' => 'g',
-        'Ĥ' | 'ĥ' => 'h',
-        'Ì'..='Ï' | 'ì'..='ï' | 'Ĩ'..='İ' => 'i',
-        'Ĵ' | 'ĵ' => 'j',
-        'Ķ' | 'ķ' => 'k',
-        'Ĺ'..='ľ' => 'l',
-        'Ñ' | 'ñ' | 'Ń'..='ň' => 'n',
-        'Ò'..='Ö' | 'ò'..='ö' | 'Ō'..='ő' => 'o',
-        'Ŕ'..='ř' => 'r',
-        'Ś'..='š' => 's',
-        'Ţ'..='ť' => 't',
-        'Ù'..='Ü' | 'ù'..='ü' | 'Ũ'..='ų' => 'u',
-        'Ŵ' | 'ŵ' => 'w',
-        'Ý' | 'ý' | 'ÿ' | 'Ŷ'..='Ÿ' => 'y',
-        'Ź'..='ž' => 'z',
-        outro => outro,
-    };
-    Some(base)
-}
-
-/// O texto sem acentos e em minúsculas, a chave das buscas e dos filtros: o filtro do
-/// Explorador, a busca da barra na Visão geral e na Estrutura. `"Ações Úteis"` → `"acoes uteis"`.
-pub fn sem_acento(texto: &str) -> String {
-    texto.chars().filter_map(letra_sem_acento).flat_map(char::to_lowercase).collect()
-}
+/// A letra sem acento ([`comum::texto::letra_sem_acento`]) e o texto sem acentos e em minúsculas, a chave das
+/// buscas e dos filtros ([`comum::texto::sem_acento`]): moram no `comum` para o `tabular` e o `planilha` buscarem do
+/// mesmo jeito.
+pub use comum::texto::{letra_sem_acento, sem_acento};
 
 /// Real como o JavaScript escreve com `String(número)` (o `Number.prototype.toString`): os dígitos mais curtos que voltam ao mesmo número, inteiro sem ".0"
 /// (`17051.0` → `"17051"`), notação exponencial só fora de [1e-7, 1e21) com `e+`/`e-` e sem zero à esquerda

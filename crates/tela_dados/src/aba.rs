@@ -2401,7 +2401,9 @@ impl estado::ParteTabela for AbaDados {
                 }
                 self.busca_mudou = Some(agora);
             }
-            estado::EventoBusca::Enter | estado::EventoBusca::Limpar => self.aplicar_busca(ctx, tabela),
+            estado::EventoBusca::Enter | estado::EventoBusca::Anterior | estado::EventoBusca::Limpar => {
+                self.aplicar_busca(ctx, tabela)
+            }
         }
         egui.request_repaint();
     }

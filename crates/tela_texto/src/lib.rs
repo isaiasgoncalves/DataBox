@@ -11,10 +11,12 @@
 //! TelaTexto::tomar_pedido() -> Option<PedidoDeArquivo>   "Abrir no programa padrão" / "Mostrar na pasta" (como a ficha)
 //! impl estado::Documento for TelaTexto
 //!   anatomia (faixa, rodapé, rolagem própria) · avisos (o leitor) · faixa · conteudo · rodape · ofertas/executar ·
-//!   propriedades · status_do_arquivo · alterado · salvando · tomar_erro_de_gravacao · ocupada · em_segundo_plano
+//!   busca/evento_busca · propriedades · status_do_arquivo · alterado · salvando · tomar_erro_de_gravacao · ocupada ·
+//!   em_segundo_plano
 //! ```
 //!
-//! Verbos: **Salvar**, **Desfazer**, **Refazer** e **Atualizar** (o F5). O Buscar fica desligado (passo 14, opcional).
+//! Verbos: **Salvar**, **Desfazer**, **Refazer**, **Atualizar** (o F5) e **Buscar** (o Ctrl+F, "Buscar em notas.txt":
+//! no texto inteiro, no editor e no leitor; o módulo `busca`).
 //! O **Formatar** é botão da faixa. Quem fecha a aba pergunta pelo [`estado::Documento::alterado`]; o Ctrl+S da casca
 //! chama o verbo Salvar; o Ctrl+Z e o Ctrl+Y só valem fora de campo de texto (com o foco no editor, quem trata é o
 //! egui, pelo mesmo `Undoer` que o Desfazer da barra usa).
@@ -42,6 +44,10 @@
 //! - **JSON**: as cores (chave, texto, número, literal, pontuação), a validação 250 ms depois da última tecla numa
 //!   tarefa (resposta de versão velha descartada), o N1 (frase, linha com fundo, sublinhado ondulado e número em
 //!   `--perigo`), o Formatar (um passo no desfazer) e o aviso de erro no toast ao salvar ("salvo com o erro da linha 14").
+//! - **Buscar** (Ctrl+F): numa tarefa, no texto inteiro (também no leitor de até 32 MiB), sem diferenciar maiúsculas
+//!   nem acentos. O trecho achado fica pintado como na Consulta SQL (no editor, `AreaTexto::destacar`, com o cursor no
+//!   fim dele; no leitor, o fundo `--sel`) e a rolagem vai até ele; Enter e Shift+Enter andam (com volta); a faixa diz
+//!   "3 de 41" ("41+" enquanto conta); Esc limpa e volta ao cursor (ou à linha) de antes.
 //! - **Salvar**: numa tarefa (`texto::gravar`: atômico, com a codificação, o BOM e o fim de linha do arquivo); antes,
 //!   `mudou_no_disco` (a pergunta "Salvar mesmo assim"); o "alterado" é o texto diferir do salvo (desfazer até o salvo
 //!   tira o ponto). **Atualizar** com alteração pergunta antes de descartar.
@@ -54,6 +60,7 @@
 
 #![forbid(unsafe_code)]
 
+mod busca;
 mod carga;
 mod edicao;
 mod estrutura;
@@ -193,6 +200,8 @@ pub struct TelaTexto {
     pedido: Option<PedidoDeArquivo>,
     /// O relógio do egui no último quadro (a validação do JSON e o desfazer o usam).
     agora: f64,
+    /// A busca da barra (Ctrl+F) no texto inteiro.
+    busca: busca::BuscaTexto,
 }
 
 impl TelaTexto {
@@ -213,6 +222,7 @@ impl TelaTexto {
             erro_de_gravacao: None,
             pedido: None,
             agora: 0.0,
+            busca: busca::BuscaTexto::default(),
         }
     }
 
@@ -295,7 +305,7 @@ impl TelaTexto {
             Corpo::Leitor(l) => l.json.ocupado(),
             _ => false,
         };
-        tarefa || editor
+        tarefa || editor || self.busca.ocupada()
     }
 
     fn id_do_editor(&self) -> Id {
@@ -573,8 +583,13 @@ impl TelaTexto {
                 .erro_na_linha(m.linha)
                 .sublinhar(m.caracteres.clone());
         }
+        // o que a busca da barra achou (só o da versão de agora do texto), quando não há outro destaque
+        let achado = self.busca.trecho.clone().filter(|(_, v)| *v == e.versao).map(|(t, _)| t);
+        let rolar_achado = std::mem::take(&mut self.busca.rolar);
         if let Some(trecho) = destacar {
             area = area.destacar(trecho, true);
+        } else if let Some(trecho) = achado {
+            area = area.destacar(trecho, rolar_achado);
         }
         let mut filho = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(Layout::top_down(Align::Min)));
         filho.set_clip_rect(rect.intersect(ui.clip_rect()));
@@ -676,7 +691,14 @@ impl TelaTexto {
                 }
             }
         });
+        let busca = self.busca.rotulo();
         if self.tipo != TipoDeTexto::Json && !matches!(self.corpo, Corpo::Leitor(_)) {
+            // a contagem da busca da barra ("3 de 41"), na ponta direita
+            if let Some(rotulo) = &busca {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
+                });
+            }
             return;
         }
         let leitor = matches!(self.corpo, Corpo::Leitor(_));
@@ -701,6 +723,9 @@ impl TelaTexto {
             }
             if let Some(v) = &veredito {
                 ir_ao_erro = circulo_de_estado(ui, v);
+            }
+            if let Some(rotulo) = &busca {
+                estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
             }
         });
         if formatar_clicado {
@@ -832,6 +857,7 @@ impl estado::Documento for TelaTexto {
     fn conteudo(&mut self, ui: &mut Ui, _ctx: &mut Contexto) {
         let egui = ui.ctx().clone();
         self.sincronizar(&egui);
+        self.passo_da_busca(&egui);
         match &self.corpo {
             Corpo::Inicial | Corpo::Lendo => {
                 ui.add_space(18.0);
@@ -877,8 +903,12 @@ impl estado::Documento for TelaTexto {
                     .com(Verbo::Desfazer, Oferta::ligada().ligada_se(e.pode_desfazer && livre))
                     .com(Verbo::Refazer, Oferta::ligada().ligada_se(e.pode_refazer && livre))
                     .com(Verbo::Atualizar, Oferta::ligada().ligada_se(livre))
+                    .ligar(Verbo::Buscar)
             }
-            Corpo::Leitor(_) | Corpo::Falhou(_) => {
+            Corpo::Leitor(_) => Ofertas::default()
+                .com(Verbo::Atualizar, Oferta::ligada().ligada_se(self.carga.is_none()))
+                .ligar(Verbo::Buscar),
+            Corpo::Falhou(_) => {
                 Ofertas::default().com(Verbo::Atualizar, Oferta::ligada().ligada_se(self.carga.is_none()))
             }
             Corpo::Inicial | Corpo::Lendo => Ofertas::default(),
@@ -899,6 +929,20 @@ impl estado::Documento for TelaTexto {
             Verbo::Atualizar => self.atualizar(egui),
             _ => {}
         }
+    }
+
+    /// "Buscar em notas.txt": no texto inteiro, no editor e no leitor (o módulo `busca`).
+    fn busca(&mut self) -> Option<estado::BuscaDaBarra<'_>> {
+        if !matches!(self.corpo, Corpo::Editor(_) | Corpo::Leitor(_)) {
+            return None;
+        }
+        let dica = self.dica_da_busca();
+        Some(estado::BuscaDaBarra { texto: &mut self.busca.texto, dica: dica.into() })
+    }
+
+    fn evento_busca(&mut self, evento: estado::EventoBusca, egui: &Context, _ctx: &mut Contexto) {
+        self.sincronizar(egui);
+        self.evento_da_busca(evento, egui);
     }
 
     fn tem_propriedades(&self) -> bool {
@@ -972,6 +1016,7 @@ impl estado::Documento for TelaTexto {
 
     fn em_segundo_plano(&mut self, egui: &Context, _ctx: &mut Contexto) {
         self.sincronizar(egui);
+        self.passo_da_busca(egui);
     }
 
     fn alterado(&self) -> bool {

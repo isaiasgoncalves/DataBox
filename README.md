@@ -162,6 +162,8 @@ The labels below are translated; the app shows them in Portuguese (the main ones
   Ctrl+C copies it tab-separated, ready for a spreadsheet.
 - Frosted glass on menus, lists and dialogs; Light, Dark or Follow Windows theme.
 - Preferences (Ctrl+,): theme, code colors and font, export options; changes preview live and persist on **Save**.
+- **Search** (Ctrl+F) in every document, CSV, Excel and text included: the whole file, ignoring case and accents;
+  Enter and Shift+Enter go to the next and previous match, the strip shows "3 de 41" ("3 of 41"), Esc goes back.
 - Drag and drop a folder, database or data file onto the window to open it.
 - Asks before closing a tab, folder or the app with unsaved changes.
 
@@ -186,6 +188,7 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 **CSV**
 - Opens files with millions of rows instantly (paged, never fully loaded), with the detected type of each column.
 - Edit cells, add/duplicate/delete rows and columns, undo/redo, filter with conditions and sort by column.
+- Search (Ctrl+F) the whole file, unsaved edits included and only in the rows the filter shows.
 - Copy and paste columns, paste matching by key (Ctrl+Shift+V), and **Bring columns** from another file (CSV,
   Excel sheet, clipboard) by a common key, with preview and a single undo step.
 - **Save** keeps the file's encoding, delimiter and line endings and does not touch unchanged lines.
@@ -194,11 +197,13 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 - Line numbers; for JSON, syntax colors, valid/invalid indicator with line, column and reason, **Format** (keeps key
   order and numbers) and a document outline.
 - Editable up to 0.5 MiB; larger files open read-only up to 32 MiB. Encoding and line endings round-trip.
+- Search (Ctrl+F) the whole text, read-only files included; the match is highlighted.
 
 **Excel**
 - Read-only, with sheet tabs (including hidden sheets on request), column widths, merged cells and frozen panes.
 - Large sheets show the first page immediately and keep indexing in the background.
 - Copy a cell or a column, or bring a sheet's columns into the open CSV.
+- Search (Ctrl+F) the whole sheet, as the grid shows it (hidden columns are skipped).
 
 The full feature list, keyboard shortcuts and details are in the [Portuguese guide](README.pt-BR.md#recursos).
 
@@ -228,7 +233,7 @@ in [issues](../../issues)):
 | 📊 | **Column profiling** | Nulls, distinct values, mean, most frequent values and a histogram for each column: "what's in here" at a glance. |
 | 🧾 | **More formats** | JSON Lines (`.jsonl`, `.ndjson`) as a table, `.sql` scripts opened in the SQL Query, and large logs (above 32 MiB) with search. |
 | 🔁 | **Format conversion** (Save as) | CSV to Excel or SQLite and back, with the right types; plus **Save all**. |
-| 🔎 | **Search in CSV and text** | Find a value anywhere in the file; edit text above 0.5 MiB. |
+| ✏️ | **Large text** | Edit text above 0.5 MiB. |
 | 🧮 | **SQL over CSV** | Run `SELECT … GROUP BY` straight on a CSV or a spreadsheet. |
 | 📈 | **Charts** | Bars, lines, histograms and scatter plots drawn by DataBox itself from a table, query or CSV; and **Open in Python**, which writes the Seaborn/Matplotlib script and runs it with the Python you already have. |
 | 🗄️ | **More databases** | A single data-source contract, starting with **PostgreSQL** (read-only by default); then **MySQL/MariaDB**, **SQL Server** (via ODBC) and, as an optional build, **DuckDB and Parquet**. Passwords stay in the system's credential store. |

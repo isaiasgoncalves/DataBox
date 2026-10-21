@@ -74,7 +74,8 @@
 //! documento (etapa 3; o módulo `documento`, com os nomes também na raiz):
 //! Anatomia { faixa, rodape, rolagem: Rolagem::{Pagina, Propria} } (Default: a página sem faixa nem rodapé) ·
 //!     com_faixa · com_rodape · rolagem_propria          ALTURA_FAIXA (42) · ALTURA_RODAPE (34)
-//! BuscaDaBarra<'a> { texto: &'a mut String, dica: Cow<'static, str> } · EventoBusca::{Mudou, Enter, Limpar}
+//! BuscaDaBarra<'a> { texto: &'a mut String, dica: Cow<'static, str> } · EventoBusca::{Mudou, Enter, Anterior,
+//!     Limpar} (Anterior: o Shift+Enter)
 //! trait Documento     anatomia · avisos(doc, ui, ctx) (os `.aviso` antes da faixa) · faixa(ui, ctx) · conteudo(ui,
 //!                     ctx) (o único obrigatório) · rodape(ui, ctx) ·
 //!                     ofertas(&Estado) -> Ofertas · executar(Verbo, &egui::Context, ctx) · busca() ->
@@ -110,6 +111,11 @@
 //! secao_abrir_na_consulta(ui, ctx, nome) (os dois a.atalho de consultas_da_tabela(nome), que navegam à Consulta)
 //! busca_da_barra(ui, Option<BuscaDaBarra>, aba) -> Option<EventoBusca>   (a Entrada::busca de 250px; sem busca, a
 //!     desligada) · id_busca_da_barra(aba) · focar_busca_da_barra(ctx, aba, texto) (o Ctrl+F, com o texto selecionado)
+//! busca (a busca da barra nos arquivos: o CSV, a planilha e o texto): BuscaEmFundo::<P>::nova(egui, origem, em_ordem,
+//!     |&mut Coletor<P>| -> Resultado<()>) (a tarefa percorre o arquivo e entrega cada achado com `achou`; `parar` diz
+//!     que a busca foi trocada) · passo(egui) -> Option<P> (para onde ir agora) · seguinte(adiante) -> Option<P> (o
+//!     Enter e o Shift+Enter, com volta) · definir_origem(origem) · atual · terminou · total · rotulo() ("3 de 41", "41+", "Nenhum
+//!     resultado") · soltar cancela · rotulo_na_faixa(ui, rotulo, cor) · LIMITE_DE_ACHADOS (1.000.000 guardados)
 //! apoio_testes: Ambiente::com_pasta(nome, itens_a_mais) (sem banco aberto, com `pasta_de_dados()`: bancos de verdade,
 //!     um sem extensão e um `.dat`, um `.db` que não é SQLite, CSV, XLSX, JSON, TXT, um PDF e subpastas) ·
 //!     palco_documento(amb, doc, tema, tamanho) e palco_parte(amb, tabela, parte, tema, tamanho), que
@@ -153,6 +159,7 @@ mod abas;
 mod acao;
 #[cfg(any(test, feature = "apoio-testes"))]
 pub mod apoio_testes;
+pub mod busca;
 mod contexto;
 mod dialogos;
 pub mod documento;

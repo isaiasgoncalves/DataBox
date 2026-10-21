@@ -1224,8 +1224,8 @@ impl estado::Documento for TelaConsulta {
                 self.achado = None;
                 return;
             }
-            (estado::EventoBusca::Enter, Some((_, fim))) => fim,
-            (estado::EventoBusca::Enter, None) => e,
+            (estado::EventoBusca::Enter | estado::EventoBusca::Anterior, Some((_, fim))) => fim,
+            (estado::EventoBusca::Enter | estado::EventoBusca::Anterior, None) => e,
             (estado::EventoBusca::Mudou, Some((inicio, _))) => inicio,
             (estado::EventoBusca::Mudou, None) => s,
         };

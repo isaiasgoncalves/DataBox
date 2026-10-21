@@ -440,11 +440,12 @@ fn status_de_arquivo_somente_leitura() {
 }
 
 #[test]
-fn verbos_so_atualizar_e_o_resto_desligado() {
+fn verbos_atualizar_e_buscar_e_o_resto_desligado() {
     let t = abrir_relatorio("verbos");
     let o = tela(&t).ofertas(&t.state().estado);
     assert!(o.ligado(Verbo::Atualizar));
     assert_eq!(o.dica(Verbo::Atualizar), "Atualizar relatorio_q3.xlsx (F5)");
+    assert!(o.ligado(Verbo::Buscar), "o Ctrl+F busca na planilha");
     for v in [
         Verbo::Salvar,
         Verbo::Novo,
@@ -454,7 +455,6 @@ fn verbos_so_atualizar_e_o_resto_desligado() {
         Verbo::Excluir,
         Verbo::Desfazer,
         Verbo::Refazer,
-        Verbo::Buscar,
         Verbo::Filtrar,
         Verbo::Exportar,
     ] {

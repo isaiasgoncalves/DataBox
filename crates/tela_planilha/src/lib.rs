@@ -10,7 +10,7 @@
 //! TelaPlanilha::tomar_pedido() -> Option<PedidoDeArquivo>   "Abrir no programa padrão" / "Mostrar na pasta"
 //! impl estado::Documento for TelaPlanilha
 //!   anatomia (faixa, rodapé, rolagem própria) · avisos (o arquivo mudou) · faixa · conteudo · rodape · ofertas/executar
-//!   (só o Atualizar) · propriedades · status_do_arquivo · ocupada · em_segundo_plano · alterado() sempre falso
+//!   (o Atualizar e o Buscar) · busca/evento_busca ("Buscar em Plan1") · propriedades · status_do_arquivo · ocupada · em_segundo_plano · alterado() sempre falso
 //! ```
 //!
 //! # O que a tela faz
@@ -26,6 +26,10 @@
 //!   (**Abrir no programa padrão**, **Mostrar na pasta**): a senha e o formato antigo com a frase do núcleo; o arquivo
 //!   estragado com "O arquivo não é uma planilha válida: …"; o que sumiu com os botões desligados. O erro de uma planilha
 //!   só fica dentro da grade dela, e as outras continuam.
+//! - **Buscar** (Ctrl+F, "Buscar em Plan1"; o módulo `busca`): na planilha inteira, numa tarefa
+//!   (`Planilha::achar_todos`, em fluxo), pelo texto como a grade o mostra, sem diferenciar maiúsculas nem acentos e
+//!   fora das colunas ocultas. A célula achada vira a ativa e a grade rola até ela; Enter e Shift+Enter andam (com
+//!   volta); a faixa diz "3 de 41" ("41+" enquanto conta); Esc limpa e volta à célula de antes.
 //! - **Sem planilha à vista**: a tela abre sem grade, com a frase e a faixa vazia; as Propriedades têm a caixa
 //!   "Mostrar planilhas ocultas".
 //!
@@ -37,6 +41,7 @@
 
 #![forbid(unsafe_code)]
 
+mod busca;
 mod folhas;
 mod fonte;
 mod grade;
@@ -231,6 +236,8 @@ pub struct TelaPlanilha {
     visto_no_disco: Option<InfoArquivo>,
     /// A origem de colunas da planilha da tela (montada quando ela muda) e o que a montou.
     fonte: Option<(ChaveDaFonte, Arc<dyn FonteDeColunas>)>,
+    /// A busca da barra (Ctrl+F) na planilha inteira.
+    busca: busca::BuscaPlanilha,
 }
 
 /// O que a origem de colunas descreve: a aba, as colunas à vista e a última linha conhecida.
@@ -263,6 +270,7 @@ impl TelaPlanilha {
             mudou_no_disco: false,
             visto_no_disco: None,
             fonte: None,
+            busca: busca::BuscaPlanilha::default(),
         }
     }
 
@@ -775,9 +783,14 @@ impl TelaPlanilha {
             }
         });
         let mut abrir = false;
+        let busca = self.busca.rotulo();
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             abrir = ui.add(Botao::ghost(ABRIR_NO_PADRAO).pequeno()).clicked();
             chip_somente_leitura(ui);
+            // a contagem da busca da barra ("3 de 41")
+            if let Some(rotulo) = &busca {
+                estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
+            }
         });
         if abrir {
             self.pedido = Some(PedidoDeArquivo::AbrirNoPadrao(self.caminho.clone()));
@@ -1061,6 +1074,7 @@ impl estado::Documento for TelaPlanilha {
         let ha_csv = ctx.fontes().iter().any(|f| f.tipo() == TipoDeFonte::Csv);
         let egui = ui.ctx().clone();
         self.sincronizar(&egui);
+        self.passo_da_busca(&egui);
         match &self.corpo {
             Corpo::Inicial | Corpo::Abrindo(_) => {
                 ui.add_space(ESPACO_FICHA);
@@ -1079,14 +1093,27 @@ impl estado::Documento for TelaPlanilha {
 
     fn ofertas(&self, _estado: &estado::Estado) -> Ofertas {
         let livre = !matches!(self.corpo, Corpo::Abrindo(_) | Corpo::Inicial);
-        Ofertas::default()
-            .com(Verbo::Atualizar, Oferta::ligada().ligada_se(livre).com_dica(format!("Atualizar {} (F5)", self.nome)))
+        let ofertas = Ofertas::default()
+            .com(Verbo::Atualizar, Oferta::ligada().ligada_se(livre).com_dica(format!("Atualizar {} (F5)", self.nome)));
+        if self.grade().is_some() { ofertas.ligar(Verbo::Buscar) } else { ofertas }
     }
 
     fn executar(&mut self, verbo: Verbo, egui: &Context, _ctx: &mut Contexto) {
         if verbo == Verbo::Atualizar {
             self.atualizar(egui);
         }
+    }
+
+    /// "Buscar em Plan1": na planilha inteira (o módulo `busca`); sem planilha à vista, desligada.
+    fn busca(&mut self) -> Option<estado::BuscaDaBarra<'_>> {
+        self.grade()?;
+        let dica = self.dica_da_busca();
+        Some(estado::BuscaDaBarra { texto: &mut self.busca.texto, dica: dica.into() })
+    }
+
+    fn evento_busca(&mut self, evento: estado::EventoBusca, egui: &Context, _ctx: &mut Contexto) {
+        self.sincronizar(egui);
+        self.evento_da_busca(evento, egui);
     }
 
     fn tem_propriedades(&self) -> bool {
@@ -1163,13 +1190,16 @@ impl estado::Documento for TelaPlanilha {
     fn ocupada(&self) -> bool {
         match &self.corpo {
             Corpo::Inicial | Corpo::Abrindo(_) => true,
-            Corpo::Pronta(p) => p.aba.as_ref().is_some_and(|a| a.sessao.ocupada()) || p.cache.ocupado(),
+            Corpo::Pronta(p) => {
+                p.aba.as_ref().is_some_and(|a| a.sessao.ocupada()) || p.cache.ocupado() || self.busca.ocupada()
+            }
             Corpo::Falhou(_) => false,
         }
     }
 
     fn em_segundo_plano(&mut self, egui: &Context, _ctx: &mut Contexto) {
         self.sincronizar(egui);
+        self.passo_da_busca(egui);
     }
 }
 

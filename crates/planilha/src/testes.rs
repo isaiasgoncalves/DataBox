@@ -1687,3 +1687,52 @@ fn benchmark_um_milhao_de_linhas_por_dez_colunas() {
     );
     assert_eq!(n, 1_000_001);
 }
+
+// ---- busca ---------------------------------------------------------------------------------------------
+
+fn achados(p: &Planilha, texto: &str) -> Vec<(u32, u32)> {
+    let mut v = Vec::new();
+    assert!(
+        p.achar_todos(texto, &|| false, &mut |l, c| {
+            v.push((l, c));
+            true
+        })
+        .unwrap()
+    );
+    v
+}
+
+#[test]
+fn busca_sem_caixa_nem_acento_no_texto_que_a_grade_mostra() {
+    let tmp = Tmp::nova("busca");
+    let caminho = Montador::novo()
+        .aba(
+            "Plan1",
+            "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>1</v></c></row>\
+             <row r=\"3\"><c r=\"A3\" t=\"inlineStr\"><is><t>sao paulo</t></is></c><c r=\"C3\"><v>1234.5</v></c></row>\
+             <row r=\"7\"><c r=\"B7\" t=\"s\"><v>2</v></c><c r=\"D7\" t=\"str\"><f>A3</f><v>SÃO PAULO</v></c></row>",
+        )
+        .textos("<si><t>Cidade</t></si><si><t>São Paulo &amp; \"Recife\"</t></si><si><t>linha um\nSão dois</t></si>")
+        .salvar(&tmp);
+    let pasta = Pasta::abrir(caminho).unwrap();
+    let p = pasta.planilha(0).unwrap();
+    assert_eq!(achados(&p, "SAO"), [(1, 1), (3, 0), (7, 1), (7, 3)]);
+    // as aspas e a quebra de linha são texto da célula
+    assert_eq!(achados(&p, "\"recife\""), [(1, 1)]);
+    assert_eq!(achados(&p, "um\nsao"), [(7, 1)]);
+    // o número como a grade o mostra, em pt-BR
+    assert_eq!(achados(&p, "1234,5"), [(3, 2)]);
+    assert_eq!(achados(&p, ""), []);
+    assert_eq!(p.buscar("são", (3, 1), &|| false).unwrap(), Some((7, 1)));
+    assert_eq!(p.buscar("são", (7, 2), &|| false).unwrap(), Some((7, 3)));
+    assert_eq!(p.buscar("são", (7, 4), &|| false).unwrap(), None);
+    let mut n = 0;
+    assert!(
+        !p.achar_todos("sao", &|| false, &mut |_, _| {
+            n += 1;
+            false
+        })
+        .unwrap()
+    );
+    assert_eq!(n, 1);
+}

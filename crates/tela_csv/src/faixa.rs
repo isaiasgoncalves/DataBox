@@ -126,6 +126,13 @@ impl TelaCsv {
         for t in crate::textos::pilulas_do_formato(&r.formato) {
             pill(ui, &t, TipoPill::Neutra);
         }
+        // a contagem da busca da barra ("3 de 41"), na ponta direita
+        if let Some(rotulo) = self.busca.rotulo() {
+            let cor = interface::tema::paleta(ui).estudio.t2;
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                estado::busca::rotulo_na_faixa(ui, &rotulo, cor);
+            });
+        }
     }
 
     /// A `.barra-filtros` no alto do conteúdo: "Filtros", as etiquetas, "+ Condição" e, filtrando, a contagem e
