@@ -5437,3 +5437,246 @@ mod faixa_das_planilhas {
         assert_eq!(fonte, fontes::fonte(12.0, fontes::Peso::Italico));
     }
 }
+
+/// O menu da célula (0.2.3, `grade::menu_da_celula`) sobre a grade só leitura: o clique direito dentro e fora do
+/// intervalo, o Shift+F10, o Esc, os itens desligados com o motivo, o submenu "Copiar como" e o Ctrl+Shift+C.
+mod menu_da_celula {
+    use super::*;
+    use interface::grade::menu_da_celula;
+    use interface::grade::{ALTURA_CABECALHO, ALTURA_LINHA, AcaoCelula, LARGURA_MENU_DA_CELULA, OfertasCelula};
+    use interface::grade::{OfertaCelula, menu_da_celula_aberto};
+    use tabular::colunas::{FormatoCopia, OpcoesCopia};
+
+    struct Estado {
+        grade: GradeSomenteLeitura,
+        acao: Option<AcaoCelula>,
+        pedidos: usize,
+        copiado: Option<String>,
+    }
+
+    fn montar() -> Harness<'static, Estado> {
+        let EstadoGrade { grade, .. } = grade_de_teste(50);
+        let estado = Estado { grade, acao: None, pedidos: 0, copiado: None };
+        harness(estado, |ui, s| {
+            let r = s.grade.mostrar(ui, 400.0);
+            if r.menu_celula {
+                s.pedidos += 1;
+            }
+            if r.copiado.is_some() {
+                s.copiado = r.copiado;
+            }
+            let ofertas = s
+                .grade
+                .nucleo()
+                .intervalo()
+                .map(OfertasCelula::de_leitura)
+                .unwrap_or_default()
+                .desligar(AcaoCelula::Colar, "A Consulta é só leitura.")
+                .ligar(AcaoCelula::FiltrarPorValor)
+                .ligar(AcaoCelula::ExcluirLinhas);
+            if let Some(acao) = menu_da_celula(ui, s.grade.nucleo_mut(), &ofertas) {
+                s.acao = Some(acao);
+            }
+        })
+    }
+
+    fn centro(h: &Harness<'_, Estado>, l: usize, c: usize) -> egui::Pos2 {
+        let larguras = h.state().grade.larguras().map(<[f32]>::to_vec).unwrap_or_default();
+        let x = 8.0 + larguras[..c].iter().sum::<f32>() + larguras[c] / 2.0;
+        let y = 8.0 + ALTURA_CABECALHO + ALTURA_LINHA * (l as f32 + 0.5);
+        egui::pos2(x, y)
+    }
+
+    fn clique_direito(h: &mut Harness<'_, Estado>, pos: egui::Pos2) {
+        h.hover_at(pos);
+        h.run_steps(1);
+        for pressed in [true, false] {
+            h.event(egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Secondary,
+                pressed,
+                modifiers: Modifiers::NONE,
+            });
+        }
+        h.run_steps(3);
+    }
+
+    fn aberto(h: &Harness<'_, Estado>) -> bool {
+        menu_da_celula_aberto(&h.ctx, h.state().grade.nucleo())
+    }
+
+    fn foco_na_grade(h: &Harness<'_, Estado>) -> bool {
+        let id = h.state().grade.id_corpo();
+        h.ctx.memory(|m| m.has_focus(id))
+    }
+
+    #[test]
+    fn clique_direito_dentro_do_intervalo_age_nele_e_fora_troca_a_ativa() {
+        let mut h = montar();
+        let inicio = centro(&h, 1, 0);
+        clicar_em(&h, inicio);
+        h.run_steps(2);
+        h.event(tecla(Key::ArrowDown, Modifiers::SHIFT));
+        h.event(tecla(Key::ArrowDown, Modifiers::SHIFT));
+        h.event(tecla(Key::ArrowRight, Modifiers::SHIFT));
+        h.run_steps(2);
+        let antes = h.state().grade.nucleo().intervalo().expect("o intervalo");
+        assert_eq!((antes.linha0, antes.linha1, antes.coluna0, antes.coluna1), (1, 3, 0, 1));
+
+        // dentro do intervalo: o menu abre e o intervalo fica
+        let dentro = centro(&h, 2, 1);
+        clique_direito(&mut h, dentro);
+        assert!(aberto(&h), "o clique direito abre o menu");
+        assert_eq!(h.state().pedidos, 1);
+        assert_eq!(h.state().grade.nucleo().intervalo(), Some(antes), "dentro do intervalo, ele fica");
+        assert_eq!(h.state().grade.selecao(), Some((1, 0)), "e a ativa também");
+        assert_eq!(h.get_by_role(Role::Menu).accesskit_node().label().as_deref(), Some("Menu da seleção"));
+        h.get_by_label("Copiar").click();
+        h.run_steps(3);
+        assert_eq!(h.state().acao, Some(AcaoCelula::Copiar));
+        assert!(!aberto(&h), "escolher fecha");
+        assert!(foco_na_grade(&h), "e devolve o foco à grade");
+
+        // fora do intervalo: a célula vira a ativa e o intervalo some
+        let fora = centro(&h, 6, 2);
+        clique_direito(&mut h, fora);
+        assert!(aberto(&h));
+        assert_eq!(h.state().grade.selecao(), Some((6, 2)));
+        assert!(!h.state().grade.nucleo().intervalo().expect("a ativa").varias());
+        assert_eq!(h.get_by_role(Role::Menu).accesskit_node().label().as_deref(), Some("Menu da célula"));
+
+        // o Esc fecha e devolve o foco à grade, que continua com a mesma célula
+        h.key_press(Key::Escape);
+        h.run_steps(3);
+        assert!(!aberto(&h));
+        assert!(foco_na_grade(&h), "o Esc devolve o foco à grade");
+        assert_eq!(h.state().grade.selecao(), Some((6, 2)));
+    }
+
+    #[test]
+    fn shift_f10_abre_na_ativa_com_o_foco_no_primeiro_item() {
+        let mut h = montar();
+        let pos = centro(&h, 4, 1);
+        clicar_em(&h, pos);
+        h.run_steps(2);
+        h.event(tecla(Key::F10, Modifiers::SHIFT));
+        h.run_steps(4);
+        assert!(aberto(&h), "o Shift+F10 abre o menu");
+        assert!(h.get_by_label("Copiar").accesskit_node().is_focused(), "o foco vai ao primeiro item");
+        // embaixo da célula ativa
+        let menu = h.get_by_role(Role::Menu).rect();
+        assert!((menu.top() - (pos.y + ALTURA_LINHA / 2.0)).abs() < 8.0, "o menu nasce embaixo da célula: {menu:?}");
+        // as setas andam pelos itens, não pela grade
+        h.key_press(Key::ArrowDown);
+        h.run_steps(2);
+        assert!(h.get_by_label("Copiar com cabeçalho").accesskit_node().is_focused());
+        assert_eq!(h.state().grade.selecao(), Some((4, 1)), "a grade não andou");
+        h.key_press(Key::Enter);
+        h.run_steps(3);
+        assert_eq!(h.state().acao, Some(AcaoCelula::CopiarComCabecalho));
+        assert!(!aberto(&h));
+        assert!(foco_na_grade(&h), "ativar pelo teclado devolve o foco à grade");
+        // sem foco na grade, o Shift+F10 não abre
+        let id = h.state().grade.id_corpo();
+        h.ctx.memory_mut(|m| m.surrender_focus(id));
+        h.run_steps(1);
+        h.event(tecla(Key::F10, Modifiers::SHIFT));
+        h.run_steps(3);
+        assert!(!aberto(&h));
+    }
+
+    #[test]
+    fn itens_desligados_ocultos_e_atalhos() {
+        let mut h = montar();
+        let pos = centro(&h, 0, 1);
+        clique_direito(&mut h, pos);
+        let largura = h.get_by_role(Role::Menu).rect().width();
+        assert!((largura - LARGURA_MENU_DA_CELULA).abs() < 1.0, "280 de largura: {largura}");
+        let colar = h.get_by_label("Colar");
+        assert!(colar.accesskit_node().is_disabled(), "o desligado aparece desligado");
+        assert_eq!(colar.accesskit_node().description().as_deref(), Some("A Consulta é só leitura."));
+        assert_eq!(colar.accesskit_node().data().keyboard_shortcut(), Some("Ctrl+V"));
+        assert_eq!(
+            h.get_by_label("Copiar com cabeçalho").accesskit_node().data().keyboard_shortcut(),
+            Some("Ctrl+Shift+C")
+        );
+        assert!(h.query_by_label("Limpar").is_none(), "o que a tela não oferece não aparece");
+        assert!(h.query_by_label("Definir como NULL").is_none());
+        assert!(h.query_by_label("Abrir a ficha da linha").is_none());
+        // clicar no desligado não faz nada nem fecha
+        h.get_by_label("Colar").click();
+        h.run_steps(2);
+        assert_eq!(h.state().acao, None);
+        assert!(aberto(&h));
+        h.get_by_label("Excluir as linhas").click();
+        h.run_steps(2);
+        assert_eq!(h.state().acao, Some(AcaoCelula::ExcluirLinhas));
+        assert_eq!(*OfertasCelula::default().get(AcaoCelula::Limpar), OfertaCelula::Oculta);
+    }
+
+    #[test]
+    fn copiar_como_pelo_submenu() {
+        let mut h = montar();
+        let inicio = centro(&h, 1, 1);
+        clicar_em(&h, inicio);
+        h.run_steps(2);
+        h.event(tecla(Key::ArrowDown, Modifiers::SHIFT));
+        h.run_steps(2);
+        let pos = centro(&h, 1, 1);
+        clique_direito(&mut h, pos);
+        h.get_by_label("Copiar como").hover();
+        h.run_steps(3);
+        assert!(!h.get_by_label("CSV").accesskit_node().is_disabled());
+        assert!(!h.get_by_label("Lista para IN (…)").accesskit_node().is_disabled(), "uma coluna só");
+        h.get_by_label("Lista para IN (…)").click();
+        h.run_steps(3);
+        assert_eq!(h.state().acao, Some(AcaoCelula::CopiarComo(FormatoCopia::ListaIn)));
+        assert!(!aberto(&h), "o item do submenu fecha o menu inteiro");
+        let opcoes = OpcoesCopia { separador: ',', tabela: "consulta" };
+        let grade = &h.state().grade;
+        assert_eq!(grade.texto_copiado_como(FormatoCopia::ListaIn, &opcoes).as_deref(), Some("('Nome 1', 'Nome 2')"));
+        assert_eq!(
+            grade.texto_copiado_como(FormatoCopia::Insert, &opcoes).as_deref(),
+            Some("INSERT INTO \"consulta\" (\"nome\") VALUES\n  ('Nome 1'),\n  ('Nome 2');\n")
+        );
+
+        // com duas colunas, a lista para IN fica desligada com o motivo
+        h.event(tecla(Key::ArrowRight, Modifiers::SHIFT));
+        h.run_steps(2);
+        clique_direito(&mut h, pos);
+        h.get_by_label("Copiar como").hover();
+        h.run_steps(3);
+        let lista = h.get_by_label("Lista para IN (…)");
+        assert!(lista.accesskit_node().is_disabled());
+        assert_eq!(lista.accesskit_node().description().as_deref(), Some("Selecione uma coluna só."));
+        assert_eq!(
+            h.state().grade.texto_copiado_como(FormatoCopia::Json, &opcoes).as_deref(),
+            Some("[\n  {\"nome\": \"Nome 1\", \"valor\": 1.5},\n  {\"nome\": \"Nome 2\", \"valor\": 3}\n]\n")
+        );
+    }
+
+    #[test]
+    fn ctrl_shift_c_copia_com_o_cabecalho() {
+        let mut h = montar();
+        let pos = centro(&h, 1, 1);
+        clicar_em(&h, pos);
+        h.run_steps(2);
+        h.event(tecla(Key::ArrowRight, Modifiers::SHIFT));
+        h.run_steps(1);
+        // o egui-winit entrega o Ctrl+Shift+C como `Event::Copy` com os modificadores apertados
+        h.event_modifiers(egui::Event::Copy, Modifiers::COMMAND | Modifiers::SHIFT);
+        h.run_steps(2);
+        assert_eq!(h.state().copiado.as_deref(), Some("nome\tvalor\r\nNome 1\t1.5\r\n"));
+        // e o `Event::Key` também vale (outros backends, o kittest)
+        h.state_mut().copiado = None;
+        h.key_press(Key::ArrowDown);
+        h.run_steps(1);
+        h.event(tecla(Key::C, Modifiers::COMMAND | Modifiers::SHIFT));
+        h.run_steps(2);
+        assert_eq!(h.state().copiado.as_deref(), Some("nome\r\nNome 2\r\n"));
+        // o Ctrl+C sem o Shift continua o de sempre
+        h.event(egui::Event::Copy);
+        h.run_steps(2);
+        assert_eq!(h.state().copiado.as_deref(), Some("Nome 2"));
+    }
+}

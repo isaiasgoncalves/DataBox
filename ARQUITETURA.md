@@ -121,8 +121,9 @@ databox/
 
 Dependências (sem ciclos): `comum` ← `ddl` ← `esquema`; `comum` ← `banco`, `exportar`, `prefs`, `planilha`,
 `tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum`, `tabular` e egui)
-← `estado`, `tela_*`, `editor`. O `interface` usa do `tabular` só o `colunas::escrever_tsv`: a grade copia um intervalo
-de células como o Excel (desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV. As telas de arquivo
+← `estado`, `tela_*`, `editor`. O `interface` usa do `tabular` só o `colunas` da cópia: a grade copia um intervalo
+de células como o Excel (`escrever_tsv`, desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV, e o
+menu da célula (0.2.3) leva os formatos do "Copiar como" (`escrever_como`, `ValorCopia`, `FormatoCopia`). As telas de arquivo
 falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
 `tela_texto` → `texto`, `tela_planilha` → `planilha`), sem passar pelo `servico`, que é a sessão de um banco.
 
@@ -338,6 +339,17 @@ Propriedades) só sem alterações pendentes. `tabular::colunas` é o motor do c
 (`ler_tsv`/`escrever_tsv`, `colunas_coladas`, `posicionar`, `casar` com as três opções de normalização, `sugerir_chaves`,
 `atualizar_coluna`, `nome_da_coluna_trazida`); `tabular::numero`, o número e o tipo de um texto de célula.
 
+Os formatos de cópia do menu da célula (0.2.3) ficam em `tabular::colunas`, ao lado do `escrever_tsv`, sem tela: as
+células chegam como `ValorCopia { Nulo, Numero { texto, literal }, Texto }` (o banco decide pela célula; o CSV e o
+Excel, pelo tipo detectado da coluna: `ValorCopia::do_csv(texto, numerica, decimal)`, com o vazio de uma coluna
+numérica como NULL), e `escrever_como(FormatoCopia, &nomes, &linhas, &OpcoesCopia { separador, tabela })` escolhe:
+`escrever_csv` (RFC 4180, o separador do arquivo, `\r\n`, o número como a grade mostra), `escrever_json` (lista de
+objetos, números como números pelo `numero::literal_numerico`, `null`), `escrever_markdown` (`\|` e `<br>`, `---:` na
+coluna só de números), `escrever_insert(tabela, ..)` (nomes pelo `comum::q`, texto entre apóstrofos dobrados, um
+comando a cada `LINHAS_POR_INSERT` = 500 linhas), `escrever_lista_in` (uma coluna, sem repetidos e sem o NULL, números
+sem aspas) e `escrever_pandas` (`pd.DataFrame({...})`, `None`); `escrever_tsv_com_cabecalho` é o "Copiar com
+cabeçalho". Sem HTML: o egui só põe texto puro na área de transferência.
+
 ### 4.4d `texto` (arquivos de texto e JSON)
 
 `texto::arquivo::carregar(caminho) -> Carregado { texto (só `\n`), codificacao, fim_de_linha, fim_misto,
@@ -450,6 +462,17 @@ e uma grade só leitura com cabeçalho fixo e rolagem virtual (a da Consulta SQL
 dos filtros, a única). Um **mostruário** (exemplo e teste com captura em PNG pelo `egui_kittest`) mostra cada peça
 nos dois temas. As peças da casca: `abas_documento`, `arvore`, `painel`, `barra_status`, `barra_titulo`,
 `ferramentas` e os itens do `PainelMenu` (desligado, marcado, submenu, item de duas linhas, com ícones).
+
+O **menu da célula** (0.2.3, `interface::grade::menu_da_celula(ui, &mut nucleo, &OfertasCelula) -> Option<AcaoCelula>`)
+é a peça comum das quatro grades: o `NucleoGrade` pede o menu (`RespostaNucleo::menu_celula`) no clique direito numa
+célula — dentro do intervalo selecionado o menu age nele; fora, a célula vira a ativa — e no Shift+F10 com o foco no
+corpo (embaixo da célula ativa, o foco no primeiro item); o menu é o `MenuContexto` (vidro fosco, itens do
+`PainelMenu`, `mostrar_aberto` sem um widget dono), com o submenu "Copiar como", os atalhos no texto (Ctrl+C,
+Ctrl+Shift+C, Ctrl+V, Delete, Enter) e no AccessKit, o Esc fechando e devolvendo o foco à grade. Cada tela diz o que
+liga em `OfertasCelula` (`de_leitura(intervalo)` para os de copiar; `ligar`, `desligar(acao, motivo)`, `ligar_se`; o
+item sem oferta não aparece, o desligado mostra o motivo na dica) e cumpre a `AcaoCelula`. O Ctrl+Shift+C com o foco
+na grade é o "Copiar com cabeçalho" (`RespostaNucleo::copiar_com_cabecalho`), não o "Copiar caminho" do Explorador.
+A tecla Menu do teclado não chega ao egui 0.36 (o egui-winit não traduz o `NamedKey::ContextMenu`).
 
 **Ícones:** `icones::Icone` (as silhuetas da barra de ferramentas e dos botões, os sólidos do
 trilho, do menu Arquivo, do banco, dos objetos e das partes, os `-grande` de 48 da dock, `Tipo(TipoColuna)` — a

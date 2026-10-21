@@ -42,13 +42,19 @@
 //!     .total() · .com_par() · .percentual() · .linhas_da_origem(i) · .trazer(&coluna, ChavesRepetidas)
 //!   sugerir_chaves(nomes_d, amostra_d, nomes_o, amostra_o, &opcoes) -> Option<(coluna_d, coluna_o)>
 //!   ler_tsv(&str) -> Vec<Vec<String>> · escrever_tsv(linhas) -> String · escrever_coluna(nome, &valores)
+//!   escrever_tsv_com_cabecalho(&nomes, linhas)          o "Copiar com cabeçalho"
+//!   ValorCopia { Nulo, Numero { texto, literal }, Texto } · ValorCopia::do_csv(texto, numerica, decimal)
+//!   escrever_como(FormatoCopia, &nomes, &linhas, &OpcoesCopia { separador, tabela })   o "Copiar como":
+//!     escrever_csv(.., separador) · escrever_json · escrever_markdown · escrever_insert(tabela, ..) (500 linhas
+//!     por comando, nomes pelo comum::q) · escrever_lista_in(valores) (sem repetidos) · escrever_pandas
 //!   colunas_coladas(&linhas, OrigemDoTexto, decimal) · texto_tem_cabecalho(..)
 //!   comparar_quantidades · posicionar(&valores, linhas, QuandoSobram) -> Posicionamento
 //!   atualizar_coluna(&atual, &trazidos, ModoAtualizacao) -> Atualizacao
 //!   nome_generico · nome_da_coluna_trazida · rotulo_da_origem
 //!
 //! tabular::numero                                 número e tipo de um texto de célula
-//!   analisar_numero(&str, decimal) · canonico(&str) · e_data(&str) · classificar(&str, decimal) · tipo_da_coluna(..)
+//!   analisar_numero(&str, decimal) · literal_numerico(&str, decimal) (o literal do JSON, do SQL e do Python)
+//!   canonico(&str) · e_data(&str) · classificar(&str, decimal) · tipo_da_coluna(..)
 //! ```
 //!
 //! # Como o CSV é lido
