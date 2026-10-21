@@ -2898,6 +2898,7 @@ struct EstadoAbas {
     novas: u32,
     altura: f32,
     juncao: Option<egui::Rangef>,
+    movidas: Vec<(usize, usize)>,
 }
 
 fn abas_de_teste(ui: &mut Ui, s: &mut EstadoAbas) {
@@ -2921,6 +2922,7 @@ fn abas_de_teste(ui: &mut Ui, s: &mut EstadoAbas) {
     }
     s.altura = r.rect.height();
     s.juncao = r.juncao;
+    s.movidas.extend(r.mover);
 }
 
 #[test]
@@ -2949,6 +2951,58 @@ fn faixa_de_abas_foca_fecha_e_abre_nova() {
     h.get_by_label("Nova consulta SQL").click();
     h.run_steps(2);
     assert_eq!(h.state().novas, 1);
+}
+
+#[test]
+fn faixa_de_abas_muda_a_aba_de_lugar_pelo_arrasto_e_pelo_menu() {
+    let mut h = harness(EstadoAbas { largura: 900.0, ..Default::default() }, abas_de_teste);
+    h.run_steps(1);
+    let centro = |h: &Harness<'_, EstadoAbas>, rotulo: &str| h.get(by().role(Role::Tab).label(rotulo)).rect().center();
+    let arrastar = |h: &mut Harness<'_, EstadoAbas>, de: egui::Pos2, para: egui::Pos2, esc: bool| {
+        h.hover_at(de);
+        h.run_steps(2);
+        h.event(egui::Event::PointerButton {
+            pos: de,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: egui::Modifiers::NONE,
+        });
+        h.run_steps(1);
+        for t in 1..=6 {
+            h.hover_at(de + (para - de) * (t as f32 / 6.0));
+            h.run_steps(2);
+        }
+        if esc {
+            h.key_press(egui::Key::Escape);
+            h.run_steps(1);
+        }
+        h.event(egui::Event::PointerButton {
+            pos: para,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: egui::Modifiers::NONE,
+        });
+        h.run_steps(2);
+    };
+    // a Consulta 1 arrastada até antes do meio da primeira cai na frente
+    let de = centro(&h, "Consulta 1");
+    let para = egui::pos2(centro(&h, "exemplo.db · Visão geral").x - 20.0, de.y);
+    arrastar(&mut h, de, para, false);
+    assert_eq!(h.state().movidas, [(2, 0)]);
+    assert_eq!(h.state().ativa, 0, "arrastar não foca nem clica");
+    // um arrasto curto, que não passa do meio da vizinha, não muda nada; o Esc cancela
+    let de = centro(&h, "exemplo.db · Visão geral");
+    arrastar(&mut h, de, de + egui::vec2(20.0, 0.0), false);
+    let longe = egui::pos2(centro(&h, "Consulta 1").x + 30.0, de.y);
+    arrastar(&mut h, de, longe, true);
+    assert_eq!(h.state().movidas.len(), 1);
+    // o menu da aba: a primeira não vai mais para a esquerda
+    h.get(by().role(Role::Tab).label("exemplo.db · Visão geral")).click_button(egui::PointerButton::Secondary);
+    h.run_steps(2);
+    assert!(h.get_by_label("Mover à esquerda").accesskit_node().is_disabled());
+    h.get_by_label("Mover à direita").click();
+    h.run_steps(2);
+    assert_eq!(h.state().movidas, [(2, 0), (0, 1)]);
 }
 
 #[test]

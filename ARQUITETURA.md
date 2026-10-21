@@ -540,8 +540,9 @@ capturar}` para testar telas com o `egui_kittest` e gravar capturas em `capturas
   `Substituir(rota)`: o endereço da aba de origem, sem histórico. As duas valem para a aba que as emitiu, mesmo que
   ela já tenha saído de vista.
 - `Voltar` e `Avancar` andam no histórico único; novas: `NovaConsulta { sql }` (o "Nova consulta" da barra e da
-  faixa; com o comando, um item do Histórico), `FocarAba(IdAba)` (o clique na faixa) e `FecharAba(Option<IdAba>)`
-  (o ×, o clique do meio e o Ctrl+W; None é a ativa).
+  faixa; com o comando, um item do Histórico), `FocarAba(IdAba)` (o clique na faixa), `FecharAba(Option<IdAba>)`
+  (o ×, o clique do meio e o Ctrl+W; None é a ativa) e `MoverAba { id, para }` (o arrasto na faixa, o menu da aba e
+  o Ctrl+Shift+PageUp/PageDown: `Abas::mover`, que não muda a ativa nem o histórico).
 - A pasta: `EscolherEAbrirPasta`, `AbrirPasta { caminho }`, `AbrirCaminho { caminho, somente_leitura }` (a casca
   classifica: pasta, banco ou arquivo de dados), `AbrirArquivoDeDados { caminho }` (vai para `Rota::Arquivo`),
   `ListarPasta { caminho }` (uma subpasta da árvore), `AtualizarPasta` e `FecharPasta` (fecha as abas de arquivo de
@@ -869,7 +870,8 @@ linha" · "Fechar".
 - **Atalhos**: Ctrl+O, Ctrl+Enter (na Consulta SQL), Ctrl+F (a busca da barra, quando a aba tem busca), Esc,
   setas/Enter/F2/Esc/Tab/Delete na grade, mais os da casca (`editor/src/casca/atalhos.rs`): Alt+←/→ e os botões
   laterais do mouse (o histórico único, que atravessa as abas), Ctrl+W (fechar a aba), Ctrl+Tab e Ctrl+Shift+Tab (a
-  aba seguinte e a anterior na faixa, com volta: `Abas::vizinha`), F5 (o Atualizar da aba, só com o Atualizar ligado
+  aba seguinte e a anterior na faixa, com volta: `Abas::vizinha`), Ctrl+Shift+PageUp/PageDown (a ativa uma casa
+  para a esquerda ou a direita, sem volta: `Acao::MoverAba`), F5 (o Atualizar da aba, só com o Atualizar ligado
   nela; senão, a tecla fica com quem tem o foco e a edição em curso não termina), Ctrl+B (Explorador) e Ctrl+Alt+B
   (Propriedades, só com o botão delas ligado: no Início e na janela estreita não faz nada; com um campo de texto
   focado, fica com o campo, porque o AltGr+B escreve em outros teclados) e Ctrl+, (as Preferências); Ctrl+Shift+O (Abrir pasta) e, só com o foco num nó do Explorador,

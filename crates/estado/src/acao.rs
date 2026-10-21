@@ -35,6 +35,8 @@ pub enum Acao {
     FocarAba(IdAba),
     /// Fecha uma aba (o × dela, o clique do meio, Ctrl+W); None é a ativa.
     FecharAba(Option<IdAba>),
+    /// Muda a aba de lugar na faixa (o arrasto, o Ctrl+Shift+PageUp e PageDown, o menu da aba), sem focá-la.
+    MoverAba { id: IdAba, para: usize },
 
     /// Abre um banco (com transação aberta no atual, a casca pergunta se descarta antes).
     AbrirBanco { caminho: PathBuf, somente_leitura: bool },

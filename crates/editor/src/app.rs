@@ -2522,6 +2522,9 @@ impl Editor {
                 Acao::FocarAba(id) => {
                     self.abas.focar(id);
                 }
+                Acao::MoverAba { id, para } => {
+                    self.abas.mover(id, para);
+                }
                 // a aba alterada pergunta antes (a fila de perguntas ao fechar, etapa 5)
                 Acao::FecharAba(id) => {
                     let id = id.unwrap_or_else(|| self.abas.id_ativa());
@@ -2725,6 +2728,18 @@ impl Editor {
         for (pedida, seguinte) in [(a.proxima, true), (a.anterior, false)] {
             if let Some(id) = self.abas.vizinha(seguinte).filter(|_| pedida) {
                 self.pendentes.push((None, Acao::FocarAba(id)));
+            }
+        }
+        // a ativa uma casa para a esquerda ou para a direita, sem volta
+        let id = self.abas.id_ativa();
+        if let Some(i) = self.abas.posicao_na_faixa(id) {
+            let para = match (a.mover_esquerda, a.mover_direita) {
+                (true, _) => i.checked_sub(1),
+                (_, true) => (i + 1 < self.abas.len()).then_some(i + 1),
+                _ => None,
+            };
+            if let Some(para) = para {
+                self.pendentes.push((None, Acao::MoverAba { id, para }));
             }
         }
         terminar_edicao(ctx);

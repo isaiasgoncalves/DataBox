@@ -273,6 +273,25 @@ impl<T> Abas<T> {
         self.lista.get(j).map(|a| a.id)
     }
 
+    /// Move a aba para a posição `para` da faixa (as do meio andam uma casa; além do fim, vai para o fim): o arrasto
+    /// na faixa, o Ctrl+Shift+PageUp e PageDown e o "Mover à esquerda/direita" do menu da aba. Não muda a ativa
+    /// nem o histórico. False se ela não existe ou já estava lá.
+    pub fn mover(&mut self, id: IdAba, para: usize) -> bool {
+        let Some(de) = self.posicao(id) else { return false };
+        let para = para.min(self.lista.len() - 1);
+        if de == para {
+            return false;
+        }
+        let aba = self.lista.remove(de);
+        self.lista.insert(para, aba);
+        true
+    }
+
+    /// A posição da aba na faixa (0 é a primeira).
+    pub fn posicao_na_faixa(&self, id: IdAba) -> Option<usize> {
+        self.posicao(id)
+    }
+
     pub fn id_ativa(&self) -> IdAba {
         self.historico.atual().aba
     }
@@ -828,6 +847,25 @@ mod testes {
         assert_eq!(abas.id_ativa(), a);
         assert_eq!(ativa(&abas), r"#/arquivo/C:\p\a.csv", "o endereço dela não troca");
         assert!(!abas.pode_voltar() && !abas.pode_avancar());
+    }
+
+    #[test]
+    fn mover_troca_a_ordem_sem_mexer_na_ativa_nem_no_historico() {
+        let mut abas = Abas::nova(Rota::Inicio, |_, _| ());
+        let a = abas.id_ativa();
+        let b = abas.abrir(Rota::Consulta { sql: Some("1".into()) }, |_, _| ()).id();
+        let c = abas.abrir(Rota::Consulta { sql: Some("2".into()) }, |_, _| ()).id();
+        let ordem = |abas: &Abas<()>| abas.iter().map(|x| x.id()).collect::<Vec<_>>();
+        assert!(abas.mover(c, 0));
+        assert_eq!(ordem(&abas), [c, a, b]);
+        assert_eq!(abas.id_ativa(), c, "a ativa continua a mesma");
+        assert!(abas.mover(c, 99), "além do fim vai para o fim");
+        assert_eq!(ordem(&abas), [a, b, c]);
+        assert!(!abas.mover(c, 2), "já estava lá");
+        assert!(!abas.mover(IdAba(999), 0));
+        assert_eq!(abas.posicao_na_faixa(b), Some(1));
+        assert!(abas.voltar());
+        assert_eq!(abas.id_ativa(), b, "o histórico não muda com a ordem");
     }
 
     #[test]

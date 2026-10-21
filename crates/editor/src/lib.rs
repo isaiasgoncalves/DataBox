@@ -102,7 +102,8 @@
 //! 3. Atalhos (`casca::atalhos`, sem janela aberta, com os modificadores exatos): Ctrl+O e Ctrl+Shift+O (fecham o
 //!    menu e abrem o diálogo do arquivo e o da pasta), Ctrl+F (a busca da barra, quando a aba tem busca), Ctrl+, (as Preferências), Alt+←/→ e os botões
 //!    laterais do mouse (o histórico único, que atravessa as abas), Ctrl+W (fecha a
-//!    aba), Ctrl+Tab e Ctrl+Shift+Tab (a aba seguinte e a anterior, com volta: `Abas::vizinha`) e F5 (o Atualizar
+//!    aba), Ctrl+Tab e Ctrl+Shift+Tab (a aba seguinte e a anterior, com volta: `Abas::vizinha`), Ctrl+Shift+PageUp e
+//!    PageDown (a ativa uma casa para a esquerda ou a direita: `Acao::MoverAba`) e F5 (o Atualizar
 //!    da aba, só quando ela o oferece): a edição em curso grava agora e a ação vale no quadro seguinte; Ctrl+B e
 //!    Ctrl+Alt+B mostram ou escondem o Explorador e as Propriedades na hora (o Ctrl+Alt+B só com o botão delas
 //!    ligado, e fica com o campo de texto focado, por causa do AltGr). Fechar a janela com uma exportação em
@@ -147,9 +148,9 @@
 //! 5. Aplica as `estado::Acao`, cada uma com a aba que a emitiu: `Navegar` (sem banco, toda rota vira o Início;
 //!    abre a aba da rota ou foca a aberta; a Consulta SQL sem comando foca a que abriu a transação, depois a mais
 //!    recente), `Atualizar`/`Substituir` (só o endereço da aba de origem; se ele cai na chave de outra aba aberta,
-//!    as duas viram uma), `Voltar`/`Avancar` (só focam), `NovaConsulta`, `FocarAba`, `FecharAba` (fechar a última
-//!    abre o Início; a execução da Consulta que ainda corre segue numa tarefa da casca),
-//!    `AbrirBanco`/`EscolherEAbrir`/`NovoBanco`/`FecharBanco` (uma troca de cada vez, só depois de o estado
+//!    as duas viram uma), `Voltar`/`Avancar` (só focam), `NovaConsulta`, `FocarAba`, `MoverAba` (`Abas::mover`),
+//!    `FecharAba` (fechar a última abre o Início; a execução da Consulta que ainda corre segue numa tarefa da
+//!    casca), `AbrirBanco`/`EscolherEAbrir`/`NovoBanco`/`FecharBanco` (uma troca de cada vez, só depois de o estado
 //!    chegar; 409 `TransacaoAberta` → a confirmação "Descartar e continuar" e a mesma troca com
 //!    `descartar_transacao`; no fim, o estado relido, todas as abas fechadas, inclusive as Consultas, e a Visão
 //!    geral do banco novo, ou o Início), `RecarregarObjetos` (vindo de uma aba de tabela, as outras abas da mesma
