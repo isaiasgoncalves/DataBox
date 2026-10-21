@@ -1590,6 +1590,94 @@ fn grade_seleciona_move_com_setas_e_copia() {
     assert_eq!(toast_atual(&h.ctx).as_deref(), Some("Copiado."));
 }
 
+#[test]
+fn grade_seleciona_um_intervalo_arrastando_e_com_o_shift_e_copia_como_o_excel() {
+    let mut h = harness(grade_de_teste(50), |ui, s| {
+        let r = s.grade.mostrar(ui, 400.0);
+        if r.copiado.is_some() || r.selecao_mudou {
+            s.ultima = r;
+        }
+        desenhar_toast(ui.ctx(), f32::INFINITY);
+    });
+    let larguras = h.state().grade.larguras().map(<[f32]>::to_vec).unwrap_or_default();
+    let centro = |l: usize, c: usize| {
+        let x = 8.0 + larguras[..c].iter().sum::<f32>() + larguras[c] / 2.0;
+        let y = 8.0 + interface::grade::ALTURA_CABECALHO + interface::grade::ALTURA_LINHA * (l as f32 + 0.5);
+        egui::pos2(x, y)
+    };
+    // arrastar da linha 1, coluna "id", até a linha 3, coluna "nome": a célula onde começou fica a ativa
+    let (de, ate) = (centro(1, 0), centro(3, 1));
+    h.hover_at(de);
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton {
+        pos: de,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
+    h.run_steps(1);
+    for t in 1..=5 {
+        h.hover_at(de + (ate - de) * (t as f32 / 5.0));
+        h.run_steps(1);
+    }
+    h.event(egui::Event::PointerButton {
+        pos: ate,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::NONE,
+    });
+    h.run_steps(2);
+    let g = &h.state().grade;
+    assert_eq!(g.selecao(), Some((1, 0)));
+    let iv = g.nucleo().intervalo().expect("o intervalo");
+    assert_eq!((iv.linha0, iv.linha1, iv.coluna0, iv.coluna1), (1, 3, 0, 1));
+    // o Ctrl+C leva o intervalo com tabulações e `\r\n`, como o Excel
+    h.event(egui::Event::Copy);
+    h.run_steps(1);
+    assert_eq!(h.state().ultima.copiado.as_deref(), Some("2\tNome 1\r\n3\tNome 2\r\n4\tNome 3\r\n"));
+    assert_eq!(toast_atual(&h.ctx).as_deref(), Some("3 linhas × 2 colunas copiadas."));
+    // Shift+→ estende até a coluna "valor"; a linha 7 é NULL (vai vazia)
+    h.event(tecla(Key::ArrowRight, Modifiers::SHIFT));
+    h.run_steps(1);
+    let iv = h.state().grade.nucleo().intervalo().expect("o intervalo");
+    assert_eq!((iv.coluna0, iv.coluna1), (0, 2));
+    // Esc volta à célula ativa; uma seta sem o Shift também desfaz o intervalo
+    h.key_press(Key::Escape);
+    h.run_steps(1);
+    assert!(!h.state().grade.nucleo().intervalo().expect("a ativa").varias());
+    h.event(tecla(Key::ArrowDown, Modifiers::SHIFT));
+    h.event(tecla(Key::ArrowDown, Modifiers::SHIFT));
+    h.run_steps(1);
+    let iv = h.state().grade.nucleo().intervalo().expect("o intervalo");
+    assert_eq!((iv.linha0, iv.linha1), (1, 3));
+    h.key_press(Key::ArrowDown);
+    h.run_steps(1);
+    assert_eq!(h.state().grade.selecao(), Some((2, 0)));
+    assert!(!h.state().grade.nucleo().intervalo().expect("a ativa").varias());
+    // Shift+clique estende da ativa até a clicada
+    let (x, y) = (centro(6, 2).x, centro(6, 2).y);
+    h.event(egui::Event::ModifiersChanged(Modifiers::SHIFT));
+    h.hover_at(egui::pos2(x, y));
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton {
+        pos: egui::pos2(x, y),
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::SHIFT,
+    });
+    h.event(egui::Event::PointerButton {
+        pos: egui::pos2(x, y),
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::SHIFT,
+    });
+    h.run_steps(2);
+    h.event(egui::Event::ModifiersChanged(Modifiers::NONE));
+    let iv = h.state().grade.nucleo().intervalo().expect("o intervalo");
+    assert_eq!((iv.linha0, iv.linha1, iv.coluna0, iv.coluna1), (2, 6, 0, 2));
+    assert_eq!(h.state().grade.selecao(), Some((2, 0)), "a ativa não muda");
+}
+
 fn tecla(key: Key, modifiers: Modifiers) -> egui::Event {
     egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }
 }

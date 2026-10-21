@@ -751,6 +751,65 @@ pub fn larguras_iniciais(painter: &Painter, p: &Paleta, colunas: &[ColunaGrade],
 
 // ------------------------------------------------------------------ núcleo
 
+/// Um intervalo retangular de células ([`NucleoGrade::intervalo`]): as linhas `linha0..=linha1` e as colunas
+/// `coluna0..=coluna1` da grade, com as pontas incluídas e na ordem da grade (a de cima à esquerda primeiro).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Intervalo {
+    pub linha0: usize,
+    pub linha1: usize,
+    pub coluna0: usize,
+    pub coluna1: usize,
+}
+
+impl Intervalo {
+    /// O retângulo entre duas células, em qualquer ordem.
+    pub fn entre(a: (usize, usize), b: (usize, usize)) -> Intervalo {
+        Intervalo { linha0: a.0.min(b.0), linha1: a.0.max(b.0), coluna0: a.1.min(b.1), coluna1: a.1.max(b.1) }
+    }
+
+    pub fn contem(&self, linha: usize, coluna: usize) -> bool {
+        (self.linha0..=self.linha1).contains(&linha) && (self.coluna0..=self.coluna1).contains(&coluna)
+    }
+
+    pub fn linhas(&self) -> Range<usize> {
+        self.linha0..self.linha1 + 1
+    }
+
+    pub fn colunas(&self) -> Range<usize> {
+        self.coluna0..self.coluna1 + 1
+    }
+
+    /// Quantas células ele tem.
+    pub fn celulas(&self) -> u64 {
+        self.linhas().len() as u64 * self.colunas().len() as u64
+    }
+
+    /// Mais de uma célula.
+    pub fn varias(&self) -> bool {
+        self.linha0 != self.linha1 || self.coluna0 != self.coluna1
+    }
+}
+
+/// O texto do intervalo para a área de transferência, como o Excel copia ([`tabular::colunas::escrever_tsv`]:
+/// tabulação entre as colunas, `\r\n` depois de cada linha, as aspas onde o campo pede). `texto` dá o texto de
+/// cada célula (linha e coluna da grade); a célula sem texto vai vazia.
+pub fn tsv_do_intervalo(intervalo: Intervalo, mut texto: impl FnMut(usize, usize) -> Option<String>) -> String {
+    let linhas: Vec<Vec<String>> =
+        intervalo.linhas().map(|l| intervalo.colunas().map(|c| texto(l, c).unwrap_or_default()).collect()).collect();
+    tabular::colunas::escrever_tsv(&linhas)
+}
+
+/// A frase do aviso depois de copiar um intervalo: "3 linhas × 2 colunas copiadas.", "Copiado." numa célula só.
+pub fn frase_do_intervalo_copiado(intervalo: Intervalo) -> String {
+    if !intervalo.varias() {
+        return "Copiado.".to_string();
+    }
+    let (l, c) = (intervalo.linhas().len(), intervalo.colunas().len());
+    let linhas = if l == 1 { "1 linha".to_string() } else { format!("{} linhas", formatar_numero(l as u64)) };
+    let colunas = if c == 1 { "1 coluna".to_string() } else { format!("{} colunas", formatar_numero(c as u64)) };
+    format!("{linhas} × {colunas} copiadas.")
+}
+
 /// Regras de teclado do [`NucleoGrade`] (valem com o corpo da grade focado).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Navegacao {
@@ -854,13 +913,15 @@ pub struct Toques {
 pub struct RespostaNucleo {
     /// A célula ativa mudou (clique ou teclado).
     pub selecao_mudou: bool,
+    /// O intervalo mudou ([`NucleoGrade::intervalo`]: o arrasto, o Shift+clique, o Shift com as setas).
+    pub intervalo_mudou: bool,
     /// Clique simples numa célula (que passou a ser a ativa).
     pub clicou: Option<(usize, usize)>,
     /// Pedido de edição da célula: duplo clique, ou Enter/F2 na célula ativa.
     pub editar: Option<(usize, usize)>,
     /// Tecla de texto com a célula ativa ([`Navegacao::Dados`]): começa a edição com ela, como numa planilha.
     pub texto_digitado: Option<String>,
-    /// Ctrl+C com a célula ativa.
+    /// Ctrl+C com a célula ativa (com um intervalo de várias, quem chama copia o [`NucleoGrade::intervalo`]).
     pub copiar: bool,
     /// Delete com o corpo focado ([`Navegacao::Dados`]: excluir as marcadas).
     pub excluir: bool,
@@ -899,6 +960,9 @@ pub struct NucleoGrade {
     coluna_numero: Option<usize>,
     selecao: Option<(usize, usize)>,
     rolar_para_selecao: bool,
+    /// A outra ponta do intervalo (a célula ativa é a âncora, onde ele começou); None: só a célula ativa.
+    extremo: Option<(usize, usize)>,
+    rolar_para_extremo: bool,
     /// O painel congelado pedido ([`NucleoGrade::com_congelado`]) e o que valeu no último quadro (a trava de 60%).
     congelado: Option<Congelado>,
     congelado_efetivo: Congelado,
@@ -928,6 +992,8 @@ impl NucleoGrade {
             coluna_numero: None,
             selecao: None,
             rolar_para_selecao: false,
+            extremo: None,
+            rolar_para_extremo: false,
             congelado: None,
             congelado_efetivo: Congelado::default(),
             mesclas: None,
@@ -1068,6 +1134,7 @@ impl NucleoGrade {
     pub fn definir_linhas(&mut self, n_linhas: usize) {
         self.n_linhas = n_linhas;
         self.selecao = self.selecao.filter(|&(l, _)| l < n_linhas);
+        self.extremo = self.extremo.filter(|&(l, _)| l < n_linhas && self.selecao.is_some());
     }
 
     pub fn larguras(&self) -> &[f32] {
@@ -1083,6 +1150,7 @@ impl NucleoGrade {
         }
         self.larguras = larguras;
         self.selecao = self.selecao.filter(|&(_, c)| c < n);
+        self.extremo = self.extremo.filter(|&(_, c)| c < n && self.selecao.is_some());
     }
 
     /// Troca a largura de uma coluna (mínimo 48px; 24px com as larguras do arquivo).
@@ -1101,10 +1169,38 @@ impl NucleoGrade {
         self.selecao
     }
 
-    /// Escolhe a célula ativa (e rola até ela). Fora da grade, ou numa coluna que não é navegável, não escolhe.
+    /// Escolhe a célula ativa (e rola até ela), sem intervalo. Fora da grade, ou numa coluna que não é navegável, não
+    /// escolhe.
     pub fn selecionar(&mut self, celula: Option<(usize, usize)>) {
         self.selecao = celula.filter(|&(l, c)| l < self.n_linhas && self.navegaveis.contains(&c));
         self.rolar_para_selecao = self.selecao.is_some();
+        self.extremo = None;
+    }
+
+    /// O intervalo entre a célula ativa (onde ele começou) e a outra ponta: o arrasto com o mouse, o Shift+clique e o
+    /// Shift com as setas o estendem; sem nada disso, é a própria célula ativa. None sem célula ativa.
+    pub fn intervalo(&self) -> Option<Intervalo> {
+        let a = self.selecao?;
+        Some(Intervalo::entre(a, self.extremo.unwrap_or(a)))
+    }
+
+    /// Estende o intervalo da célula ativa até `celula` (presa à grade e às colunas navegáveis); sem célula ativa, ela
+    /// passa a ser a ativa. Devolve se mudou.
+    pub fn estender(&mut self, celula: (usize, usize)) -> bool {
+        if self.n_linhas == 0 || self.navegaveis.is_empty() {
+            return false;
+        }
+        let l = celula.0.min(self.n_linhas - 1);
+        let c = celula.1.clamp(self.navegaveis.start, self.navegaveis.end - 1);
+        let Some(a) = self.selecao else {
+            self.selecionar(Some((l, c)));
+            return true;
+        };
+        let novo = (a != (l, c)).then_some((l, c));
+        let mudou = novo != self.extremo;
+        self.extremo = novo;
+        self.rolar_para_extremo |= mudou;
+        mudou
     }
 
     /// Passa o foco do teclado para o corpo da grade (depois de gravar a edição no lugar com Enter).
@@ -1148,8 +1244,9 @@ impl NucleoGrade {
         }
         l = (l + dl).clamp(0, ultima);
         let nova = Some((l as usize, c as usize));
-        let mudou = nova != self.selecao;
+        let mudou = nova != self.selecao || self.extremo.is_some();
         self.selecao = nova;
+        self.extremo = None;
         self.rolar_para_selecao = true;
         mudou
     }
@@ -1164,7 +1261,13 @@ impl NucleoGrade {
         ui.memory_mut(|m| {
             m.set_focus_lock_filter(
                 id_corpo,
-                EventFilter { horizontal_arrows: true, vertical_arrows: true, tab: dados, ..Default::default() },
+                // com um intervalo, o Esc é da grade (desfaz o intervalo) e não tira o foco dela
+                EventFilter {
+                    horizontal_arrows: true,
+                    vertical_arrows: true,
+                    tab: dados,
+                    escape: self.extremo.is_some(),
+                },
             )
         });
         let (c0, c1) = (self.navegaveis.start, self.navegaveis.end - 1);
@@ -1175,6 +1278,8 @@ impl NucleoGrade {
         };
         let eventos: Vec<Event> = ui.input(|i| i.events.clone());
         let antes = self.selecao;
+        let extremo_antes = self.extremo;
+        let mut esc = false;
         for e in &eventos {
             match e {
                 Event::Key { key, pressed: true, modifiers, .. } => {
@@ -1185,6 +1290,19 @@ impl NucleoGrade {
                     // cada tecla navegável move; as outras não desfazem o que as anteriores moveram
                     let mut nova: Option<(usize, usize)> = None;
                     let ctrl = modifiers.ctrl || modifiers.command;
+                    // com o Shift, as setas, o PageUp/PageDown e o Home/End estendem o intervalo a partir da outra ponta
+                    // (com o Ctrl, até a borda da grade); o Shift+Tab continua sendo o Tab de volta
+                    if modifiers.shift
+                        && let Some(alvo) = self.alvo_do_shift(*key, ctrl, pagina, (c0, c1))
+                    {
+                        self.estender(alvo);
+                        continue;
+                    }
+                    if *key == Key::Escape && self.extremo.is_some() {
+                        self.extremo = None;
+                        esc = true;
+                        continue;
+                    }
                     if dados {
                         match key {
                             Key::ArrowDown if !ctrl => {
@@ -1242,6 +1360,7 @@ impl NucleoGrade {
                     }
                     if let Some(n) = nova {
                         self.selecao = Some(n);
+                        self.extremo = None;
                         self.rolar_para_selecao = true;
                     }
                 }
@@ -1255,6 +1374,37 @@ impl NucleoGrade {
         if self.selecao != antes {
             resposta.selecao_mudou = true;
         }
+        if self.extremo != extremo_antes {
+            resposta.intervalo_mudou = true;
+        }
+        if esc {
+            // o Esc que desfez o intervalo não vai a mais ninguém
+            ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Escape));
+        }
+    }
+
+    /// Onde o Shift com uma tecla leva a outra ponta do intervalo (presa à grade depois, pelo
+    /// [`NucleoGrade::estender`]); None numa tecla que não estende.
+    fn alvo_do_shift(&self, tecla: Key, ctrl: bool, pagina: usize, (c0, c1): (usize, usize)) -> Option<(usize, usize)> {
+        let (l, c) = self.extremo.or(self.selecao).unwrap_or((0, c0));
+        let ultima = self.n_linhas.saturating_sub(1);
+        Some(match tecla {
+            Key::ArrowDown if ctrl => (ultima, c),
+            Key::ArrowDown => (l + 1, c),
+            Key::ArrowUp if ctrl => (0, c),
+            Key::ArrowUp => (l.saturating_sub(1), c),
+            Key::ArrowRight if ctrl => (l, c1),
+            Key::ArrowRight => (l, c + 1),
+            Key::ArrowLeft if ctrl => (l, c0),
+            Key::ArrowLeft => (l, c.saturating_sub(1)),
+            Key::PageDown if !ctrl => (l + pagina, c),
+            Key::PageUp if !ctrl => (l.saturating_sub(pagina), c),
+            Key::Home if ctrl => (0, c0),
+            Key::Home => (l, c0),
+            Key::End if ctrl => (ultima, c1),
+            Key::End => (l, c1),
+            _ => return None,
+        })
     }
 
     /// Desenha a grade na largura disponível, com no máximo `altura_max` de altura (encolhe quando há poucas
@@ -1283,6 +1433,11 @@ impl NucleoGrade {
         let id_corpo = self.id_corpo();
         let selecao = self.selecao;
         let rolar = std::mem::take(&mut self.rolar_para_selecao);
+        let rolar_extremo = std::mem::take(&mut self.rolar_para_extremo);
+        // o intervalo de várias células (o de uma só é a própria célula ativa, com o contorno de sempre)
+        let intervalo = selecao.map(|a| Intervalo::entre(a, self.extremo.unwrap_or(a))).filter(Intervalo::varias);
+        let alvo_da_rolagem = if rolar_extremo { self.extremo } else { selecao.filter(|_| rolar) };
+        let mut arrasto_ate: Option<(usize, usize)> = None;
         let congelado = self.congelado;
         let mesclas = self.mesclas.clone();
         let cabecalho_liso = self.cabecalho_liso;
@@ -1395,7 +1550,7 @@ impl NucleoGrade {
 
                 // o corpo (abaixo do cabeçalho grudado) é uma interação só
                 let corpo_tela = Rect::from_min_max(pos2(visivel.left(), visivel.top() + alt_cab), visivel.max);
-                let corpo = ui.interact(corpo_tela, id_corpo, Sense::click());
+                let corpo = ui.interact(corpo_tela, id_corpo, Sense::click_and_drag());
                 let celula_em = |pos: egui::Pos2| -> Option<(usize, usize)> {
                     let l = if nf > 0 && pos.y < y_presa {
                         ((pos.y - visivel.top() - alt_cab) / ALTURA_LINHA).floor()
@@ -1409,11 +1564,65 @@ impl NucleoGrade {
                     let c = candidatas.into_iter().find(|&c| pos.x >= esq(c) && pos.x < dir(c))?;
                     Some((l as usize, c))
                 };
+                // a célula mais perto do ponteiro, presa à grade (o arrasto que passa da borda continua na última)
+                let celula_perto = |pos: egui::Pos2| -> Option<(usize, usize)> {
+                    if n_lin == 0 || navegaveis.is_empty() {
+                        return None;
+                    }
+                    let y = pos.y.clamp(corpo_tela.top(), corpo_tela.bottom() - 1.0);
+                    let x = pos.x.clamp(visivel.left(), visivel.right() - 1.0);
+                    let (l, c) = celula_em(pos2(x, y)).unwrap_or_else(|| {
+                        let l = if y >= origem.y + alt_cab + n_lin as f32 * ALTURA_LINHA { n_lin - 1 } else { 0 };
+                        let c = if x >= xs[n_col] { navegaveis.end - 1 } else { navegaveis.start };
+                        (l, c)
+                    });
+                    Some((l, c.clamp(navegaveis.start, navegaveis.end - 1)))
+                };
                 let sob_ponteiro = corpo.hover_pos().and_then(celula_em);
                 resposta.linha_sob_ponteiro = sob_ponteiro.map(|(l, _)| l);
+                let shift = ui.input(|i| i.modifiers.shift);
+                // o arrasto de uma célula a outra marca o intervalo (a que começou fica a ativa); perto da borda, a grade
+                // rola sozinha
+                let id_arrasto = id.with("arrasto-do-intervalo");
+                if corpo.drag_started() {
+                    corpo.request_focus();
+                    let inicio = ui.input(|i| i.pointer.press_origin()).and_then(celula_em);
+                    let mut valido = false;
+                    if let Some((l, c)) = inicio.filter(|&(_, c)| coluna_numero != Some(c)) {
+                        let (l, c) = canto_da_mescla(l, c);
+                        if navegaveis.contains(&c) {
+                            // com o Shift, o arrasto estende a partir da célula ativa
+                            valido = true;
+                            if !(shift && selecao.is_some()) {
+                                clique = Some((l, c));
+                            }
+                        }
+                    }
+                    ui.data_mut(|d| d.insert_temp(id_arrasto, valido));
+                }
+                let arrasto_valido = ui.data(|d| d.get_temp::<bool>(id_arrasto)).unwrap_or(false);
+                if corpo.dragged()
+                    && arrasto_valido
+                    && let Some(pos) = corpo.interact_pointer_pos()
+                {
+                    arrasto_ate = celula_perto(pos);
+                    let borda = ALTURA_LINHA;
+                    let passo = |fora: f32| (fora / borda).clamp(0.0, 3.0) * 8.0;
+                    let dy = passo(pos.y - (corpo_tela.bottom() - borda)) - passo(corpo_tela.top() + borda - pos.y);
+                    let dx = passo(pos.x - (visivel.right() - borda)) - passo(visivel.left() + borda - pos.x);
+                    if dx != 0.0 || dy != 0.0 {
+                        ui.scroll_with_delta(vec2(-dx, -dy));
+                        ui.ctx().request_repaint();
+                    }
+                }
                 if corpo.clicked() || corpo.double_clicked() {
                     corpo.request_focus();
-                    if let Some((l, c)) = corpo.interact_pointer_pos().and_then(celula_em) {
+                    // o Shift+clique estende o intervalo da célula ativa até a clicada
+                    let estende = shift && selecao.is_some() && !corpo.double_clicked();
+                    if estende {
+                        arrasto_ate =
+                            corpo.interact_pointer_pos().and_then(celula_em).map(|(l, c)| canto_da_mescla(l, c));
+                    } else if let Some((l, c)) = corpo.interact_pointer_pos().and_then(celula_em) {
                         if coluna_numero == Some(c) {
                             // o número da linha não é célula: o clique pede a seleção da linha
                             if !corpo.double_clicked() {
@@ -1480,6 +1689,14 @@ impl NucleoGrade {
                             let celula = Rect::from_min_max(pos2(esq(c), y), pos2(direita, y + ALTURA_LINHA - 1.0));
                             pintor.rect_filled(celula, 0.0, p.estudio.tint);
                         }
+                        // o intervalo de várias células: o `--tint` da coluna selecionada, por baixo dos fios e do texto
+                        if let Some(iv) = intervalo.filter(|iv| iv.linhas().contains(&l)) {
+                            for &c in colunas.iter().filter(|&&c| iv.colunas().contains(&c)) {
+                                let direita = if com_fio(c) { dir(c) - 1.0 } else { dir(c) };
+                                let celula = Rect::from_min_max(pos2(esq(c), y), pos2(direita, y + ALTURA_LINHA - 1.0));
+                                pintor.rect_filled(celula, 0.0, p.estudio.tint);
+                            }
+                        }
                         // `.grade td{border-bottom:1px solid --b}` em todas as linhas, e o da direita sem cruzar com ele;
                         // dentro de uma mescla nenhum dos dois passa (só o da borda dela)
                         let y_fio = faixa.bottom() - 0.5;
@@ -1530,6 +1747,14 @@ impl NucleoGrade {
                             let celula = Rect::from_min_max(pos2(esq(ca), y), pos2(dir(ca), y + ALTURA_LINHA));
                             pintar_celula_ativa(&pintor, p, celula);
                         }
+                    }
+                    // o contorno de 1px `--acc` do intervalo, por cima dos fios
+                    if let Some(iv) = intervalo {
+                        let r = Rect::from_min_max(
+                            pos2(esq(iv.coluna0), y_de(iv.linha0)),
+                            pos2(dir(iv.coluna1), y_de(iv.linha1) + ALTURA_LINHA),
+                        );
+                        pintor.rect_stroke(r, 0.0, Stroke::new(1.0, p.estudio.acc), StrokeKind::Inside);
                     }
                     // as mescladas desta parte: o conteúdo da célula de cima à esquerda no retângulo todo
                     for m in &mesclas_visiveis {
@@ -1691,8 +1916,7 @@ impl NucleoGrade {
                 }
 
                 // rolar até a célula ativa, deixando de fora o cabeçalho e o que está congelado
-                if rolar
-                    && let Some((l, c)) = selecao
+                if let Some((l, c)) = alvo_da_rolagem
                     && c < n_col
                 {
                     let (x_ini, x_fim) =
@@ -1717,8 +1941,18 @@ impl NucleoGrade {
             if Some(nova) != self.selecao {
                 resposta.selecao_mudou = true;
             }
+            if self.extremo.take().is_some() {
+                resposta.intervalo_mudou = true;
+            }
             self.selecao = Some(nova);
             resposta.clicou = Some(nova);
+        }
+        if let Some(ate) = arrasto_ate
+            && self.estender(ate)
+        {
+            resposta.intervalo_mudou = true;
+            // o arrasto já está com a ponta à vista: não rola até ela
+            self.rolar_para_extremo = false;
         }
         resposta.clicou_numero_da_linha = clique_numero;
         resposta.clicou_cabecalho = clique_cabecalho;
@@ -1878,6 +2112,16 @@ impl GradeSomenteLeitura {
         self.linhas.get(l)?.get(c).map(texto_celula)
     }
 
+    /// O que o Ctrl+C leva: o intervalo de várias células como o Excel copia ([`tsv_do_intervalo`]), ou o texto da célula
+    /// ativa ([`GradeSomenteLeitura::texto_selecionado`]).
+    pub fn texto_copiado(&self) -> Option<String> {
+        let iv = self.nucleo.intervalo()?;
+        if !iv.varias() {
+            return self.texto_selecionado();
+        }
+        Some(tsv_do_intervalo(iv, |l, c| self.linhas.get(l)?.get(c).map(texto_celula)))
+    }
+
     /// As larguras das colunas (depois do primeiro quadro).
     pub fn larguras(&self) -> Option<&[f32]> {
         self.larguras_prontas.then(|| self.nucleo.larguras())
@@ -1906,10 +2150,11 @@ impl GradeSomenteLeitura {
         let r = self.nucleo.mostrar(ui, altura_max, &mut desenho);
         let mut resposta = RespostaGrade { copiado: None, selecao_mudou: r.selecao_mudou };
         if r.copiar
-            && let Some(t) = self.texto_selecionado()
+            && let Some(t) = self.texto_copiado()
         {
             ui.ctx().copy_text(t.clone());
-            toast_concluido(ui.ctx(), "Copiado.");
+            let frase = self.nucleo.intervalo().map_or_else(|| "Copiado.".to_string(), frase_do_intervalo_copiado);
+            toast_concluido(ui.ctx(), frase);
             resposta.copiado = Some(t);
         }
         resposta
