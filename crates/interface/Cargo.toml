@@ -11,6 +11,7 @@ egui_extras = { workspace = true }
 image = { workspace = true }
 comum = { workspace = true }
 chrono = { workspace = true }
+tabular = { workspace = true }
 
 [dev-dependencies]
 egui_kittest = { workspace = true }

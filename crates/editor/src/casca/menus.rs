@@ -1,12 +1,13 @@
 //! Os menus da barra de título (o `nav` "Menus" das pranchetas: Arquivo, Editar, Exibir e Ajuda, com 2px entre
 //! eles), sobre a peça `interface::pecas::casca::Menu`. Nenhum item tem reticências (design/README.md, "Textos").
 //!
-//! - **Arquivo** (a prancheta Inicio, o `.menu-ic` de 300px: linhas de 36px com os sólidos de 24):
-//!   Abrir pasta (a pasta; Ctrl+Shift+O) · Abrir arquivo (a folha; Ctrl+O) · Novo banco (o cilindro com o
-//!   "+") | Abertos recentemente ▸ (o relógio; os recentes que existem, menos o banco aberto e a pasta aberta, com o
-//!   ícone de 24 de cada tipo, a pasta, o cilindro ou a folha, em linhas de 44px; o clique abre pelo tipo; desligado
+//! - **Arquivo** (300px; desde 20/10/2026 com as silhuetas de 14 da barra de ferramentas, como os menus Banco e
+//!   Tabela, no lugar dos sólidos de 24 da prancheta Inicio: item de menu é ação): Abrir pasta (a pasta;
+//!   Ctrl+Shift+O) · Abrir arquivo (a folha; Ctrl+O) · Novo banco (o cilindro com o "+") | Abertos recentemente ▸
+//!   (sem silhueta por ora; os recentes que existem, menos o banco aberto e a pasta aberta, com o sólido de 24 de
+//!   cada tipo, a pasta, o cilindro ou a folha, em linhas de 44px: são objetos; o clique abre pelo tipo; desligado
 //!   sem nenhum) | Salvar (o disquete; Ctrl+S, o verbo da aba) · Fechar aba (Ctrl+W; desligado com o Início sozinho)
-//!   · Fechar banco (com um banco aberto) · Fechar pasta (desligado sem pasta) | Preferências (a engrenagem dupla;
+//!   · Fechar banco (com um banco aberto) · Fechar pasta (desligado sem pasta) | Preferências (sem silhueta por ora;
 //!   Ctrl+,).
 //! - **Editar**: os verbos da aba, das mesmas `Ofertas` da barra de ferramentas: Desfazer · Refazer | Novo · Nova
 //!   coluna · Duplicar · Excluir | Buscar · Filtrar · Atualizar · Executar · Exportar. O item fica desligado quando a
@@ -15,12 +16,14 @@
 //! - **Exibir** (a prancheta Main, 262px): Início (Alt+Home; a aba Início, que o trilho abria até 19/10/2026) |
 //!   Explorador (Ctrl+B), Propriedades (Ctrl+Alt+B) e Histórico de consultas, marcados quando à vista na doca ou na
 //!   janela própria (as Propriedades seguem o botão da barra: desligadas quando sumiram por falta de largura e no
-//!   Início, que não as tem) | Tema ▸ (210px: Seguir o Windows, Claro e Escuro, com o ponto no
+//!   Início, que não as tem), e a Barra de status (escondida por padrão desde 20/10/2026; o que ela mostrava está
+//!   nas Propriedades e nos rodapés dos documentos) | Tema ▸ (210px: Seguir o Windows, Claro e Escuro, com o ponto no
 //!   escolhido, e "Preferências de aparência", que abre as Preferências na seção Aparência).
 //! - **Banco** (revisão de UI de 19/10/2026, prancheta 3; só com um banco aberto, entre Exibir e Ajuda, o
 //!   `.menu-ctx` de 290px com as silhuetas): Visão geral · Nova consulta SQL · Nova tabela (desligada em só leitura) |
-//!   Verificar integridade · Verificar chaves estrangeiras · Otimizar · Compactar (VACUUM) (os dois últimos só com o
-//!   banco gravando) | Fazer cópia de segurança · Exportar o banco | Abrir só para leitura (ou "Abrir para gravação",
+//!   Verificar integridade · Verificar chaves estrangeiras · Otimizar · Compactar (VACUUM) (com as silhuetas da
+//!   Manutenção das Propriedades; os dois últimos só com o banco gravando) | Fazer cópia de segurança · Exportar o
+//!   banco | Abrir só para leitura (ou "Abrir para gravação",
 //!   no banco só leitura) · Fechar o banco. As manutenções e a cópia põem a Visão geral à vista, que as executa.
 //! - **Tabela** (prancheta 2; só com uma tabela ou visão à vista, depois do Banco): as vistas das Propriedades
 //!   Colunas (Alt+2), Índices e gatilhos (Alt+3) e Definição SQL (Alt+4; a visão só tem esta) | Abrir na Consulta
@@ -82,6 +85,8 @@ pub(crate) struct Menus<'a> {
     /// O estado do botão Painel de propriedades da barra (a marca e o desligado do item Propriedades).
     pub propriedades: EstadoPainel,
     pub tema: Tema,
+    /// A barra de status à vista (a marca do Exibir › Barra de status).
+    pub barra_status: bool,
     /// O banco aberto (com ele, o menu Banco).
     pub banco: Option<&'a BancoInfo>,
     /// A tabela ou visão à vista (com ela, o menu Tabela).
@@ -121,6 +126,8 @@ pub(crate) enum PedidoMenu {
     Verbo(Verbo),
     /// Mostrar ou esconder o Explorador, as Propriedades ou o Histórico de consultas.
     Painel(Painel),
+    /// Mostrar ou esconder a barra de status.
+    BarraStatus,
     /// Um item do menu Tabela, para a tabela à vista.
     Tabela(ItemTabela),
     /// A janela "Atalhos do teclado" e a "Sobre o DataBox".
@@ -153,21 +160,23 @@ fn item_do_verbo(p: &mut PainelMenu<'_>, ofertas: &Ofertas, verbo: Verbo) -> boo
 pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> SaidaMenus {
     let mut pedido = None;
     let _ = Menu::new(IDS[0], "Arquivo").largura(LARGURA_ARQUIVO).mostrar(ui, |p| {
-        p.com_icones();
-        if p.icone(Icone::PastaSolida).item("Abrir pasta", Some("Ctrl+Shift+O"), false).clicked() {
+        // as silhuetas da barra de ferramentas (revisão de 20/10/2026: item de menu é ação, como nos outros menus;
+        // os sólidos ficam para os objetos, como os arquivos dos Abertos recentemente)
+        p.com_silhuetas();
+        if p.silhueta(Icone::Pasta).item("Abrir pasta", Some("Ctrl+Shift+O"), false).clicked() {
             pedido = Some(PedidoMenu::Acao(Acao::EscolherEAbrirPasta));
         }
-        if p.icone(Icone::DocumentoSolido).item("Abrir arquivo", Some("Ctrl+O"), false).clicked() {
+        if p.silhueta(Icone::Arquivo).item("Abrir arquivo", Some("Ctrl+O"), false).clicked() {
             pedido = Some(PedidoMenu::Acao(Acao::EscolherEAbrir { somente_leitura: false }));
         }
-        if p.icone(Icone::NovoBancoSolido).item("Novo banco", None, false).clicked() {
+        if p.silhueta(Icone::NovoBanco).item("Novo banco", None, false).clicked() {
             pedido = Some(PedidoMenu::Acao(Acao::NovoBanco));
         }
         p.separador();
         if recentes.is_empty() {
-            p.icone(Icone::Recentes).item_desligado("Abertos recentemente", None);
+            p.item_desligado("Abertos recentemente", None);
         } else {
-            p.icone(Icone::Recentes).submenu("Abertos recentemente", LARGURA_RECENTES, |p| {
+            p.submenu("Abertos recentemente", LARGURA_RECENTES, |p| {
                 p.com_icones();
                 for r in recentes {
                     if p.item_duplo(Some(r.icone), &r.nome, &r.pasta).clicked() {
@@ -177,7 +186,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
             });
         }
         p.separador();
-        p.icone(Icone::DisqueteSolido);
+        p.silhueta(Icone::Salvar);
         if item_do_verbo(p, m.ofertas, Verbo::Salvar) {
             pedido = Some(PedidoMenu::Verbo(Verbo::Salvar));
         }
@@ -195,7 +204,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
             pedido = Some(PedidoMenu::Acao(Acao::FecharPasta));
         }
         p.separador();
-        if p.icone(Icone::Preferencias).item("Preferências", Some("Ctrl+,"), false).clicked() {
+        if p.item("Preferências", Some("Ctrl+,"), false).clicked() {
             pedido = Some(PedidoMenu::Preferencias(Secao::Geral));
         }
     });
@@ -241,6 +250,9 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
         if p.item_marcado("Histórico de consultas", None, a_vista(Painel::Historico)).clicked() {
             pedido = Some(PedidoMenu::Painel(Painel::Historico));
         }
+        if p.item_marcado("Barra de status", None, m.barra_status).clicked() {
+            pedido = Some(PedidoMenu::BarraStatus);
+        }
         p.separador();
         p.submenu("Tema", LARGURA_TEMA, |p| {
             p.com_marcas();
@@ -273,13 +285,15 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
                 pedido = Some(PedidoMenu::Acao(Acao::AbrirNovaTabela));
             }
             p.separador();
+            // as silhuetas da seção Manutenção das Propriedades
             let manutencoes = [
-                (AcaoManutencao::Integridade, "Verificar integridade", false),
-                (AcaoManutencao::Chaves, "Verificar chaves estrangeiras", false),
-                (AcaoManutencao::Otimizar, "Otimizar", true),
-                (AcaoManutencao::Vacuum, "Compactar (VACUUM)", true),
+                (AcaoManutencao::Integridade, Icone::VerificarIntegridade, "Verificar integridade", false),
+                (AcaoManutencao::Chaves, Icone::VerificarChaves, "Verificar chaves estrangeiras", false),
+                (AcaoManutencao::Otimizar, Icone::Otimizar, "Otimizar", true),
+                (AcaoManutencao::Vacuum, Icone::Compactar, "Compactar (VACUUM)", true),
             ];
-            for (acao, rotulo, escreve) in manutencoes {
+            for (acao, icone, rotulo, escreve) in manutencoes {
+                p.silhueta(icone);
                 if escreve && somente_leitura {
                     p.item_desligado(rotulo, None);
                 } else if p.item(rotulo, None, false).clicked() {

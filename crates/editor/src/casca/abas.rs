@@ -8,7 +8,9 @@
 //!
 //! Na ponta direita, o "Todas as abas" (revisão de UI de 19/10/2026): o menu com cada aba aberta, a ativa marcada.
 //!
-//! O clique numa aba (ou no item dela no "Todas as abas"), no × dela, o clique do meio e o "+" viram [`Acao`] (`FocarAba`, `FecharAba`, `NovaConsulta`).
+//! O clique numa aba (ou no item dela no "Todas as abas"), no × dela, o clique do meio e o "+" viram [`Acao`]
+//! (`FocarAba`, `FecharAba`, `NovaConsulta`); o arrasto de uma aba e o "Mover à esquerda/direita" do menu dela,
+//! `MoverAba`.
 //! Quem chama tira o foco do campo em edição no mesmo quadro e aplica a ação no seguinte, como os atalhos de
 //! teclado: a célula da grade em edição grava antes de a aba sair de vista. Quem chama também pinta o documento
 //! embaixo (`pintar_documento`), sem o fio de cima debaixo da aba ativa (a junção que a faixa devolve).
@@ -77,6 +79,8 @@ pub(crate) fn faixa(ui: &mut Ui, abas: &Abas<Documento>, estado: &Estado) -> (Op
     let id_de = |i: usize| abas.iter().nth(i).map(|a| a.id());
     let pedido = if let Some(id) = r.fechar.and_then(id_de) {
         Some(Acao::FecharAba(Some(id)))
+    } else if let Some((id, para)) = r.mover.and_then(|(de, para)| Some((id_de(de)?, para))) {
+        Some(Acao::MoverAba { id, para })
     } else if let Some(id) = r.clicada.or(r.escolhida).and_then(id_de).filter(|&id| id != abas.id_ativa()) {
         Some(Acao::FocarAba(id))
     } else {

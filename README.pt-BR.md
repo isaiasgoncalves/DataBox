@@ -259,12 +259,14 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 ### Linha de comando
 
 ```text
-DataBox.exe [caminho] [--somente-leitura] [--renderizador glow|wgpu] [--criar-atalho] [-h | --ajuda] [--versao]
+DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador glow|wgpu] [--criar-atalho] [-h | --ajuda] [--versao]
 ```
 
 - `DataBox.exe C:\dados` abre a pasta; `DataBox.exe C:\dados\vendas.db --somente-leitura` abre o banco só para
   leitura. Também serve para o "Abrir com…" do Windows.
 - `--criar-atalho` cria os atalhos "DataBox" na Área de Trabalho e no Menu Iniciar e sai.
+- `--moldura-do-sistema` usa a barra de título e as bordas do sistema no lugar das do DataBox (no Linux, para um
+  gerenciador de janelas em que a janela sem decoração não se comporta).
 - `--renderizador wgpu` força o outro modo de desenho. Normalmente não é preciso: se a máquina não abrir OpenGL
   (máquina virtual sem driver de vídeo), o programa se abre de novo sozinho com o wgpu.
 

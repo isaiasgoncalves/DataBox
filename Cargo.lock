@@ -1813,6 +1813,7 @@ dependencies = [
  "egui_extras",
  "egui_kittest",
  "image",
+ "tabular",
 ]
 
 [[package]]

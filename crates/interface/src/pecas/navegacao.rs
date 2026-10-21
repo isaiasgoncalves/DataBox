@@ -125,6 +125,8 @@ pub struct ParteSeletor<'a> {
     pub nota: Option<&'a str>,
     pub perigo: bool,
     pub icone: Option<Icone>,
+    /// O ícone que fica no lugar do texto quando ele não cabe ([`ParteSeletor::reserva`]).
+    pub reserva: Option<Icone>,
 }
 
 /// O lado do ícone da parte (`.sk.s16`).
@@ -132,12 +134,20 @@ const LADO_ICONE_PARTE: f32 = 16.0;
 
 impl<'a> ParteSeletor<'a> {
     pub fn new(texto: &'a str) -> Self {
-        ParteSeletor { texto, nota: None, perigo: false, icone: None }
+        ParteSeletor { texto, nota: None, perigo: false, icone: None, reserva: None }
     }
 
     /// O ícone de 16px antes do texto, com 6px até ele (os arquivos XLSX, CSV e JSON do Formato).
     pub fn icone(mut self, icone: Icone) -> Self {
         self.icone = Some(icone);
+        self
+    }
+
+    /// O ícone de 16px que fica sozinho no lugar do texto quando o trilho cheio não tem espaço para ele (as vistas
+    /// das Propriedades numa doca estreita, revisão de 20/10/2026). Só vale quando todas as partes têm o seu: o nome
+    /// vai para a dica, e o leitor de tela ouve o mesmo de sempre.
+    pub fn reserva(mut self, icone: Icone) -> Self {
+        self.reserva = Some(icone);
         self
     }
 
@@ -244,6 +254,13 @@ fn desenhar_trilho(
     let disponivel = Some(ui.available_width()).filter(|d| tamanho.cheio() && d.is_finite());
     let largura = largura_das_partes(maior, partes.len(), disponivel);
     let total = largura * partes.len() as f32 + 2.0 * RECUO_SEG;
+    // sem espaço para o texto de alguma parte (o mesmo corte de baixo), todas mostram só o ícone de reserva
+    let so_icones = !partes.is_empty()
+        && partes.iter().all(|parte| parte.reserva.is_some())
+        && partes.iter().any(|parte| {
+            let g = galley(ui, parte.texto, fontes::fonte(12.0, Peso::Medio), Color32::PLACEHOLDER);
+            g.size().x > largura - 2.0 - 2.0 * PADDING_APERTADO - largura_nota(ui, parte)
+        });
     let (rect, resp) = ui.allocate_exact_size(vec2(total, altura_item + 2.0 * RECUO_SEG), Sense::hover());
     let visivel = ui.is_rect_visible(rect.expand(20.0));
     if visivel {
@@ -286,29 +303,38 @@ fn desenhar_trilho(
             } else {
                 pintura::misturar(e.t2, e.t, hover)
             };
-            // a parte apertada (o trilho cheio numa doca estreita) corta o texto, com o nome inteiro na dica
-            let cabe = (largura - 2.0 - 2.0 * PADDING_APERTADO - largura_nota(ui, parte)).max(8.0);
-            let g = galley_cortado(ui, parte.texto, fontes::fonte(12.0, peso_de(i)), cor, cabe);
-            if g.elided && item.hovered() {
-                item.clone().on_hover_text(parte.texto);
-            }
-            let gn = parte.nota.map(|n| galley(ui, n, fonte_nota.clone(), e.t3));
-            let largura_icone = if parte.icone.is_some() { LADO_ICONE_PARTE + GAP_NOTA } else { 0.0 };
-            let total_texto = largura_icone + g.size().x + gn.as_ref().map_or(0.0, |gn| GAP_NOTA + gn.size().x);
-            let inicio = r.center().x - total_texto / 2.0;
-            if let Some(icone) = parte.icone {
-                let caixa = Rect::from_min_size(
-                    pos2(inicio, r.center().y - LADO_ICONE_PARTE / 2.0),
-                    vec2(LADO_ICONE_PARTE, LADO_ICONE_PARTE),
-                );
+            if let Some(icone) = parte.reserva.filter(|_| so_icones) {
+                // sem espaço para o texto: só o ícone, com o nome na dica
+                let caixa = Rect::from_center_size(r.center(), vec2(LADO_ICONE_PARTE, LADO_ICONE_PARTE));
                 icones::pintar(painter, caixa, icone, cor);
-            }
-            let x0 = inicio + largura_icone;
-            let largura_texto = g.size().x;
-            painter.galley(pos2(x0, r.center().y - g.size().y / 2.0), g, cor);
-            if let Some(gn) = gn {
-                let pos = pos2(x0 + largura_texto + GAP_NOTA, r.center().y - gn.size().y / 2.0);
-                painter.galley(pos, gn, e.t3);
+                if item.hovered() {
+                    item.clone().on_hover_text(parte.rotulo());
+                }
+            } else {
+                // a parte apertada (o trilho cheio numa doca estreita) corta o texto, com o nome inteiro na dica
+                let cabe = (largura - 2.0 - 2.0 * PADDING_APERTADO - largura_nota(ui, parte)).max(8.0);
+                let g = galley_cortado(ui, parte.texto, fontes::fonte(12.0, peso_de(i)), cor, cabe);
+                if g.elided && item.hovered() {
+                    item.clone().on_hover_text(parte.texto);
+                }
+                let gn = parte.nota.map(|n| galley(ui, n, fonte_nota.clone(), e.t3));
+                let largura_icone = if parte.icone.is_some() { LADO_ICONE_PARTE + GAP_NOTA } else { 0.0 };
+                let total_texto = largura_icone + g.size().x + gn.as_ref().map_or(0.0, |gn| GAP_NOTA + gn.size().x);
+                let inicio = r.center().x - total_texto / 2.0;
+                if let Some(icone) = parte.icone {
+                    let caixa = Rect::from_min_size(
+                        pos2(inicio, r.center().y - LADO_ICONE_PARTE / 2.0),
+                        vec2(LADO_ICONE_PARTE, LADO_ICONE_PARTE),
+                    );
+                    icones::pintar(painter, caixa, icone, cor);
+                }
+                let x0 = inicio + largura_icone;
+                let largura_texto = g.size().x;
+                painter.galley(pos2(x0, r.center().y - g.size().y / 2.0), g, cor);
+                if let Some(gn) = gn {
+                    let pos = pos2(x0 + largura_texto + GAP_NOTA, r.center().y - gn.size().y / 2.0);
+                    painter.galley(pos, gn, e.t3);
+                }
             }
             if item.has_focus() && pintura::foco_visivel(ui.ctx()) {
                 pintura::anel_foco(&fora, p, r, f32::INFINITY);

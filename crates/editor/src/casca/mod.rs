@@ -62,7 +62,7 @@ pub(crate) fn frase_da_transacao(consulta: &str) -> String {
 
 /// As linhas da janela "Atalhos do teclado" (os da grade, da Consulta e da casca: as
 /// abas, o Início, os painéis, o Atualizar, a pasta e o Copiar caminho do Explorador).
-pub(crate) const ATALHOS: [(&str, &str); 19] = [
+pub(crate) const ATALHOS: [(&str, &str); 20] = [
     ("Ctrl+Shift+O", "Abrir uma pasta"),
     ("Ctrl+O", "Abrir um arquivo"),
     ("Ctrl+S", "Salvar"),
@@ -71,6 +71,7 @@ pub(crate) const ATALHOS: [(&str, &str); 19] = [
     ("Ctrl+Y", "Refazer"),
     ("Ctrl+Shift+V", "Colar com correspondência"),
     ("Ctrl+Tab e Ctrl+Shift+Tab", "Ir para a aba seguinte e para a anterior"),
+    ("Ctrl+Shift+PgUp e PgDn", "Mover a aba para a esquerda e para a direita"),
     ("Alt+← e Alt+→", "Voltar e avançar entre as abas"),
     ("Alt+Home", "Ir para o Início"),
     ("Alt+1 a Alt+4", "As vistas das Propriedades da tabela (Resumo, Colunas, Índices, SQL)"),
@@ -378,6 +379,7 @@ mod testes {
                 "Ctrl+Y",
                 "Ctrl+Shift+V",
                 "Ctrl+Tab e Ctrl+Shift+Tab",
+                "Ctrl+Shift+PgUp e PgDn",
                 "Alt+← e Alt+→",
                 "Alt+Home",
                 "Alt+1 a Alt+4",

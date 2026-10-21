@@ -579,6 +579,7 @@ impl TelaBanco {
         let _ = Secao::new("propriedades::arquivo", "Arquivo").primeira(true).mostrar(ui, |ui| {
             ficha(ui, |d| {
                 d.linha("Caminho", |ui| copiar_caminho = linha_do_caminho(ui, &t.caminho));
+                crate::casca::status::linha_da_gravacao(d, b);
                 d.linha_texto("Tamanho", Some(&t.tamanho_arquivo), "—");
                 d.linha_texto("Modificado em", Some(&t.modificado), "—");
                 d.linha_texto("Versão do SQLite", Some(&b.sqlite_versao), "—");

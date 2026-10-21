@@ -16,6 +16,10 @@
 //!   muda entre um e outro, ao contrário do CSS, que troca 21px por 24px).
 //! - Sem espaço, os textos encolhem por igual com "…" (as abas curtas ficam inteiras) até [`TEXTO_MINIMO`]; daí
 //!   em diante a faixa rola com a roda, e a aba que passa a ser a ativa entra à vista.
+//! - Arrastar uma aba muda o lugar dela na faixa (revisão de 20/10/2026): a aba segue o ponteiro, o fio `--acct`
+//!   marca onde ela vai cair e, ao soltar, [`RespostaAbas::mover`] diz de onde para onde (o Esc cancela). O clique
+//!   direito (ou o Shift+F10) abre o menu da aba: "Mover à esquerda", "Mover à direita" (sem o atalho ao lado, que
+//!   não cabe nos 250px; ele fica nos Atalhos do teclado) e "Fechar aba".
 //! - Acessibilidade: cada aba tem o papel `tab`, `selected` e o rótulo "nome · sub" ([`AbaDocumento::rotulo`]); o ×
 //!   é o botão "Fechar a aba nome · sub" (rótulo único), com a dica "Fechar aba (Ctrl+W)".
 //!
@@ -139,6 +143,8 @@ pub struct RespostaAbas {
     pub fechar: Option<usize>,
     /// O "+" foi clicado.
     pub nova: bool,
+    /// A aba a mudar de lugar: `(de, para)`, as posições na faixa antes e depois (o arrasto solto ou o menu da aba).
+    pub mover: Option<(usize, usize)>,
     /// Uma aba foi escolhida no menu "Todas as abas" (o índice; quem chama a foca, como [`RespostaAbas::clicada`]).
     pub escolhida: Option<usize>,
     /// A faixa inteira.
@@ -185,8 +191,15 @@ impl<'a> FaixaAbas<'a> {
         let p = paleta(ui);
         let e = &p.estudio;
         let (faixa, faixa_resp) = ui.allocate_exact_size(vec2(ui.available_width(), ALTURA_FAIXA), Sense::hover());
-        let mut resposta =
-            RespostaAbas { clicada: None, fechar: None, nova: false, escolhida: None, rect: faixa, juncao: None };
+        let mut resposta = RespostaAbas {
+            clicada: None,
+            fechar: None,
+            nova: false,
+            mover: None,
+            escolhida: None,
+            rect: faixa,
+            juncao: None,
+        };
         let fonte = fontes::fonte(12.0, Peso::Normal);
         let medir = |texto: &str| galley(ui, texto, fonte.clone(), Color32::PLACEHOLDER).size().x;
         let medidas: Vec<(f32, f32)> = self.abas.iter().map(|a| (medir(a.nome), a.sub.map_or(0.0, medir))).collect();
@@ -244,22 +257,96 @@ impl<'a> FaixaAbas<'a> {
 
         let pintor = ui.painter().with_clip_rect(area);
         let tempo = duracao_transicao(ui);
-        for (i, aba) in self.abas.iter().enumerate() {
-            let r = Rect::from_min_size(
+        let ids: Vec<Id> = self
+            .abas
+            .iter()
+            .enumerate()
+            .map(|(i, aba)| match aba.chave {
+                Some(c) => self.id.with(("chave", c)),
+                None => self.id.with(("posicao", i)),
+            })
+            .collect();
+        let rect_de = |i: usize| {
+            Rect::from_min_size(
                 pos2(area.left() - deslocamento + inicios[i], faixa.bottom() - ALTURA_ABA),
                 vec2(larguras[i], ALTURA_ABA),
-            );
+            )
+        };
+        // a aba sendo arrastada (desde o quadro anterior) segue o ponteiro e é pintada por último, por cima das
+        // outras
+        let id_cancelado = self.id.with("arrasto-cancelado");
+        let mut cancelado: bool = ui.ctx().data(|d| d.get_temp(id_cancelado)).unwrap_or(false);
+        let (arrastando, ponteiro, origem) =
+            ui.input(|i| (i.pointer.is_decidedly_dragging(), i.pointer.latest_pos(), i.pointer.press_origin()));
+        if !ui.input(|i| i.pointer.any_down()) {
+            cancelado = false;
+        } else if arrastando && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            cancelado = true;
+        }
+        let arrastada = ui
+            .ctx()
+            .dragged_id()
+            .and_then(|d| ids.iter().position(|&id| id == d))
+            .filter(|_| arrastando && !cancelado && self.abas.len() > 1);
+        let deslize = match (arrastada, ponteiro, origem) {
+            (Some(_), Some(p), Some(o)) => p.x - o.x,
+            _ => 0.0,
+        };
+        // onde a arrastada cai: quantas das outras ficam com o meio antes do meio dela
+        let alvo = arrastada.map(|i| {
+            let meio = rect_de(i).center().x + deslize;
+            (0..self.abas.len()).filter(|&k| k != i && rect_de(k).center().x < meio).count()
+        });
+        let id_alvo = self.id.with("arrasto-alvo");
+        let ultimo_alvo: Option<(usize, usize)> = ui.ctx().data(|d| d.get_temp(id_alvo)).flatten();
+        let agora = arrastada.zip(alvo);
+        if agora != ultimo_alvo {
+            ui.ctx().data_mut(|d| d.insert_temp(id_alvo, agora));
+        }
+        let ordem: Vec<usize> = (0..self.abas.len()).filter(|&i| Some(i) != arrastada).chain(arrastada).collect();
+        for i in ordem {
+            let aba = &self.abas[i];
+            let r = rect_de(i).translate(vec2(if Some(i) == arrastada { deslize } else { 0.0 }, 0.0));
             let visivel = r.intersect(area);
             if !visivel.is_positive() {
                 continue;
             }
             let e_ativa = Some(i) == self.ativa;
             let rotulo = aba.rotulo();
-            let id_aba = match aba.chave {
-                Some(c) => self.id.with(("chave", c)),
-                None => self.id.with(("posicao", i)),
-            };
-            let resp = ui.interact(visivel, id_aba, Sense::click());
+            let id_aba = ids[i];
+            let resp = ui.interact(visivel, id_aba, Sense::click_and_drag());
+            // no quadro em que o botão é solto o arrasto já acabou: vale o lugar do quadro anterior
+            if resp.drag_stopped()
+                && !cancelado
+                && let Some((a, para)) = ultimo_alvo.filter(|&(a, para)| a == i && para != a)
+            {
+                resposta.mover = Some((a, para));
+            }
+            let ultima = self.abas.len() - 1;
+            let pedido_menu = MenuContexto::new(id_aba.with("menu")).rotulo(&rotulo).mostrar(&resp, |m| {
+                let mut pedido = None;
+                let esquerda = "Mover à esquerda";
+                let direita = "Mover à direita";
+                if i == 0 {
+                    m.item_desligado(esquerda, None);
+                } else if m.item(esquerda, None, false).clicked() {
+                    pedido = Some(PedidoMenuAba::Mover(i - 1));
+                }
+                if i == ultima {
+                    m.item_desligado(direita, None);
+                } else if m.item(direita, None, false).clicked() {
+                    pedido = Some(PedidoMenuAba::Mover(i + 1));
+                }
+                if aba.fechavel && m.item("Fechar aba", Some("Ctrl+W"), true).clicked() {
+                    pedido = Some(PedidoMenuAba::Fechar);
+                }
+                pedido
+            });
+            match pedido_menu.flatten() {
+                Some(PedidoMenuAba::Mover(para)) => resposta.mover = Some((i, para)),
+                Some(PedidoMenuAba::Fechar) => resposta.fechar = Some(i),
+                None => {}
+            }
             let rect_x =
                 Rect::from_center_size(pos2(r.right() - 1.0 - 6.0 - LADO_X / 2.0, r.center().y), vec2(LADO_X, LADO_X));
             // o × depois da aba: fica por cima dela
@@ -345,7 +432,9 @@ impl<'a> FaixaAbas<'a> {
             if resp.has_focus() && pintura::foco_visivel(ui.ctx()) {
                 pintura::anel_foco(&pintor_de_fora(ui, r), p, r, RAIO_ABA);
             }
-            if resp.hovered() {
+            if Some(i) == arrastada {
+                ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
+            } else if resp.hovered() {
                 ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
             }
             resp.widget_info(|| WidgetInfo::selected(WidgetType::SelectableLabel, ui.is_enabled(), e_ativa, &rotulo));
@@ -353,6 +442,22 @@ impl<'a> FaixaAbas<'a> {
                 no.set_role(Role::Tab);
                 no.set_selected(e_ativa);
             });
+        }
+
+        // o fio `--acct` de 2px no vão onde a arrastada vai cair
+        if let (Some(i), Some(para)) = (arrastada, alvo)
+            && para != i
+        {
+            let outras: Vec<usize> = (0..self.abas.len()).filter(|&k| k != i).collect();
+            let x = match outras.get(para) {
+                Some(&k) => rect_de(k).left() - ESPACO_ABAS / 2.0,
+                None => outras.last().map_or(area.left(), |&k| rect_de(k).right() + ESPACO_ABAS / 2.0),
+            };
+            let y = Rangef::new(faixa.bottom() - ALTURA_ABA + 4.0, faixa.bottom() - 4.0);
+            pintor.vline(x.clamp(area.left() + 1.0, area.right() - 1.0), y, Stroke::new(2.0, e.acct));
+        }
+        if cancelado != ui.ctx().data(|d| d.get_temp(id_cancelado)).unwrap_or(false) {
+            ui.ctx().data_mut(|d| d.insert_temp(id_cancelado, cancelado));
         }
 
         if let Some(habilitada) = self.nova {
@@ -401,6 +506,13 @@ impl<'a> FaixaAbas<'a> {
     }
 }
 
+/// O item escolhido no menu de uma aba.
+enum PedidoMenuAba {
+    /// Para esta posição da faixa.
+    Mover(usize),
+    Fechar,
+}
+
 /// A largura do texto de cada aba para caberem em `disponivel`: as naturais, se couberem; senão, o texto de cada
 /// uma encolhe até um teto comum (as curtas ficam inteiras), nunca abaixo de `minimo` (aí a faixa rola).
 pub(crate) fn larguras_texto(naturais: &[f32], fixas: &[f32], espaco: f32, disponivel: f32, minimo: f32) -> Vec<f32> {
@@ -429,6 +541,12 @@ pub(crate) fn larguras_texto(naturais: &[f32], fixas: &[f32], espaco: f32, dispo
     naturais.iter().map(|&w| w.min(teto)).collect()
 }
 
+/// A aba ativa encosta na quina de cima à esquerda do documento em `rect`: o canto fica reto (na moldura e no que
+/// encosta no alto por dentro dela, como a faixa de contexto e os avisos).
+pub fn quina_reta(rect: Rect, juncao: Option<Rangef>) -> bool {
+    juncao.is_some_and(|j| j.min <= rect.left() + 0.5)
+}
+
 /// Pinta o documento (`.doc`: fundo `--c`, borda `--vidrob`, raio [`RAIO_CARD`]) embaixo da faixa das abas. Na
 /// `juncao` (a aba ativa, [`RespostaAbas::juncao`]) o fio de cima some e a aba continua no documento, como o
 /// `margin-bottom:-1px` da faixa das pranchetas: o retângulo do documento começa 1px antes do fim da faixa.
@@ -436,7 +554,7 @@ pub fn pintar_documento(painter: &Painter, p: &Paleta, rect: Rect, juncao: Optio
     let e = &p.estudio;
     // a aba ativa encostada na quina: o canto de cima à esquerda fica reto (`border-top-left-radius:0`)
     let mut cantos = pintura::canto(rect, RAIO_CARD);
-    if juncao.is_some_and(|j| j.min <= rect.left() + 0.5) {
+    if quina_reta(rect, juncao) {
         cantos.nw = 0;
     }
     painter.rect_filled(rect, cantos, e.doc);

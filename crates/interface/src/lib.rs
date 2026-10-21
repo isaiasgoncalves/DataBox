@@ -273,8 +273,9 @@
 //!       2px entre os botões), `separador` (`.sep`) e `busca_desligada` (a [`pecas::campos::Entrada::busca`] de
 //!       250px com o Ctrl+F, desligada; a ligada é a `estado::busca_da_barra`).
 //!     - [`pecas::abas_documento`]: `FaixaAbas::new(id, &[AbaDocumento]).ativa(..).nova(..).mostrar(ui) ->
-//!       RespostaAbas { clicada, fechar, nova, rect, juncao }` (abas de 34px com ícone, nome, sub e ×, e a chave
-//!       estável de `com_chave`; papel `tab`; clique do meio fecha; encolhem com "…" e rolam; `alterada(true)` põe o
+//!       RespostaAbas { clicada, fechar, nova, mover, rect, juncao }` (abas de 34px com ícone, nome, sub e ×, e a
+//!       chave estável de `com_chave`; papel `tab`; clique do meio fecha; arrastar muda de lugar (`mover: (de, para)`),
+//!       e o menu da aba move e fecha; encolhem com "…" e rolam; `alterada(true)` põe o
 //!       ponto de 7px `--acct` ([`pecas::abas_documento::LADO_PONTO`], o `.aba .mod`) no lugar do ×, que volta com o
 //!       ponteiro ou o foco na aba, e o rótulo ganha ", alterada") e
 //!       `pintar_documento(painter, paleta, rect, juncao)` (o `.doc` sem o fio de cima embaixo da aba ativa).
@@ -325,13 +326,18 @@
 //!     (`com_fixas` para as colunas de marcar e de abrir), `com_coluna_marcar` (`td.selc`: sem padding e sem o fio
 //!     à direita), `com_coluna_numero` (`td.lin`: o fundo `--p`), célula ativa (clique e teclado:
 //!     [`grade::Navegacao`] `Consulta` ou `Dados`, `com_navegaveis` para pular as colunas que não são dados),
-//!     `mover`, `na_ponta`, `focar`, `definir_linhas`; o conteúdo vem dos ganchos de [`grade::DesenhoGrade`]
+//!     `mover`, `na_ponta`, `focar`, `definir_linhas`; o intervalo de células ([`grade::Intervalo`], 0.2.2: a célula
+//!     ativa é a âncora; o arrasto com a rolagem perto da borda, o Shift+clique e o Shift com as setas, PageUp/PageDown
+//!     e Home/End o estendem, Esc e as teclas sem Shift o desfazem; fundo `--tint` e contorno `--acc`): `intervalo()`,
+//!     `estender(celula)`, `recolher_intervalo()`, e [`grade::tsv_do_intervalo`] e
+//!     [`grade::frase_do_intervalo_copiado`] para o Ctrl+C de quem chama; o conteúdo vem dos ganchos de
+//!     [`grade::DesenhoGrade`]
 //!     (`celula(ui, &CelulaVisivel)`, `cabecalho(ui, &CabecalhoVisivel)`, `fundo_linha` para a linha marcada —
 //!     `--sel`, no lugar do hover —, `dica`, `th_selecionada(coluna)`: o núcleo pinta o `th` em `--sel` e as células
 //!     da coluna em `--tint`) e [`grade::RespostaNucleo`] traz `clicou`, `editar` (duplo clique,
 //!     Enter, F2), `texto_digitado` (começa a edição com a tecla), `copiar`, `excluir` (Delete), `espaco`,
-//!     `selecao_mudou`, `linha_sob_ponteiro`, `clicou_cabecalho` (`Some((coluna, `[`grade::Toques`]` { ctrl, shift }))`
-//!     no clique no `th` de uma coluna navegável, onde o gancho não pôs um widget que ficou com o clique) e
+//!     `selecao_mudou`, `intervalo_mudou`, `linha_sob_ponteiro`, `clicou_cabecalho` (`Some((coluna, `[`grade::Toques`]`
+//!     { ctrl, shift }))` no clique no `th` de uma coluna navegável, onde o gancho não pôs um widget que ficou com o clique) e
 //!     `menu_cabecalho` (o clique direito) e `clicou_numero_da_linha` (o clique no número da linha, que não é célula
 //!     ativável). Etapa 6 (a planilha; tudo opcional, sem isso a grade é a de sempre): `com_congelado(linhas, colunas)`
 //!     (as linhas ficam sob o cabeçalho e as colunas de dados, mais as especiais, grudam à esquerda, com o fio de 2px
@@ -343,7 +349,8 @@
 //!     `com_cabecalho_liso` (sem as riscas), [`grade::Th::centrada`] e [`grade::pintar_texto_alinhado`]; o Ctrl+PageUp
 //!     e o Ctrl+PageDown ficam livres na `Consulta`. O exemplo vivo é o [`mostruario::planilha::PlanilhaExemplo`];
 //!   - a [`grade::GradeSomenteLeitura`] da Consulta SQL, montada no núcleo (`new(id, colunas, linhas)`,
-//!     `mostrar(ui, altura_max) -> RespostaGrade`; Ctrl+C copia o [`grade::texto_celula`] e mostra "Copiado.").
+//!     `mostrar(ui, altura_max) -> RespostaGrade`; Ctrl+C copia o [`grade::texto_celula`] e mostra "Copiado.", ou o
+//!     intervalo em TSV com "3 linhas × 2 colunas copiadas.", `texto_copiado()`).
 //! - [`mostruario`]: [`mostruario::Mostruario`] — todas as peças numa tela (`ui(ui)` para uma janela;
 //!   `pagina`/`sobreposicoes` para captura) e a casca nova inteira, só com as peças (`pagina_casca`; na janela,
 //!   `mostrar_casca(true)` ou o "Ver a casca"). `examples/mostruario.rs` e `tests/mostruario.rs` gravam as

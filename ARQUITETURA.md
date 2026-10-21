@@ -22,7 +22,7 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
 | Preferências num JSON por pessoa (`%APPDATA%\DataBox\preferencias.json`, registro em `%LOCALAPPDATA%\DataBox\databox.log`), com trava entre processos e gravação atômica (§4.5) | Duas janelas abertas não apagam o que a outra gravou; um arquivo estranho não derruba o app. |
 | Visual **Estúdio** em código (crate `interface`): os tokens claro e escuro das pranchetas, as fontes do Windows lidas em tempo de execução (Segoe UI, Consolas ou Cascadia Mono), o logo próprio, os ícones em PNG rasterizados dos SVG e as peças (botões, campos, cartão, menus, abas, árvore, painéis, janela, toast…) | O egui não usa CSS nem desfoca o que está atrás: o vidro fosco das camadas que se sobrepõem é feito com a foto da própria janela, desfocada embaixo do `--flut` a 78/80% (`interface::fosco`, §4.7), com o liso a 96% de reserva (`design/README.md`). Nenhuma marca de terceiros; das fontes, só as padrão do egui (`epaint_default_fonts`: Ubuntu Light, Noto Emoji, Hack; SIL OFL 1.1 e Ubuntu Font Licence), compiladas como reserva e listadas no `THIRD-PARTY-NOTICES.txt` do pacote da versão. |
 | Cada tela é o **documento de uma aba** e tem endereço (`Rota`); Voltar e Avançar andam num **histórico único** (aba + endereço), com Alt+←/→ e os botões laterais do mouse | As abas deixam várias partes de tabela e várias Consultas abertas juntas, e o Voltar funciona como num navegador. |
-| Janela **sem a decoração do Windows**, com a barra de título própria integrada aos menus (só no Windows; `BARRA_PROPRIA` no main.rs) | Uma faixa só de 30 px para o logo, os menus, o título e os botões da janela. Fica dentro do eframe e do winit 0.30, sem `unsafe`: sem o `WM_NCHITTEST`, perdem-se o Snap Layouts no Maximizar e o menu do sistema no clique direito do título (§5). O winit como dependência direta e o subclassing da janela ficaram de fora por decisão de 16/10/2026. |
+| Janela **sem a decoração do sistema**, com a barra de título própria integrada aos menus (no Windows e, desde a 0.2.2, no Linux; `BARRA_PROPRIA` no main.rs, e o `--moldura-do-sistema` volta à do sistema) | Uma faixa só de 30 px para o logo, os menus, o título e os botões da janela. Fica dentro do eframe e do winit 0.30, sem `unsafe`: sem o `WM_NCHITTEST`, perdem-se o Snap Layouts no Maximizar e o menu do sistema no clique direito do título (§5). O winit como dependência direta e o subclassing da janela ficaram de fora por decisão de 16/10/2026. |
 | Toolchain **GNU** (MinGW-w64 da WinLibs) e não MSVC | Não exige Visual Studio nem admin. Ver §1. |
 | **Linux** (experimental) com o mesmo código: o que é de cada sistema fica em `cfg(windows)`, sem crate novo | O `rfd` usa o xdg-desktop-portal (sem GTK), as pastas são as do XDG (`comum::app`), as fontes Noto/DejaVu (`interface::fontes`), o "Abrir"/"Mostrar na pasta" o `xdg-open` (`servico::arquivos`; a pasta, sem selecionar o arquivo) e o `--criar-atalho` um `databox.desktop` (`editor::atalho`). A janela usa a moldura do sistema. Textos que citam o sistema saem de `comum::app::{SEGUIR_O_SISTEMA, PROGRAMA_PADRAO}`. O CI roda fmt, clippy e testes no Ubuntu; a versão leva um AppImage (`ferramentas/appimage.sh`: appimagetool e runtime em versões fixas conferidas pelo SHA-256; as bibliotecas gráficas e as fontes vêm da distribuição; compilado no Ubuntu 22.04 pela glibc mínima) e um `.tar.gz`. Dentro do AppImage, o atalho e o relançar com wgpu usam o `$APPIMAGE` (`editor::atalho::executavel_do_pacote`), porque o binário de dentro fica numa montagem temporária. |
 
@@ -120,8 +120,10 @@ databox/
 ```
 
 Dependências (sem ciclos): `comum` ← `ddl` ← `esquema`; `comum` ← `banco`, `exportar`, `prefs`, `planilha`,
-`tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum` e egui) ← `estado`,
-`tela_*`, `editor`. As telas de arquivo falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
+`tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum`, `tabular` e egui)
+← `estado`, `tela_*`, `editor`. O `interface` usa do `tabular` só o `colunas::escrever_tsv`: a grade copia um intervalo
+de células como o Excel (desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV. As telas de arquivo
+falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
 `tela_texto` → `texto`, `tela_planilha` → `planilha`), sem passar pelo `servico`, que é a sessão de um banco.
 
 O contrato entre as telas e a casca mora no `estado::documento` (§4.8): as telas, cada uma no crate dela,
@@ -374,7 +376,10 @@ respeitado. `recentes()` devolve os três tipos (`existe` da pasta = é pasta qu
 arquivo = é arquivo comum) e esconde, guardados, os de `"tipo"` desconhecido; `limpar_recentes` tira os três.
 `pasta_aberta() → Option<String>` e `Mudanca.pasta_aberta: Option<Option<PathBuf>>` (None não mexe, `Some(None)`
 apaga, vazio → 400 "A pasta aberta precisa ser um caminho."): a chave `"pasta_aberta"` vem depois de
-`"larguras_paineis"` e **só existe enquanto há pasta aberta** (apagada no Fechar pasta).
+`"larguras_paineis"` e **só existe enquanto há pasta aberta** (apagada no Fechar pasta). `barra_status() → bool` e
+`Mudanca.barra_status: Option<bool>` (`Mudanca::barra_status(b)`): a chave `"barra_status"` vem depois de
+`"pasta_aberta"`, só entra no arquivo na primeira mudança, e sem ela (ou com valor que não é booleano) a barra de
+status fica escondida.
 
 **Aparência do código:** `aparencia() → Aparencia { cores_codigo: CoresCodigo::{DataBox, AltoContraste,
 SolarizedEscuro, Monokai}, fonte_codigo: Option<String> /* None = Consolas */, tamanho_codigo: f32 }` (padrão
@@ -489,7 +494,7 @@ pasta), `rotulos::chip_filtro` e `etiqueta_mais`, `Entrada::pastilha`/`somente_l
 **Código:** `interface::codigo` tem as 147 palavras reservadas do SQLite (saíram do
 `tela_consulta`, que passa a usar a lista daqui), um léxico próprio (`trechos_sql`: palavras-chave, textos,
 identificadores citados, números, comentários `--` e `/* */`, pontuação; nunca perde um byte) e `realcar_sql`, sem
-depender do `ddl` (o `interface` continua só com `comum` e o egui). As quatro "cores do código" (`CoresCodigo`,
+depender do `ddl` (o `interface` continua sem ele). As quatro "cores do código" (`CoresCodigo`,
 espelho do `prefs::CoresCodigo`) resolvem para `CoresResolvidas { fundo, texto, kw, st, nu, pu }` com os valores da
 prancheta 13; a DataBox segue o tema (`--c`, `--t`, `--kw`, `--st`, `--nu`, `--t3`). A `AparenciaCodigo { cores,
 familia, tamanho }` mora no contexto (`codigo::definir`/`atual`) e vale na hora para o `AreaTexto::codigo` (o
@@ -540,8 +545,9 @@ capturar}` para testar telas com o `egui_kittest` e gravar capturas em `capturas
   `Substituir(rota)`: o endereço da aba de origem, sem histórico. As duas valem para a aba que as emitiu, mesmo que
   ela já tenha saído de vista.
 - `Voltar` e `Avancar` andam no histórico único; novas: `NovaConsulta { sql }` (o "Nova consulta" da barra e da
-  faixa; com o comando, um item do Histórico), `FocarAba(IdAba)` (o clique na faixa) e `FecharAba(Option<IdAba>)`
-  (o ×, o clique do meio e o Ctrl+W; None é a ativa).
+  faixa; com o comando, um item do Histórico), `FocarAba(IdAba)` (o clique na faixa), `FecharAba(Option<IdAba>)`
+  (o ×, o clique do meio e o Ctrl+W; None é a ativa) e `MoverAba { id, para }` (o arrasto na faixa, o menu da aba e
+  o Ctrl+Shift+PageUp/PageDown: `Abas::mover`, que não muda a ativa nem o histórico).
 - A pasta: `EscolherEAbrirPasta`, `AbrirPasta { caminho }`, `AbrirCaminho { caminho, somente_leitura }` (a casca
   classifica: pasta, banco ou arquivo de dados), `AbrirArquivoDeDados { caminho }` (vai para `Rota::Arquivo`),
   `ListarPasta { caminho }` (uma subpasta da árvore), `AtualizarPasta` e `FecharPasta` (fecha as abas de arquivo de
@@ -761,7 +767,10 @@ linha" · "Fechar".
     padrão, as setas andam 16 pt. Numa janela estreita, os dois painéis encolhem antes de as Propriedades sumirem
     (agora abaixo de ~1052 pt, não mais ~1182). A escolha vale entre as sessões (a chave `"larguras_paineis"`,
     §4.5), gravada ao fim do gesto;
-  - a **barra de status** (`status.rs`, 26 px): sem banco, o nome da pasta aberta (o ponto `--t3`, a dica com o
+  - a **barra de status** (`status.rs`, 26 px; escondida por padrão desde 20/10/2026, Exibir › Barra de status a
+    mostra e `prefs.barra_status()` lembra; sem ela, o corpo vai até a margem de baixo e o toast fica acima do rodapé
+    do documento; o modo de gravação também está na linha "Gravação" das Propriedades): sem banco, o nome da pasta
+    aberta (o ponto `--t3`, a dica com o
     caminho) ou "Nenhuma pasta aberta"; com banco, o banco com o ponto (`--ok`; `--aviso` com a transação aberta), o
     modo de gravação ("Gravação imediata", "Transação aberta" ou "Só leitura", com a frase do aviso de transação na
     dica) e, à direita, o que a aba diz de si ("clientes · 60 linhas · 7 colunas", "SQL"), o SQLite e a codificação
@@ -833,7 +842,12 @@ linha" · "Fechar".
   a janela (`Minimized(false)` e `Focus`) e liga o `fechar_pendente`, decidido no fim do primeiro quadro da janela
   restaurada, depois do `aplicar` (`decidir_fechar_pendente`): com o motivo, a pergunta; sem ele, a janela fecha,
   como a pessoa pediu. Com a janela à vista, o `logica` não faz nada.
-- **Janela sem decoração** (só no Windows, `BARRA_PROPRIA` no main.rs; o código em `editor/src/casca/janela.rs`): a
+- **Tamanho da interface** (`editor/src/escala.rs`): no Linux, o main.rs lê uma vez, antes da janela, o
+  `text-scaling-factor` do GNOME (`gsettings`; sem ele, ou com valor fora de 0,5 a 3, é 1) e o aplica como o zoom do
+  egui (`set_zoom_factor`), com a janela inicial e a mínima multiplicadas por ele; a escala do monitor continua com o
+  winit.
+- **Janela sem decoração** (no Windows e no Linux, `BARRA_PROPRIA` no main.rs, menos com o `--moldura-do-sistema`; o
+  código em `editor/src/casca/janela.rs`, que diz também o que muda no Linux): a
   barra de título é a faixa de 30 px do DataBox (logo, menus Arquivo/Editar/Exibir/Ajuda, o título "arquivo ·
   DataBox" no centro e os botões Minimizar, Maximizar/Restaurar e "Fechar a janela"). Os controles ficam numa camada
   `Order::Tooltip`, acima da modal: com a Exportar ou uma confirmação aberta, ainda dá para mover, minimizar e
@@ -869,7 +883,8 @@ linha" · "Fechar".
 - **Atalhos**: Ctrl+O, Ctrl+Enter (na Consulta SQL), Ctrl+F (a busca da barra, quando a aba tem busca), Esc,
   setas/Enter/F2/Esc/Tab/Delete na grade, mais os da casca (`editor/src/casca/atalhos.rs`): Alt+←/→ e os botões
   laterais do mouse (o histórico único, que atravessa as abas), Ctrl+W (fechar a aba), Ctrl+Tab e Ctrl+Shift+Tab (a
-  aba seguinte e a anterior na faixa, com volta: `Abas::vizinha`), F5 (o Atualizar da aba, só com o Atualizar ligado
+  aba seguinte e a anterior na faixa, com volta: `Abas::vizinha`), Ctrl+Shift+PageUp/PageDown (a ativa uma casa
+  para a esquerda ou a direita, sem volta: `Acao::MoverAba`), F5 (o Atualizar da aba, só com o Atualizar ligado
   nela; senão, a tecla fica com quem tem o foco e a edição em curso não termina), Ctrl+B (Explorador) e Ctrl+Alt+B
   (Propriedades, só com o botão delas ligado: no Início e na janela estreita não faz nada; com um campo de texto
   focado, fica com o campo, porque o AltGr+B escreve em outros teclados) e Ctrl+, (as Preferências); Ctrl+Shift+O (Abrir pasta) e, só com o foco num nó do Explorador,

@@ -68,8 +68,9 @@
 //!   gravado, o toast e o erro dizem, e o aviso de topo oferece "Ler de novo". Enquanto grava, nada se edita e os verbos
 //!   de edição ficam desligados. Com uma alteração que mexe nas posições (inserir, excluir, duplicar, desfazer, ler de
 //!   novo) ainda sem resposta, o que é pedido por posição espera (o Delete repetido não exclui a linha de baixo); a
-//!   célula aberta grava antes de outra alteração entrar na fila. Ctrl+C: as linhas marcadas em TSV com o cabeçalho
-//!   (numa tarefa) ou a célula ativa. Sem "Primeira linha é o cabeçalho", as colunas não têm nome no arquivo: Renomear
+//!   célula aberta grava antes de outra alteração entrar na fila. Ctrl+C: o intervalo de células em TSV (as linhas
+//!   fora da página lidas numa tarefa), as linhas marcadas em TSV com o cabeçalho (numa tarefa) ou a célula ativa. Sem
+//!   "Primeira linha é o cabeçalho", as colunas não têm nome no arquivo: Renomear
 //!   fica desligado (com a dica) e a Nova coluna entra com o nome genérico.
 //! - **Colunas** (passo 12, prancheta 16): o clique no cabeçalho seleciona a coluna (Ctrl soma ou tira, Shift
 //!   estende; o clique numa célula desfaz), "· coluna valor selecionada" no rodapé. O menu do cabeçalho (clique

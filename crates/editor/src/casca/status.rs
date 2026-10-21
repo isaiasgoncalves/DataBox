@@ -1,5 +1,7 @@
 //! A barra de status (o `footer.vidro` das pranchetas Main, Dados, Consulta e DadosClaro), sobre a peça
-//! `interface::pecas::barra_status`:
+//! `interface::pecas::barra_status`. Desde a revisão de 20/10/2026 ela fica escondida por padrão (Exibir › Barra de
+//! status a mostra): o que ela diz já está nas Propriedades (o modo de gravação na linha "Gravação" da seção Arquivo,
+//! [`linha_da_gravacao`]; o SQLite e a codificação), nos rodapés dos documentos e nas abas.
 //!
 //! - à esquerda, o banco aberto com o ponto (`--ok`; `--aviso` com a transação aberta) e o modo de gravação
 //!   ("Gravação imediata", "Transação aberta" em `--aviso` 600 ou "Só leitura"), com a frase que antes era a nota da
@@ -57,6 +59,22 @@ pub(crate) fn modo_do_banco(b: &BancoInfo, consulta: &str) -> (Modo, String) {
     } else {
         (Modo::GravacaoImediata, format!("Você está editando {nome}. Tudo o que for salvo grava no arquivo na hora."))
     }
+}
+
+/// A linha "Gravação" da seção Arquivo das Propriedades do banco (revisão de 20/10/2026: com a barra de status
+/// escondida por padrão, o modo de gravação mora aqui): "Imediata", ou "Transação aberta" e "Só leitura" na pílula de
+/// espera, com a frase da barra na dica. A transação, com o nome genérico da Consulta ([`nome_da_consulta`]).
+pub(crate) fn linha_da_gravacao(d: &mut interface::pecas::detalhes::Detalhes<'_>, b: &BancoInfo) {
+    use interface::pecas::rotulos::{TipoPill, pill};
+    let (modo, frase) = modo_do_banco(b, &nome_da_consulta(None));
+    d.linha("Gravação", |ui| {
+        let resp = match modo {
+            Modo::GravacaoImediata => pill(ui, "imediata", TipoPill::Neutra),
+            Modo::TransacaoAberta => pill(ui, "transação aberta", TipoPill::Wait),
+            Modo::SoLeitura => pill(ui, "só leitura", TipoPill::Wait),
+        };
+        resp.on_hover_text(frase);
+    });
 }
 
 /// A barra sem banco e sem pasta (prancheta 4).

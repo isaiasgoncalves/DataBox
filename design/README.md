@@ -111,7 +111,10 @@ Pedidos de 15/10/2026 que valem para a implementação, além das pranchetas 12 
 - **Exibir > Tema** continua como atalho e ganha "Preferências de aparência"; o trilho tem Preferências no pé.
 - **Cores do código:** DataBox (segue o tema; o padrão), Alto contraste, Solarized escuro e Monokai.
 - **Ícones de arquivo:** a etiqueta colorida grande (40 × 21) até 24 px e a menor (36 × 16) de 32 px para cima.
-- **Menu Arquivo:** ícones sólidos de 24 px (prancheta 4), decidido em 16/10/2026.
+- **Menu Arquivo:** ícones sólidos de 24 px (prancheta 4), decidido em 16/10/2026. **Revisto em 20/10/2026:** todos os
+  menus da barra usam as silhuetas de 14 px (item de menu é ação, como na barra de ferramentas); os sólidos ficam para
+  os objetos, como os arquivos dos Abertos recentemente. Abertos recentemente e Preferências ficam sem silhueta até
+  haver o relógio e a engrenagem na biblioteca. A prancheta 4 ainda mostra os sólidos.
 
 Da revisão crítica de 15/10/2026, aplicada às pranchetas (as que se refazem inteiras saem de `janelas.py`,
 `preferencias.py` e `estados_novos.py`):

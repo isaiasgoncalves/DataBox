@@ -194,11 +194,13 @@ The full feature list, keyboard shortcuts and details are in the [Portuguese gui
 ## Command line
 
 ```text
-DataBox.exe [path] [--somente-leitura] [--renderizador glow|wgpu] [--criar-atalho] [-h | --ajuda] [--versao]
+DataBox.exe [path] [--somente-leitura] [--moldura-do-sistema] [--renderizador glow|wgpu] [--criar-atalho] [-h | --ajuda] [--versao]
 ```
 
 - `DataBox.exe C:\data` opens the folder; add `--somente-leitura` to open a database read-only.
 - `--criar-atalho` creates Desktop and Start menu shortcuts and exits.
+- `--moldura-do-sistema` uses the system title bar and borders instead of DataBox's own (on Linux, for a window manager
+  where the undecorated window misbehaves).
 - Settings live in `%APPDATA%\DataBox\preferencias.json`; the log is `%LOCALAPPDATA%\DataBox\databox.log`.
 
 ---

@@ -1,6 +1,7 @@
 //! Os atalhos de teclado da casca: Ctrl+O (abrir um arquivo), Ctrl+Shift+O (abrir uma pasta), Alt+← e Alt+→ e os botões laterais do mouse (o
 //! histórico único, que atravessa as abas), Ctrl+W (fechar a aba), Ctrl+Tab e Ctrl+Shift+Tab (a aba seguinte e a
-//! anterior na faixa, com volta), F5 (o Atualizar da aba, se ela o oferece; senão a tecla fica com quem tem o foco),
+//! anterior na faixa, com volta), Ctrl+Shift+PageUp e Ctrl+Shift+PageDown (a aba ativa uma casa para a esquerda ou
+//! para a direita, sem volta), F5 (o Atualizar da aba, se ela o oferece; senão a tecla fica com quem tem o foco),
 //! Alt+Home (a aba Início, como o Exibir › Início; o trilho que a abria saiu em 19/10/2026), Alt+1 a Alt+4 (as
 //! vistas das Propriedades de uma tabela à vista: Resumo, Colunas, Índices e gatilhos, Definição SQL),
 //! Ctrl+B (mostrar ou esconder o Explorador), Ctrl+Alt+B (as Propriedades, com o botão delas ligado) e Ctrl+F (a
@@ -28,6 +29,9 @@ pub(crate) struct Atalhos {
     pub fechar_aba: bool,
     pub proxima: bool,
     pub anterior: bool,
+    /// Ctrl+Shift+PageUp e Ctrl+Shift+PageDown: a aba ativa uma casa para a esquerda ou para a direita.
+    pub mover_esquerda: bool,
+    pub mover_direita: bool,
     pub atualizar: bool,
     /// Alt+Home: a aba Início.
     pub inicio: bool,
@@ -54,11 +58,14 @@ impl Atalhos {
     }
 
     /// Algum atalho que tira o documento de vista, abre o diálogo ou o refaz (a edição em curso grava antes):
-    /// todos, menos o Ctrl+B e o Ctrl+Alt+B, que só mostram e escondem os painéis, o Ctrl+F, que só leva o foco à
+    /// todos, menos o Ctrl+Shift+PageUp e PageDown, que só mudam a aba de lugar, o Ctrl+B e o Ctrl+Alt+B, que só
+    /// mostram e escondem os painéis, o Ctrl+F, que só leva o foco à
     /// busca da barra (a célula em edição grava quando perde o foco), e os verbos do documento (Ctrl+S, Ctrl+Z,
     /// Ctrl+Y), que vão a ele no mesmo quadro sem tirar o foco de ninguém.
     pub fn sai_do_documento(&self) -> bool {
         Atalhos {
+            mover_esquerda: false,
+            mover_direita: false,
             explorador: false,
             propriedades: false,
             buscar: false,
@@ -133,6 +140,8 @@ pub(crate) fn ler(ctx: &egui::Context, valem: Valem) -> Atalhos {
             fechar_aba: consumir(i, Modifiers::COMMAND, Key::W),
             proxima: consumir(i, Modifiers::COMMAND, Key::Tab),
             anterior: consumir(i, ctrl_shift, Key::Tab),
+            mover_esquerda: consumir(i, ctrl_shift, Key::PageUp),
+            mover_direita: consumir(i, ctrl_shift, Key::PageDown),
             atualizar: valem.atualizar && consumir(i, Modifiers::NONE, Key::F5),
             inicio: consumir(i, Modifiers::ALT, Key::Home),
             vista: if valem.tabela {
@@ -198,6 +207,9 @@ mod testes {
         assert_eq!(com_tecla(CTRL, Key::Tab), Atalhos { proxima: true, ..Default::default() });
         let ctrl_shift = Modifiers { shift: true, ..CTRL };
         assert_eq!(com_tecla(ctrl_shift, Key::Tab), Atalhos { anterior: true, ..Default::default() });
+        assert_eq!(com_tecla(ctrl_shift, Key::PageUp), Atalhos { mover_esquerda: true, ..Default::default() });
+        assert_eq!(com_tecla(ctrl_shift, Key::PageDown), Atalhos { mover_direita: true, ..Default::default() });
+        assert!(!com_tecla(ctrl_shift, Key::PageDown).sai_do_documento(), "mudar a aba de lugar não a tira de vista");
         assert_eq!(com_tecla(Modifiers::ALT, Key::ArrowLeft), Atalhos { voltar: true, ..Default::default() });
         assert_eq!(com_tecla(Modifiers::ALT, Key::ArrowRight), Atalhos { avancar: true, ..Default::default() });
         let explorador = com_tecla(CTRL, Key::B);

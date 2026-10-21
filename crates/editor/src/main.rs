@@ -1,11 +1,13 @@
 //! DataBox.exe:
 //!
 //! ```text
-//! DataBox.exe [caminho] [--somente-leitura] [--renderizador glow|wgpu] [--criar-atalho]
+//! DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador glow|wgpu] [--criar-atalho]
 //! ```
 //!
 //! Liga o registro (com o gancho de pânico), abre as preferências e o serviço, e abre a janela com o tema das preferências e o movimento reduzido do Windows.
-//! No Windows, a janela fica sem a decoração do sistema, com a barra de título própria ([`BARRA_PROPRIA`]).
+//! No Windows e no Linux, a janela fica sem a decoração do sistema, com a barra de título própria ([`BARRA_PROPRIA`]);
+//! o `--moldura-do-sistema` volta à do sistema ([`barra_propria`]).
+//! No Linux, a interface cresce pelo tamanho do texto do GNOME ([`escala::fator_do_sistema`], o zoom do egui).
 //! O caminho da linha de comando (uma pasta, um banco ou um arquivo de dados) é aberto no começo (se não abrir, o
 //! aplicativo abre sem ele e mostra o motivo no Início). O renderizador padrão é o glow (OpenGL); se ele não abrir (máquina virtual sem driver), o executável
 //! se relança com `--renderizador wgpu` e sai. Sem console: ajuda, versão, erros de argumento e falhas fatais
@@ -21,15 +23,23 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use comum::app::NOME;
 use editor::linha_comando::{self, Argumentos, Comando, Renderizador};
-use editor::{Editor, Partida, atalho, registro, tema_da_interface};
+use editor::{Editor, Partida, atalho, escala, registro, tema_da_interface};
 
 /// Tamanho inicial e mínimo da janela: o inicial deixa as Propriedades à vista, na proporção 16:10.
 const TAMANHO_INICIAL: [f32; 2] = [1280.0, 800.0];
 const TAMANHO_MINIMO: [f32; 2] = [960.0, 600.0];
-/// No Windows, a janela fica sem a decoração do sistema e a barra de título é a do DataBox (os menus, o título e os
-/// botões minimizar, maximizar e fechar numa faixa só; o app cuida do arrasto e das bordas). Fora dele, a barra do
-/// sistema continua, e a faixa fica só com o logo, os menus e o título.
-const BARRA_PROPRIA: bool = cfg!(windows);
+/// No Windows e no Linux (revisão de 20/10/2026: no GNOME, a barra do sistema ficava em cima da faixa dos menus), a
+/// janela fica sem a decoração do sistema e a barra de título é a do DataBox (os menus, o título e os botões
+/// minimizar, maximizar e fechar numa faixa só; o app cuida do arrasto e das bordas, pelo `drag_window` e o
+/// `drag_resize_window` do winit, que valem no X11 e no Wayland). Nos outros sistemas, a barra do sistema continua, e a
+/// faixa fica só com o logo, os menus e o título.
+const BARRA_PROPRIA: bool = cfg!(any(windows, target_os = "linux"));
+
+/// A barra própria vale nesta execução: a do sistema ([`BARRA_PROPRIA`]), menos com o `--moldura-do-sistema` (a saída
+/// para um gerenciador de janelas em que a janela sem decoração não se comporta).
+fn barra_propria(args: &Argumentos) -> bool {
+    BARRA_PROPRIA && !args.moldura_do_sistema
+}
 
 /// Caixa de mensagem do Windows (sem console é o único jeito de a pessoa ver o que houve).
 fn caixa(texto: &str, erro: bool) {
@@ -108,17 +118,19 @@ fn criar_atalho() -> ExitCode {
     }
 }
 
-fn opcoes_nativas(renderizador: Renderizador) -> eframe::NativeOptions {
+/// `fator`: o tamanho da interface que o sistema pede ([`escala::fator_do_sistema`]); a janela inicial e a mínima
+/// crescem com ele.
+fn opcoes_nativas(renderizador: Renderizador, barra_propria: bool, fator: f32) -> eframe::NativeOptions {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(NOME)
         // sem o recurso `persistence` do eframe, o app_id só vale no Wayland (o nome da janela), para o porte futuro
         .with_app_id(NOME)
-        .with_inner_size(TAMANHO_INICIAL)
-        .with_min_inner_size(TAMANHO_MINIMO);
+        .with_inner_size(escala::tamanho_com_fator(TAMANHO_INICIAL, fator))
+        .with_min_inner_size(escala::tamanho_com_fator(TAMANHO_MINIMO, fator));
     if let Some(icone) = interface::marca::icone_janela() {
         viewport = viewport.with_icon(Arc::new(icone));
     }
-    if BARRA_PROPRIA {
+    if barra_propria {
         // o winit mantém os estilos de legenda e de borda (o Aero Snap, o Win+setas e o Alt+F4 continuam) e o
         // egui-winit pede a sombra da janela sem decoração
         viewport = viewport.with_decorations(false);
@@ -141,16 +153,22 @@ fn executar(args: &Argumentos) -> ExitCode {
     let aparencia = prefs.aparencia();
     let paineis = prefs.paineis();
     let lugares = prefs.lugares();
+    let barra_status = prefs.barra_status();
     let servico = Arc::new(servico::Servico::novo(prefs));
     let servico_ao_sair = Arc::clone(&servico);
     let reduzido = movimento_reduzido_do_windows();
     let partida = Partida { caminho: args.caminho.clone(), somente_leitura: args.somente_leitura };
     let renderizador = args.renderizador;
+    let propria = barra_propria(args);
+    let fator = escala::fator_do_sistema();
+    if fator != 1.0 {
+        log::info!("Tamanho da interface do sistema: {:.0}%.", fator * 100.0);
+    }
     let criado = Arc::new(AtomicBool::new(false));
     let marcador = Arc::clone(&criado);
     let resultado = eframe::run_native(
         NOME,
-        opcoes_nativas(args.renderizador),
+        opcoes_nativas(args.renderizador, propria, fator),
         Box::new(move |cc| {
             marcador.store(true, Ordering::SeqCst);
             // o tema das preferências vale antes do primeiro quadro (a janela não pisca clara)
@@ -158,6 +176,8 @@ fn executar(args: &Argumentos) -> ExitCode {
             // e a aparência do código (cores, família e tamanho), também antes do primeiro quadro
             editor::aplicar_aparencia(&cc.egui_ctx, &aparencia);
             interface::tema::definir_movimento_reduzido(&cc.egui_ctx, reduzido);
+            // o tamanho da interface que o sistema pede além da escala do monitor (o texto grande do GNOME)
+            cc.egui_ctx.set_zoom_factor(fator);
             // o vidro fosco: o que está atrás dos menus, janelas e avisos sai desfocado (a foto da própria janela)
             interface::fosco::ligar(&cc.egui_ctx, Some(|linha| log::info!("{linha}")));
             // a borda de 1px, a linha do topo e a sombra do DWM seguem o tema do app: a cada mudança do tema, o egui
@@ -167,10 +187,11 @@ fn executar(args: &Argumentos) -> ExitCode {
             // e as larguras das docas que a pessoa deixou (as divisórias) e onde ela pôs cada painel
             Ok(Box::new(
                 Editor::novo(servico, tema, partida)
-                    .com_barra_propria(BARRA_PROPRIA)
+                    .com_barra_propria(propria)
                     .com_renderizador(renderizador)
                     .com_larguras(paineis)
-                    .com_lugares(lugares),
+                    .com_lugares(lugares)
+                    .com_barra_status(barra_status),
             ))
         }),
     );

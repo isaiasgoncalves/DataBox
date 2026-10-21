@@ -19,7 +19,8 @@
 //! (`SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION)`, o único `unsafe` do crate, no main.rs, sob
 //! `cfg(windows)`; fora dele, sem movimento reduzido) para o `interface::tema::definir_movimento_reduzido`, e
 //! abre a janela (título `comum::app::NOME`, 1280×800, mínimo 960×600, ícone `interface::marca::icone_janela`; no
-//! Windows, sem a decoração do sistema, com a barra de título própria: `BARRA_PROPRIA` e `com_barra_propria`)
+//! Windows e no Linux, sem a decoração do sistema, com a barra de título própria: `BARRA_PROPRIA` e
+//! `com_barra_propria`; o `--moldura-do-sistema` volta à do sistema)
 //! com o tema das preferências aplicado antes do primeiro quadro (e o `sync_window_theme` do egui ligado: a borda e
 //! a sombra do DWM seguem o tema do app). O caminho da
 //! linha de comando (pasta, banco ou arquivo de dados, pelo `Servico::alvo_do_caminho`) é aberto na primeira tarefa;
@@ -42,11 +43,14 @@
 //!       não toca no disco: o estado (e o banco da partida) chegam numa tarefa no primeiro quadro
 //!   com_barra_propria(bool) -> Editor   a janela sem a decoração do sistema: os botões minimizar, maximizar e fechar,
 //!       o arrasto e as bordas de redimensionar na barra de título (padrão: sim; o main.rs passa `BARRA_PROPRIA`,
-//!       que é só do Windows)
+//!       do Windows e do Linux, menos com o `--moldura-do-sistema`)
 //!   com_larguras(prefs::LarguraPaineis) -> Editor   as larguras das docas da sessão de antes
 //!       (`prefs.paineis()`, lidas antes da janela); as divisórias as mudam e a casca as guarda ao fim do gesto
 //!   com_lugares(prefs::LugaresPaineis) -> Editor   onde cada painel morava (a doca da esquerda, a da direita ou a
 //!       janela própria; `prefs.lugares()`); mudar o painel de lugar grava o lugar novo
+//!   com_barra_status(bool) -> Editor   a barra de status à vista (padrão: sim; o main.rs passa
+//!       `prefs.barra_status()`, escondida enquanto a pessoa não a mostrar); o Exibir › Barra de status a alterna e
+//!       grava a escolha
 //!   desenhar(&mut self, ui: &mut egui::Ui, frame: Option<&eframe::Frame>)
 //!       um quadro inteiro na janela (`ui` = a janela toda, sem margem; frame None nos testes, sem diálogos)
 //!   titulo() -> &str        "vendas.db · DataBox" (sem banco, "DataBox"); vai para a janela sozinho
@@ -81,8 +85,11 @@
 //! RegioesJanela { livre: Vec<Rect>, botoes: [Rect; 3], borda: f32 } · regioes_da_janela(&egui::Context)
 //!     as regiões da barra própria no último quadro (a porta para um WM_NCHITTEST próprio)
 //! linha_comando::{analisar(&[OsString]) -> Result<Comando, ErroArgumentos>, Comando::{Executar(Argumentos),
-//!     Ajuda, Versao}, Argumentos { caminho, somente_leitura, renderizador, criar_atalho }, Renderizador::{Glow, Wgpu},
-//!     ErroArgumentos { mensagem } · texto(), argumentos_para_relancar(&Argumentos, Renderizador), USO, AJUDA}
+//!     Ajuda, Versao}, Argumentos { caminho, somente_leitura, renderizador, criar_atalho, moldura_do_sistema },
+//!     Renderizador::{Glow, Wgpu}, ErroArgumentos { mensagem } · texto(), argumentos_para_relancar(&Argumentos,
+//!     Renderizador), USO, AJUDA}
+//! escala::{fator_do_sistema() -> f32 (o `text-scaling-factor` do GNOME no Linux; 1 sem ele), ler_fator(&str) ->
+//!     Option<f32>, tamanho_com_fator([f32; 2], f32) -> [f32; 2]}
 //! registro::{iniciar(PathBuf) -> bool, instalar_gancho_de_panico(), RegistroCompartilhado::novo(arquivo,
 //!     max_bytes, copias) · escrever(linha) · com_adiamento, Registro (log::Log), formatar_linha, nivel_do_alvo,
 //!     MAX_BYTES (1.000.000), COPIAS (2), ADIAR_ROTACAO (60 s)}
@@ -102,7 +109,8 @@
 //! 3. Atalhos (`casca::atalhos`, sem janela aberta, com os modificadores exatos): Ctrl+O e Ctrl+Shift+O (fecham o
 //!    menu e abrem o diálogo do arquivo e o da pasta), Ctrl+F (a busca da barra, quando a aba tem busca), Ctrl+, (as Preferências), Alt+←/→ e os botões
 //!    laterais do mouse (o histórico único, que atravessa as abas), Ctrl+W (fecha a
-//!    aba), Ctrl+Tab e Ctrl+Shift+Tab (a aba seguinte e a anterior, com volta: `Abas::vizinha`) e F5 (o Atualizar
+//!    aba), Ctrl+Tab e Ctrl+Shift+Tab (a aba seguinte e a anterior, com volta: `Abas::vizinha`), Ctrl+Shift+PageUp e
+//!    PageDown (a ativa uma casa para a esquerda ou a direita: `Acao::MoverAba`) e F5 (o Atualizar
 //!    da aba, só quando ela o oferece): a edição em curso grava agora e a ação vale no quadro seguinte; Ctrl+B e
 //!    Ctrl+Alt+B mostram ou escondem o Explorador e as Propriedades na hora (o Ctrl+Alt+B só com o botão delas
 //!    ligado, e fica com o campo de texto focado, por causa do AltGr). Fechar a janela com uma exportação em
@@ -147,9 +155,9 @@
 //! 5. Aplica as `estado::Acao`, cada uma com a aba que a emitiu: `Navegar` (sem banco, toda rota vira o Início;
 //!    abre a aba da rota ou foca a aberta; a Consulta SQL sem comando foca a que abriu a transação, depois a mais
 //!    recente), `Atualizar`/`Substituir` (só o endereço da aba de origem; se ele cai na chave de outra aba aberta,
-//!    as duas viram uma), `Voltar`/`Avancar` (só focam), `NovaConsulta`, `FocarAba`, `FecharAba` (fechar a última
-//!    abre o Início; a execução da Consulta que ainda corre segue numa tarefa da casca),
-//!    `AbrirBanco`/`EscolherEAbrir`/`NovoBanco`/`FecharBanco` (uma troca de cada vez, só depois de o estado
+//!    as duas viram uma), `Voltar`/`Avancar` (só focam), `NovaConsulta`, `FocarAba`, `MoverAba` (`Abas::mover`),
+//!    `FecharAba` (fechar a última abre o Início; a execução da Consulta que ainda corre segue numa tarefa da
+//!    casca), `AbrirBanco`/`EscolherEAbrir`/`NovoBanco`/`FecharBanco` (uma troca de cada vez, só depois de o estado
 //!    chegar; 409 `TransacaoAberta` → a confirmação "Descartar e continuar" e a mesma troca com
 //!    `descartar_transacao`; no fim, o estado relido, todas as abas fechadas, inclusive as Consultas, e a Visão
 //!    geral do banco novo, ou o Início), `RecarregarObjetos` (vindo de uma aba de tabela, as outras abas da mesma
@@ -413,6 +421,7 @@ mod app;
 pub mod atalho;
 mod casca;
 mod documento;
+pub mod escala;
 mod inicio;
 pub mod linha_comando;
 mod pedir_caminho;

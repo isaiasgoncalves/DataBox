@@ -11,8 +11,8 @@ use amostras::{N_CLIENTES, N_EVENTOS};
 use apoio::*;
 use banco::Operador;
 use comum::Celula;
-use egui::Key;
 use egui::accesskit::Role;
+use egui::{Event, Key, Modifiers};
 use egui_kittest::kittest::{NodeT, Queryable};
 use estado::apoio_testes::{Ambiente, esperar};
 use estado::{ConsultaDados, FiltroDigitado, OrigemJanelaExportar};
@@ -1643,4 +1643,31 @@ fn desfazer_a_ultima_edicao_de_celula() {
     esperar_que(&mut h, |r| r.marcadas == 0 && !r.carregando && r.linhas > 0);
     assert!(!ofertas(&h).ligado(Verbo::Desfazer));
     assert_eq!(ofertas(&h).dica(Verbo::Desfazer), tela_dados::DICA_EXCLUIR);
+}
+
+/// O que foi para a área de transferência neste quadro.
+fn copiado_agora(h: &H) -> Option<String> {
+    h.output().platform_output.commands.iter().find_map(|c| match c {
+        egui::OutputCommand::CopyText(t) => Some(t.clone()),
+        _ => None,
+    })
+}
+
+#[test]
+fn ctrl_c_copia_a_celula_ativa_e_o_intervalo() {
+    let amb = Ambiente::exemplo("dados_copiar_intervalo");
+    let mut h = abrir(&amb, "eventos");
+    // a célula ativa sozinha: o texto dela
+    clicar_celula(&mut h, 0, 1);
+    h.input_mut().events.push(Event::Copy);
+    h.step();
+    assert_eq!(copiado_agora(&h).as_deref(), Some("login"));
+    // Shift com as setas: duas linhas × duas colunas, como o Excel copia
+    clicar_celula(&mut h, 0, 0);
+    tecla_com(&mut h, Modifiers::SHIFT, Key::ArrowDown);
+    tecla_com(&mut h, Modifiers::SHIFT, Key::ArrowRight);
+    h.input_mut().events.push(Event::Copy);
+    h.step();
+    assert_eq!(copiado_agora(&h).as_deref(), Some("2026-09-01T00:00:00\tlogin\r\n2026-09-02T01:01:13\tconsulta\r\n"));
+    assert_eq!(interface::pecas::toast::toast_atual(&h.ctx).as_deref(), Some("2 linhas × 2 colunas copiadas."));
 }

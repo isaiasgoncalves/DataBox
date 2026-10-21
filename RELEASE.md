@@ -49,6 +49,27 @@ GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um
 Antes da tag, dá para testar o AppImage do Linux: **Actions › CI › Run workflow** gera o artefato `appimage` com o
 `DataBox-dev-<commit>-x86_64.AppImage` (ou, numa máquina Linux, `ferramentas/appimage.sh`).
 
+### O que testar à mão
+
+Os testes de tela rodam a janela embutida (kittest), sem sistema de janelas: o que depende do compositor só se vê no
+app compilado. Antes da tag, no Windows e no Linux (no GNOME, uma vez no Wayland e outra na sessão X11, se houver):
+
+1. **Barra própria:** os menus e os botões Minimizar, Maximizar e Fechar numa linha só, sem outra barra em cima.
+   Arraste a janela pelo espaço livre da faixa; duplo clique maximiza e restaura; arraste a maximizada para
+   restaurar; encoste na borda da tela (Aero Snap / encaixe do GNOME). Redimensione pelas quatro bordas e pelos
+   cantos (5 px por dentro). O Fechar com uma Consulta em transação pergunta antes.
+2. **Moldura do sistema:** `DataBox --moldura-do-sistema` abre com a barra do sistema, e a faixa fica só com o logo,
+   os menus e o título.
+3. **Janela própria de um painel:** "Destacar em janela" nas Propriedades, no Explorador e no Histórico abre a
+   janela do sistema; "Prender de volta" e o × dela devolvem o painel à doca. Feche e abra o app: o lugar foi
+   lembrado.
+4. **Arrastar a aba de uma doca:** para a outra doca prende lá; para fora da janela abre a janela própria (no Wayland
+   a janela nasce onde o compositor quiser); o Esc no meio do arrasto cancela.
+5. **Abas de documento:** arraste uma aba para outra posição; Ctrl+Shift+PageUp/PageDown e o menu do clique direito
+   (Mover à esquerda/direita) mudam a ativa de lugar.
+6. **Atalho do menu de aplicativos (Linux):** `DataBox --criar-atalho` a partir do AppImage novo; o DataBox aparece
+   no menu com o ícone e abre o AppImage certo.
+
 A tag precisa bater com a versão do `Cargo.toml` (`v0.1.0` ↔ `0.1.0`); se não bater, o workflow para antes de
 publicar. Se algo der errado depois de criada, apague a versão na página de Releases e a tag
 (`git push --delete origin v0.1.0` e `git tag -d v0.1.0`), corrija e repita.

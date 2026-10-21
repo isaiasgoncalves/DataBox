@@ -5,6 +5,41 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Selecionar um intervalo de células** nos Dados, no CSV, na planilha do Excel e no resultado da Consulta SQL:
+  arraste de uma célula a outra (a grade rola sozinha perto da borda), use Shift+clique ou Shift com as setas,
+  PageUp/PageDown e Home/End (com Ctrl, até a borda). Ctrl+C copia o intervalo como o Excel, com tabulações, para colar
+  numa planilha; no CSV, as linhas que ainda não estavam lidas são lidas na hora. Esc volta à célula ativa.
+- Ctrl+C na aba Dados copia a célula ativa (antes não fazia nada fora da janela da linha).
+- **Mover as abas de documento:** arraste uma aba na faixa para mudar o lugar dela (um fio na cor de destaque marca
+  onde ela cai; Esc cancela). O clique direito na aba abre o menu com "Mover à esquerda", "Mover à direita" e "Fechar
+  aba"; Ctrl+Shift+PageUp e Ctrl+Shift+PageDown movem a aba ativa.
+- **Exibir › Barra de status**, para mostrar ou esconder a barra; a escolha fica guardada.
+- **Gravação** na seção Arquivo das Propriedades (do banco e da tabela): "imediata", "transação aberta" ou "só
+  leitura", com a explicação na dica.
+- `--moldura-do-sistema`: abre a janela com a barra de título e as bordas do sistema.
+
+### Alterado
+
+- **Linux:** a janela usa a barra de título do DataBox, como no Windows: os botões Minimizar, Maximizar e Fechar
+  ficam na linha dos menus, sem a barra do GNOME em cima (e sem o título repetido).
+- **A barra de status fica escondida por padrão:** o que ela mostrava já está nas Propriedades (o modo de gravação, a
+  versão do SQLite, a codificação), nos rodapés dos documentos e nas abas. Sem ela, o aviso que aparece embaixo fica
+  logo acima do rodapé do documento.
+- **Menus com o mesmo tipo de ícone:** o Arquivo troca os ícones coloridos pelas silhuetas da barra de ferramentas,
+  como os menus Banco e Tabela, e as manutenções do Banco ganham as silhuetas que já tinham nas Propriedades.
+- Na doca mais estreita, o seletor Resumo · Colunas · Índices · SQL das Propriedades mostra só os ícones, com o nome
+  na dica, em vez de cortar os nomes com "…".
+
+### Corrigido
+
+- **Linux:** o DataBox segue o tamanho do texto do GNOME (Acessibilidade › Texto grande, ou o fator de escala das
+  fontes no Ajustes): com 125%, a interface inteira e a janela inicial crescem 25%, e ele deixa de parecer menor que
+  os outros programas na mesma tela.
+- O canto de cima à esquerda do documento, com a primeira aba ativa, tinha um recorte: a faixa de cima do documento
+  continuava arredondada embaixo da aba reta.
+
 ## [0.2.1] - 2026-10-20
 
 ### Adicionado

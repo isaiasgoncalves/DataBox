@@ -386,7 +386,11 @@ impl TelaCsv {
         self.trabalhos().any(|t| match t {
             Trabalho::Mutacao(m) => m.muda_posicoes(),
             Trabalho::Reabrir(_) | Trabalho::Cabecalho(_) | Trabalho::Recarregar(_) => true,
-            Trabalho::Pagina | Trabalho::ConferirDisco | Trabalho::Salvar | Trabalho::LerLinhas(_) => false,
+            Trabalho::Pagina
+            | Trabalho::ConferirDisco
+            | Trabalho::Salvar
+            | Trabalho::LerLinhas(_)
+            | Trabalho::LerIntervalo { .. } => false,
         })
     }
 

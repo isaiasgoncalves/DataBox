@@ -439,8 +439,12 @@ fn visao_geral_so_leitura_so_tem_verificacoes_e_copia() {
     let mut h = harness_com(&amb, Tema::Claro, TAMANHO, partida, |_| None);
     // a pílula "só leitura" na faixa, logo depois do nome
     assert!(tem_texto(&h, "só leitura"));
-    let pilula = h.get(by().label("só leitura")).rect();
-    assert!(pilula.top() > documento(&h).top() && pilula.bottom() < documento(&h).top() + 42.0, "{pilula:?}");
+    // (e outra na linha "Gravação" das Propriedades, revisão de 20/10/2026)
+    let doc = documento(&h);
+    let pilulas: Vec<egui::Rect> = h.query_all(by().label("só leitura")).map(|n| n.rect()).collect();
+    assert_eq!(pilulas.len(), 2, "{pilulas:?}");
+    let pilula = pilulas.iter().find(|r| doc.contains_rect(**r)).copied().expect("a pílula da faixa");
+    assert!(pilula.top() > doc.top() && pilula.bottom() < doc.top() + 42.0, "{pilula:?}");
     // a Manutenção nas Propriedades: só as verificações e a cópia
     let t = textos_das_propriedades(&h);
     for item in
@@ -4150,7 +4154,7 @@ fn docas_com_os_solidos_e_o_explorador_on() {
 }
 
 #[test]
-fn menu_arquivo_com_icones_de_24() {
+fn menu_arquivo_com_as_silhuetas_e_os_recentes_com_os_solidos() {
     use interface::icones::Icone;
     let amb = Ambiente::exemplo("menu_icones");
     let estoque = amb.pasta().join("estoque_2026.db");
@@ -4158,29 +4162,32 @@ fn menu_arquivo_com_icones_de_24() {
     amb.servico.prefs().adicionar_recente(&estoque);
     let mut h = harness(&amb);
     abrir_menu_arquivo(&mut h);
-    // `.menu-ic`: as linhas de 36 e os sólidos de 24 com `padding-left:8px`
-    for rotulo in ["Abrir pasta", "Abrir arquivo", "Novo banco", "Abertos recentemente", "Salvar", "Fechar aba"] {
-        assert_eq!(item_de_menu(&h, rotulo).rect().height(), 36.0, "{rotulo}");
+    // as silhuetas de 14 da barra de ferramentas, como nos menus Banco e Tabela (revisão de 20/10/2026), em linhas
+    // da mesma altura; os sólidos de 24 de antes nem são carregados
+    let altura = item_de_menu(&h, "Abrir pasta").rect().height();
+    for rotulo in ["Abrir arquivo", "Novo banco", "Abertos recentemente", "Salvar", "Fechar aba", "Preferências"] {
+        assert_eq!(item_de_menu(&h, rotulo).rect().height(), altura, "{rotulo}");
     }
-    for (icone, rotulo) in [
-        (Icone::PastaSolida, "Abrir pasta"),
-        (Icone::DocumentoSolido, "Abrir arquivo"),
-        (Icone::NovoBancoSolido, "Novo banco"),
-        (Icone::Recentes, "Abertos recentemente"),
-    ] {
+    let mut x_da_silhueta = None;
+    for (icone, rotulo) in
+        [(Icone::Pasta, "Abrir pasta"), (Icone::Arquivo, "Abrir arquivo"), (Icone::NovoBanco, "Novo banco")]
+    {
         let item = item_de_menu(&h, rotulo).rect();
-        let r = icone_pintado_em(&h, icone, 24.0, item).unwrap_or_else(|| panic!("o sólido de 24 em {rotulo}"));
-        assert_eq!((r.width(), r.left() - item.left()), (24.0, 8.0), "{rotulo}");
+        let r = icone_pintado_em(&h, icone, 14.0, item).unwrap_or_else(|| panic!("a silhueta de 14 em {rotulo}"));
+        assert_eq!(r.width(), 14.0, "{rotulo}");
+        let x = r.left() - item.left();
+        assert_eq!(*x_da_silhueta.get_or_insert(x), x, "a mesma coluna em {rotulo}");
     }
-    // o desligado (Salvar) em cinza: outra textura, a de cor nem é carregada
-    assert!(interface::icones::textura_carregada(&h.ctx, Icone::DisqueteSolido, 24.0).is_none());
+    for solido in [Icone::PastaSolida, Icone::DocumentoSolido, Icone::NovoBancoSolido, Icone::Recentes] {
+        assert!(interface::icones::textura_carregada(&h.ctx, solido, 24.0).is_none(), "{solido:?}");
+    }
     // os recentes: o cilindro de 24 em linhas de 44
     abrir_submenu(&mut h, "Abertos recentemente");
     let recente = item_de_menu(&h, "estoque_2026.db").rect();
     assert_eq!(recente.height(), 44.0);
     let r = icone_pintado_em(&h, Icone::Banco, 24.0, recente).expect("o cilindro de 24 no recente");
     assert_eq!(r.left() - recente.left(), 8.0);
-    capturar(&mut h, "menu-arquivo-icones-claro.png");
+    capturar(&mut h, "menu-arquivo-silhuetas-claro.png");
 }
 
 // ---- as Preferências (etapa 3, passo 18) ---------------------------------------------------------------------------
@@ -4935,4 +4942,29 @@ fn abas_das_docas_dizem_qual_esta_a_vista() {
     // pelo Exibir, de volta ao Explorador
     exibir(&mut h, "Explorador");
     assert!(aba_do_painel_ativa(&h, "Explorador"));
+}
+
+#[test]
+fn barra_de_status_escondida_pelas_preferencias_e_mostrada_pelo_exibir() {
+    let amb = Ambiente::exemplo("casca_sem_status");
+    let editor = editor::Editor::novo(std::sync::Arc::clone(&amb.servico), Tema::Claro, Partida::default())
+        .com_barra_status(amb.servico.prefs().barra_status());
+    let mut h = harness_editor(editor, Tema::Claro, TAMANHO);
+    // escondida por padrão (revisão de 20/10/2026): o modo de gravação fica nas Propriedades, com a frase na dica
+    assert!(!h.state().barra_status_a_vista());
+    assert!(!existe(&h, Role::Label, "Gravação imediata"), "sem a barra");
+    assert!(textos_das_propriedades(&h).iter().any(|t| t == "imediata"), "{:?}", textos_das_propriedades(&h));
+    let dica = ler_dica(&mut h, Role::Label, "imediata");
+    assert!(dica.contains("Tudo o que for salvo grava no arquivo na hora."), "{dica:?}");
+    // Exibir › Barra de status: aparece, e a escolha fica nas preferências
+    abrir_menu(&mut h, "Exibir");
+    clicar_item(&mut h, "Barra de status");
+    assert!(h.state().barra_status_a_vista());
+    assert!(existe(&h, Role::Label, "Gravação imediata"));
+    esperar(&mut h, "a preferência gravar", |_| amb.servico.prefs().barra_status());
+    // e some de novo
+    abrir_menu(&mut h, "Exibir");
+    clicar_item(&mut h, "Barra de status");
+    assert!(!existe(&h, Role::Label, "Gravação imediata"));
+    esperar(&mut h, "a preferência gravar", |_| !amb.servico.prefs().barra_status());
 }

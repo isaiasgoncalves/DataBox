@@ -41,7 +41,7 @@
 //! Ofertas                     o que a aba oferece de cada verbo (Default: tudo desligado): get · com(verbo,
 //!                             oferta) · ligar(verbo) · ligado · rotulo(verbo) · dica(verbo) · iter
 //! Acao                        pedidos à casca (Navegar, Atualizar, Substituir, Voltar, Avancar, NovaConsulta,
-//!                             FocarAba, FecharAba, AbrirBanco, EscolherEAbrir, NovoBanco, FecharBanco,
+//!                             FocarAba, FecharAba, MoverAba, AbrirBanco, EscolherEAbrir, NovoBanco, FecharBanco,
 //!                             RecarregarObjetos/Banco/Prefs, NotarTransacao, BancoTrocado, LembrarDiretorio,
 //!                             TrocarTema, AbrirExportacao, AbrirNovaTabela, AbrirNovoIndice, EscolherCopia) e, da
 //!                             etapa 4 (a casca as trata): EscolherEAbrirPasta · AbrirPasta{caminho} ·

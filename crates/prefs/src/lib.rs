@@ -16,6 +16,7 @@
 //!     pub fn paineis(&self) -> LarguraPaineis   // as larguras dos painéis laterais; None = a padrão da casca
 //!     pub fn lugares(&self) -> LugaresPaineis   // onde mora cada painel; None = o padrão da casca
 //!     pub fn pasta_aberta(&self) -> Option<String>   // a pasta que estava aberta; None = nenhuma
+//!     pub fn barra_status(&self) -> bool        // a barra de status à vista (Exibir › Barra de status); padrão false
 //!     pub fn ultimo_diretorio(&self) -> Option<String>
 //!     pub fn atualizar(&self, mudanca: Mudanca) -> Resultado<()>   // ErroBanco 400 com a frase
 //!     pub fn recentes(&self) -> Vec<Recente>    // até 15 (bancos, pastas, arquivos), o mais recente primeiro; consulta os arquivos agora
@@ -52,9 +53,10 @@
 //! pub struct Mudanca { tema: Option<Tema>, exportacao: Option<MudancaExportacao>,
 //!     ultimo_diretorio: Option<Option<PathBuf>>,    // None = não mexe; Some(None) = apaga
 //!     aparencia: Option<MudancaAparencia>, paineis: Option<MudancaLarguraPaineis>, lugares: Option<LugaresPaineis>,
-//!     pasta_aberta: Option<Option<PathBuf>> }       // None = não mexe; Some(None) = apaga a chave
+//!     pasta_aberta: Option<Option<PathBuf>>,        // None = não mexe; Some(None) = apaga a chave
+//!     barra_status: Option<bool> }
 //!     Mudanca::tema(t) / ::exportacao(m) / ::ultimo_diretorio(p) / ::aparencia(m) / ::paineis(m) / ::lugares(l)
-//!     / ::pasta_aberta(p)
+//!     / ::pasta_aberta(p) / ::barra_status(b)
 //!     e Default
 //! pub enum TipoRecente { Banco, Pasta, Arquivo }  // como_str()/Display: "banco" | "pasta" | "arquivo"; Default = Banco
 //!     TipoRecente::TODOS; TipoRecente::de_texto(&str) -> Resultado<TipoRecente> (e FromStr):
@@ -137,6 +139,9 @@
 //!   (`"pasta_aberta": "C:\\Projetos"`). Só existe enquanto há pasta aberta: [`Mudanca::pasta_aberta`] a grava ao
 //!   abrir e a apaga ao fechar. Valor que não é texto, ou texto vazio, conta como nenhuma pasta (e some na próxima
 //!   gravação).
+//! - **A barra de status** (revisão de 20/10/2026: escondida por padrão) fica na chave `"barra_status"`, depois de
+//!   `"pasta_aberta"`: `true` com ela à vista. A chave só é gravada na primeira mudança com `barra_status`; sem ela,
+//!   ou com um valor que não é booleano, a barra fica escondida.
 //! - **As larguras dos painéis** (as divisórias do Explorador e das Propriedades) ficam na chave
 //!   `"larguras_paineis"`, depois da `"aparencia"`: `{"explorador": 300, "propriedades": 272}` (pontos inteiros;
 //!   cada uma só existe depois que a pessoa a muda). A chave só é gravada na primeira mudança com `paineis`; sem
@@ -482,9 +487,15 @@ pub struct Mudanca {
     /// Some(Some(p)) grava a chave `"pasta_aberta"` (a pasta que acabou de abrir); Some(None) a apaga (o Fechar
     /// pasta); None não mexe.
     pub pasta_aberta: Option<Option<PathBuf>>,
+    /// Some grava a chave `"barra_status"` (a barra de status à vista ou não); None não mexe.
+    pub barra_status: Option<bool>,
 }
 
 impl Mudanca {
+    pub fn barra_status(a_vista: bool) -> Mudanca {
+        Mudanca { barra_status: Some(a_vista), ..Mudanca::default() }
+    }
+
     pub fn pasta_aberta(pasta: Option<PathBuf>) -> Mudanca {
         Mudanca { pasta_aberta: Some(pasta), ..Mudanca::default() }
     }
@@ -805,7 +816,7 @@ impl Exportacao {
 type Extras = Vec<(String, Json)>;
 
 /// As chaves do arquivo que esta versão conhece; as outras ficam em [`Dados::extras`].
-const CHAVES_DO_ARQUIVO: [&str; 10] = [
+const CHAVES_DO_ARQUIVO: [&str; 11] = [
     "versao",
     "tema",
     "exportacao",
@@ -816,6 +827,7 @@ const CHAVES_DO_ARQUIVO: [&str; 10] = [
     "larguras_paineis",
     "lugares_paineis",
     "pasta_aberta",
+    "barra_status",
 ];
 /// As chaves de cada recente que esta versão conhece; as outras ficam em [`RecenteGuardado::extras`].
 const CHAVES_DO_RECENTE: [&str; 2] = ["caminho", "aberto_em"];
@@ -1047,6 +1059,8 @@ struct Dados {
     lugares: Option<LugaresGuardados>,
     /// O caminho da pasta aberta; None enquanto não há pasta aberta (sem a chave no arquivo).
     pasta_aberta: Option<String>,
+    /// A barra de status à vista; None enquanto a pessoa não mudar (sem a chave no arquivo: escondida).
+    barra_status: Option<bool>,
     /// As chaves do arquivo que esta versão não conhece (gravadas por uma versão mais nova).
     extras: Extras,
 }
@@ -1068,6 +1082,7 @@ impl Dados {
             paineis: None,
             lugares: None,
             pasta_aberta: None,
+            barra_status: None,
             extras: Extras::new(),
         }
     }
@@ -1128,6 +1143,9 @@ impl Dados {
         }
         if let Some(pasta) = &self.pasta_aberta {
             pares.push(("pasta_aberta".to_string(), Json::Texto(pasta.clone())));
+        }
+        if let Some(b) = self.barra_status {
+            pares.push(("barra_status".to_string(), Json::Bool(b)));
         }
         pares.extend(self.extras.iter().cloned());
         Json::Objeto(pares)
@@ -1227,6 +1245,10 @@ fn sanear(bruto: &Json, max_bancos: usize) -> Result<Dados, String> {
         && !caminhos::tirar_espacos(pasta).is_empty()
     {
         dados.pasta_aberta = Some(pasta.to_string());
+    }
+    // uma "barra_status" que não é booleana conta como não escolhida
+    if let Some(Json::Bool(b)) = bruto.campo("barra_status") {
+        dados.barra_status = Some(*b);
     }
     Ok(dados)
 }
@@ -1674,8 +1696,14 @@ impl Preferencias {
         self.dados_atuais(&mut est).pasta_aberta.clone()
     }
 
-    /// Muda tema, exportação, última pasta, aparência, larguras dos painéis e/ou pasta aberta (None em cada campo
-    /// deixa como está).
+    /// A barra de status à vista (Exibir › Barra de status). Escondida enquanto a pessoa não a mostrar.
+    pub fn barra_status(&self) -> bool {
+        let mut est = self.travar_estado();
+        self.dados_atuais(&mut est).barra_status.unwrap_or(false)
+    }
+
+    /// Muda tema, exportação, última pasta, aparência, larguras dos painéis, pasta aberta e/ou a barra de status (None
+    /// em cada campo deixa como está).
     ///
     /// `exportacao`, `aparencia` e `paineis` são mescladas às guardadas. Separador fora de [`SEPARADORES_CSV`] /
     /// [`SEPARADORES_DECIMAIS`], pasta vazia, tamanho do código fora de [`TAMANHO_CODIGO_MINIMO`] a
@@ -1688,7 +1716,8 @@ impl Preferencias {
     /// aberta: `pasta_aberta: Some(Some(p))` a grava (o caminho absoluto, sem conferir o disco) e `Some(None)` a
     /// apaga; caminho vazio → ErroBanco 400 ("A pasta aberta precisa ser um caminho."), sem gravar nada.
     pub fn atualizar(&self, mudanca: Mudanca) -> Resultado<()> {
-        let Mudanca { tema, exportacao, ultimo_diretorio, aparencia, paineis, lugares, pasta_aberta } = mudanca;
+        let Mudanca { tema, exportacao, ultimo_diretorio, aparencia, paineis, lugares, pasta_aberta, barra_status } =
+            mudanca;
         if let Some(t) = aparencia.as_ref().and_then(|m| m.tamanho_codigo)
             && !tamanho_codigo_valido(f64::from(t))
         {
@@ -1781,6 +1810,9 @@ impl Preferencias {
             }
             if let Some(p) = pasta_aberta {
                 dados.pasta_aberta = p;
+            }
+            if let Some(b) = barra_status {
+                dados.barra_status = Some(b);
             }
             true
         });

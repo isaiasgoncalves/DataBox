@@ -232,6 +232,31 @@ fn ctrl_c_copia_a_celula_pelo_exibir() {
 }
 
 #[test]
+fn ctrl_c_copia_o_intervalo_em_tsv() {
+    let mut t = abrir_relatorio("copia_intervalo");
+    let pos = centro_de(&t, "R$ 10.119,37");
+    clicar_em(&mut t, pos, Modifiers::NONE);
+    for tecla in [Key::ArrowDown, Key::ArrowRight] {
+        t.event(Event::Key {
+            key: tecla,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::SHIFT,
+        });
+        t.run_steps(2);
+    }
+    t.event(Event::Copy);
+    let texto = esperar_copia(&mut t);
+    // duas linhas do Excel × duas colunas, com o texto que vai para fora (o número cru com a vírgula)
+    let linhas: Vec<&str> = texto.split("\r\n").collect();
+    assert_eq!(linhas.len(), 3, "{texto:?}");
+    assert!(linhas.iter().take(2).all(|l| l.split('\t').count() == 2), "{texto:?}");
+    assert!(linhas[0].starts_with("10119,37\t"), "{texto:?}");
+    assert_eq!(interface::pecas::toast::toast_atual(&t.ctx).as_deref(), Some("2 linhas × 2 colunas copiadas."));
+}
+
+#[test]
 fn ctrl_c_copia_a_coluna_em_tsv() {
     let mut t = abrir_relatorio("copia_coluna");
     let pos = centro_de(&t, "D");

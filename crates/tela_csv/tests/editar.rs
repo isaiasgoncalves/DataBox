@@ -493,6 +493,34 @@ fn ctrl_c_copia_a_celula_ativa() {
 }
 
 #[test]
+fn ctrl_c_copia_o_intervalo_em_tsv_mesmo_alem_da_pagina() {
+    let amb = Ambiente::vazio("csv_copiar_intervalo");
+    let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(3000)));
+    // Shift com as setas estende da célula ativa: duas linhas × duas colunas, na página em mãos
+    clicar_celula(&mut h, 1, 1);
+    tecla(&mut h, Key::ArrowDown, Modifiers::SHIFT);
+    tecla(&mut h, Key::ArrowRight, Modifiers::SHIFT);
+    h.input_mut().events.push(Event::Copy);
+    h.step();
+    let texto = copiado(&mut h).expect("copiou");
+    let esperado =
+        format!("{}\t{}\r\n{}\t{}\r\n", celula(&h, 1, 1), celula(&h, 1, 2), celula(&h, 2, 1), celula(&h, 2, 2));
+    assert_eq!(texto, esperado);
+    assert_eq!(interface::pecas::toast::toast_atual(&h.ctx).as_deref(), Some("2 linhas × 2 colunas copiadas."));
+    // até o fim (Ctrl+Shift+End): as linhas fora da página são lidas numa tarefa
+    clicar_celula(&mut h, 0, 0);
+    let primeira = celula(&h, 0, 0);
+    tecla(&mut h, Key::End, Modifiers::COMMAND | Modifiers::SHIFT);
+    h.input_mut().events.push(Event::Copy);
+    h.step();
+    let texto = copiado(&mut h).expect("copiou");
+    assert_eq!(texto.matches("\r\n").count(), 3000, "as 3.000 linhas, sem o cabeçalho");
+    assert!(texto.starts_with(&format!("{primeira}\t")), "{:?}", &texto[..40]);
+    esperar_ociosa(&mut h);
+    assert_eq!(interface::pecas::toast::toast_atual(&h.ctx).as_deref(), Some("3.000 linhas × 6 colunas copiadas."));
+}
+
+#[test]
 fn ctrl_c_com_marcas_copia_as_linhas_em_tsv() {
     let amb = Ambiente::vazio("csv_copiar_linhas");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(5)));
