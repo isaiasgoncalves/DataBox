@@ -1,6 +1,6 @@
 //! A janela "Sobre o DataBox" (prancheta 13) e as duas que saem dela, "Licença" e "Licenças de terceiros".
 //!
-//! **Sobre** (440 px): o logo completo de 20 no cabeçalho; no topo o logo de 96, "DataBox" (20 / 600), "Versão 0.2.1" e a
+//! **Sobre** (440 px): o logo completo de 20 no cabeçalho; no topo o logo de 96, "DataBox" (20 / 600), "Versão 0.2.2" e a
 //! descrição em 11 px; a ficha de 92 / 1fr, com fios em cima e embaixo e sem Consolas: Compilação (o
 //! `DATABOX_COMPILACAO` do build.rs, "15/10/2026 · fb34ec7"), Renderizador ("OpenGL (glow)" ou "wgpu", o que o
 //! [`crate::Editor::com_renderizador`] recebeu), SQLite ("3.53.2, embutido"), Sistema ("Windows · x64", do
@@ -613,7 +613,7 @@ mod testes {
         ] {
             assert!(rc.contains(linha), "{linha}");
         }
-        // a versão do .rc é a do pacote (0.2.1): o texto e os quatro números
+        // a versão do .rc é a do pacote (0.2.2): o texto e os quatro números
         let versao = env!("CARGO_PKG_VERSION");
         let numeros = versao.replace('.', ",");
         for linha in [

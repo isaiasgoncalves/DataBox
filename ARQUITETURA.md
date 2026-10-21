@@ -786,7 +786,7 @@ linha" · "Fechar".
     o tamanho); Consulta SQL limpa o histórico; Exportação, as opções que a janela Exportar guarda. Cada mudança vale na
     hora; o Salvar grava só o que difere do retrato da abertura (`Servico::gravar_preferencias`), e Cancelar, Esc, o × e
     o fundo reaplicam o retrato. "Restaurar o padrão" mexe só na seção à vista.
-  - **Sobre o DataBox** (`sobre.rs`, prancheta 13, 440 pt): o logo de 96, "Versão 0.2.1" e a ficha (Compilação, do
+  - **Sobre o DataBox** (`sobre.rs`, prancheta 13, 440 pt): o logo de 96, "Versão 0.2.2" e a ficha (Compilação, do
     `DATABOX_COMPILACAO` do build.rs; Renderizador; SQLite; Sistema; Licença, o link "MIT"; Preferências e Arquivo de
     log, links com o caminho de verdade na dica), e no rodapé "Licenças de terceiros" (a lista do Cargo.lock, feita
     pelo build.rs), "Copiar informações" (a ficha em texto, com os `%APPDATA%`/`%LOCALAPPDATA%` no lugar do nome da
@@ -897,7 +897,7 @@ linha" · "Fechar".
 - **Nome DataBox** num lugar só, `comum::app::NOME` (o `servico::NOME_APP` e o `AppInfo.nome` são ele): título
   da janela "vendas.db · DataBox" (sem banco, "DataBox"), ícone da janela `interface::marca::icone_janela` (o logo
   completo de 48 px). O executável é o `[[bin]] DataBox` do pacote `editor`, com o ícone, a versão (DataBox
-  0.2.1; CompanyName "Isaías Gonçalves" e LegalCopyright "© 2026 Isaías Gonçalves — licença MIT") e o manifesto embutidos de `crates/editor/recursos/databox.rc`; o
+  0.2.2; CompanyName "Isaías Gonçalves" e LegalCopyright "© 2026 Isaías Gonçalves — licença MIT") e o manifesto embutidos de `crates/editor/recursos/databox.rc`; o
   `databox.ico` sai de `design/ferramentas/ico.py` (só o logo completo, de 16 a 256 px: a versão simplificada deixou de ser usada em 17/10/2026).
   `--criar-atalho` cria o "DataBox.lnk" (no Linux, o `databox.desktop` em `$XDG_DATA_HOME/applications`, com o
   logo de 256 px em `icons/hicolor/256x256/apps`); a confirmação
