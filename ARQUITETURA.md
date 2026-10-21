@@ -662,6 +662,10 @@ linha" · "Fechar".
 
 ## 5. Interface
 
+- **O aplicativo** (`editor/src/app.rs`): o `Editor` e os tipos comuns; o resto do `impl Editor` mora em
+  `editor/src/app/`, um módulo por assunto: `abas`, `abrir` (e a troca de banco), `acoes` (o despacho das ações, os
+  itens de menu, os verbos e os atalhos), `fechar` (a fila de perguntas ao fechar), `paineis`, `pasta`,
+  `preferencias`, `quadro` (o ciclo da janela), `tarefas` e `toasts`.
 - **Casca** (`editor/src/casca/`, a anatomia de `design/README.md`), de cima para baixo:
   - a **barra de título** de 30 px (`janela.rs`): o logo de 16 px, os menus (`menus.rs`, sem reticências) e o
     título no centro, esmaecido com a janela inativa; com a barra própria, os botões da janela (ver "Janela sem
@@ -724,7 +728,7 @@ linha" · "Fechar".
     o foco; **Ctrl+Z**, **Ctrl+Y** e Ctrl+Shift+Z viram Desfazer e Refazer só sem campo de texto focado (com o
     `TextEdit` focado, o desfazer é o do egui, o mesmo `Undoer` que o texto usa); o F5 é o Atualizar da aba, e a tela
     pergunta antes de descartar ("Descartar as alterações de {nome} e ler o arquivo de novo?");
-  - a **fila de perguntas ao fechar** (`FilaDeSalvar` no `app.rs`): o Ctrl+W, o ×, o clique
+  - a **fila de perguntas ao fechar** (`FilaDeSalvar` em `editor/src/app/fechar.rs`): o Ctrl+W, o ×, o clique
     do meio, o Arquivo › Fechar aba, o Fechar pasta e o pedido de fechar a janela (também minimizada) juntam as abas
     alteradas que vão fechar e perguntam uma a uma, com a aba à frente: "Salvar as alterações em {nome}?" com "Há 1
     alteração não salva. Se não salvar, ela se perde." e **Não salvar · Cancelar · Salvar** (Esc cancela). Salvar roda o
@@ -911,6 +915,9 @@ linha" · "Fechar".
 - `.\cargo.ps1 test --workspace` na raiz do repositório (com `APPDATA` numa pasta temporária, para não mexer nas
   preferências reais). Unitários em cada crate (§3 item 7).
 - Interface: `egui_kittest` (consulta pela árvore de acessibilidade, cliques, digitação) e capturas PNG em
-  `capturas/rust/` (ignorada pelo git) para conferir o visual contra as pranchetas de `design/canvas`: as cenas `casca-*` de `editor/tests/casca.rs` montam as
+  `capturas/rust/` (ignorada pelo git) para conferir o visual contra as pranchetas de `design/canvas`: as cenas `casca-*` de `editor/tests/casca/cenas.rs` montam as
   das pranchetas com o banco de exemplo. O foco do teclado (as paradas do Tab e a ordem delas, as setas do
   Explorador e dos menus, o Esc do menu) fica em `editor/tests/foco.rs`.
+- A casca de ponta a ponta fica em `editor/tests/casca/`: um alvo só (`--test casca`), com um módulo por área
+  (`abrir`, `abas`, `menus`, `explorador`, `ferramentas`, `preferencias`…) e o apoio comum em `main.rs` e em
+  `editor/tests/apoio/`.
