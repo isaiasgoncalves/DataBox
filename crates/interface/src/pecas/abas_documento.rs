@@ -429,6 +429,12 @@ pub(crate) fn larguras_texto(naturais: &[f32], fixas: &[f32], espaco: f32, dispo
     naturais.iter().map(|&w| w.min(teto)).collect()
 }
 
+/// A aba ativa encosta na quina de cima à esquerda do documento em `rect`: o canto fica reto (na moldura e no que
+/// encosta no alto por dentro dela, como a faixa de contexto e os avisos).
+pub fn quina_reta(rect: Rect, juncao: Option<Rangef>) -> bool {
+    juncao.is_some_and(|j| j.min <= rect.left() + 0.5)
+}
+
 /// Pinta o documento (`.doc`: fundo `--c`, borda `--vidrob`, raio [`RAIO_CARD`]) embaixo da faixa das abas. Na
 /// `juncao` (a aba ativa, [`RespostaAbas::juncao`]) o fio de cima some e a aba continua no documento, como o
 /// `margin-bottom:-1px` da faixa das pranchetas: o retângulo do documento começa 1px antes do fim da faixa.
@@ -436,7 +442,7 @@ pub fn pintar_documento(painter: &Painter, p: &Paleta, rect: Rect, juncao: Optio
     let e = &p.estudio;
     // a aba ativa encostada na quina: o canto de cima à esquerda fica reto (`border-top-left-radius:0`)
     let mut cantos = pintura::canto(rect, RAIO_CARD);
-    if juncao.is_some_and(|j| j.min <= rect.left() + 0.5) {
+    if quina_reta(rect, juncao) {
         cantos.nw = 0;
     }
     painter.rect_filled(rect, cantos, e.doc);

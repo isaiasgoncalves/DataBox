@@ -27,7 +27,7 @@ use egui::{
     Align, CornerRadius, Id, Layout, Rangef, Rect, ScrollArea, Sense, Shape, Stroke, Ui, UiBuilder, pos2, vec2,
 };
 
-use crate::pecas::abas_documento::pintar_documento;
+use crate::pecas::abas_documento::{pintar_documento, quina_reta};
 use crate::pecas::avisos::{Aviso, CoresAviso, TomAviso, aviso_do_documento};
 use crate::pecas::texto::{RespostaTexto, Trecho};
 use crate::pintura::{self, Preenchimento, RAIO_PADRAO};
@@ -86,12 +86,15 @@ pub struct Documento {
     base: f32,
     com_faixa: bool,
     com_rodape: bool,
+    /// A aba ativa encosta na quina: o canto de cima à esquerda fica reto também no que encosta no alto.
+    quina_reta: bool,
 }
 
-/// Os cantos de cima (`nw`, `ne`) com o raio de dentro da borda, para a parte que encosta no alto da moldura.
-fn cantos_de_cima(sim: bool) -> CornerRadius {
+/// Os cantos de cima (`nw`, `ne`) com o raio de dentro da borda, para a parte que encosta no alto da moldura; com a
+/// `quina_reta` (a aba ativa encostada na quina), o `nw` fica reto como o da moldura, sem o recorte do fundo.
+fn cantos_de_cima(sim: bool, quina_reta: bool) -> CornerRadius {
     let r = if sim { (RAIO_PADRAO - 1.0) as u8 } else { 0 };
-    CornerRadius { nw: r, ne: r, sw: 0, se: 0 }
+    CornerRadius { nw: if quina_reta { 0 } else { r }, ne: r, sw: 0, se: 0 }
 }
 
 impl Documento {
@@ -101,7 +104,15 @@ impl Documento {
         pintar_documento(ui.painter(), paleta(ui), rect, juncao);
         let dentro = rect.shrink(1.0);
         let base = if com_rodape { dentro.bottom() - ALTURA_RODAPE } else { dentro.bottom() };
-        Documento { rect, dentro, topo: dentro.top(), base, com_faixa: false, com_rodape }
+        Documento {
+            rect,
+            dentro,
+            topo: dentro.top(),
+            base,
+            com_faixa: false,
+            com_rodape,
+            quina_reta: quina_reta(rect, juncao),
+        }
     }
 
     /// A moldura inteira (com a borda).
@@ -130,7 +141,7 @@ impl Documento {
         );
         filho.set_clip_rect(r.intersect(ui.clip_rect()));
         let (resp, saida) = Aviso::com_tom(tom)
-            .faixa_do_documento(cantos_de_cima(self.encosta_no_alto()))
+            .faixa_do_documento(cantos_de_cima(self.encosta_no_alto(), self.quina_reta))
             .mostrar_com(&mut filho, conteudo);
         self.topo = resp.rect.bottom().min(self.base);
         saida
@@ -147,7 +158,8 @@ impl Documento {
                 .layout(Layout::top_down(Align::Min)),
         );
         filho.set_clip_rect(r.intersect(ui.clip_rect()));
-        let resposta = aviso_do_documento(&mut filho, trechos, tom, cantos_de_cima(self.encosta_no_alto()));
+        let resposta =
+            aviso_do_documento(&mut filho, trechos, tom, cantos_de_cima(self.encosta_no_alto(), self.quina_reta));
         self.topo = resposta.resposta.rect.bottom().min(self.base);
         resposta
     }
@@ -156,7 +168,7 @@ impl Documento {
     pub fn faixa<R>(&mut self, ui: &mut Ui, conteudo: impl FnOnce(&mut Ui) -> R) -> R {
         let p = paleta(ui);
         let rect = Rect::from_min_size(pos2(self.dentro.left(), self.topo), vec2(self.dentro.width(), ALTURA_FAIXA));
-        let cantos = cantos_de_cima(self.encosta_no_alto());
+        let cantos = cantos_de_cima(self.encosta_no_alto(), self.quina_reta);
         let painter = ui.painter();
         let mut fundo = pintura::forma_preenchida(ui.ctx(), p, rect, 0.0, Preenchimento::Cabecalho);
         if let Shape::Rect(f) = &mut fundo {
@@ -308,4 +320,24 @@ fn em_linha<R>(ui: &mut Ui, rect: Rect, id: &'static str, conteudo: impl FnOnce(
     filho.set_clip_rect(rect.intersect(ui.clip_rect()));
     filho.spacing_mut().item_spacing.x = GAP;
     conteudo(&mut filho)
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    #[test]
+    fn com_a_aba_ativa_na_quina_a_faixa_fica_reta_desse_lado() {
+        let doc = Rect::from_min_size(pos2(10.0, 40.0), vec2(400.0, 300.0));
+        let na_quina = Some(Rangef::new(10.0, 120.0));
+        let mais_adiante = Some(Rangef::new(130.0, 220.0));
+        assert!(quina_reta(doc, na_quina));
+        assert!(!quina_reta(doc, mais_adiante) && !quina_reta(doc, None));
+        let reta = cantos_de_cima(true, true);
+        assert_eq!((reta.nw, reta.ne), (0, (RAIO_PADRAO - 1.0) as u8));
+        let redonda = cantos_de_cima(true, false);
+        assert_eq!(redonda.nw, redonda.ne);
+        // fora do alto (debaixo de um aviso), nenhum canto
+        assert_eq!(cantos_de_cima(false, true), CornerRadius::ZERO);
+    }
 }
