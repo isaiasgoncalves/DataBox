@@ -86,11 +86,20 @@ pub(crate) struct Rodando {
     pub desde: f64,
 }
 
-/// O cálculo das estatísticas de uma coluna (a seção Coluna), guardado por coluna e versão.
+/// O cálculo das estatísticas de uma coluna (a seção Coluna), guardado por coluna e versão. Trocado (outra coluna,
+/// outra versão) ou largado, ele é cancelado: as contas de uma coluna longa não se acumulam a cada clique.
 struct CalculoColuna {
     coluna: usize,
     versao: u64,
     promessa: Promessa<Estatistica>,
+    controle: Arc<Controle>,
+}
+
+impl Drop for CalculoColuna {
+    /// A conta para na próxima vez que avisar o progresso.
+    fn drop(&mut self) {
+        self.controle.cancelar();
+    }
 }
 
 /// O editor tabular de CSV (prancheta 7). Veja o topo do crate.
@@ -172,6 +181,8 @@ pub struct TelaCsv {
     pub(crate) versao: u64,
     estatisticas: HashMap<usize, (u64, Estatistica)>,
     calculo: Option<CalculoColuna>,
+    /// A conta que falhou (coluna e versão): não é pedida de novo a cada quadro.
+    calculo_falhou: Option<(usize, u64)>,
     /// O arquivo mudou por fora (a volta do foco conferiu): o aviso de topo.
     pub(crate) mudou_no_disco: bool,
     /// A janela tinha o foco no quadro anterior.
@@ -243,6 +254,7 @@ impl TelaCsv {
             versao: 0,
             estatisticas: HashMap::new(),
             calculo: None,
+            calculo_falhou: None,
             mudou_no_disco: false,
             com_foco: true,
             confirmar_descartar: None,
@@ -562,33 +574,58 @@ impl TelaCsv {
         let Some(r) = c.promessa.tomar() else { return };
         let (coluna, versao) = (c.coluna, c.versao);
         self.calculo = None;
-        if let Ok(e) = r {
-            self.estatisticas.insert(coluna, (versao, e));
+        match r {
+            Ok(e) => {
+                self.estatisticas.insert(coluna, (versao, e));
+            }
+            Err(e) if e.tem_codigo(Codigo::Cancelado) => {}
+            Err(e) => {
+                log::warn!("As contas da coluna {} falharam: {e}", coluna + 1);
+                self.calculo_falhou = Some((coluna, versao));
+            }
         }
     }
 
-    /// A estatística da coluna `c` na versão de agora; sem ela, pede o cálculo (uma coluna por vez).
-    fn estatistica(&mut self, ectx: &egui::Context, c: usize) -> Option<Estatistica> {
+    /// A estatística da coluna `c` na versão de agora e se a conta dela está em curso; sem ela, pede a conta (uma
+    /// coluna por vez: a de outra coluna ou de outra versão em curso é cancelada). A conta passa pela coluna em fluxo
+    /// (as [`propriedades::Contas`] somam um valor por vez), sem juntá-la na memória.
+    fn estatistica(&mut self, ectx: &egui::Context, c: usize) -> (Option<Estatistica>, bool) {
         if let Some((v, e)) = self.estatisticas.get(&c)
             && *v == self.versao
         {
-            return Some(e.clone());
-        }
-        let ocupado = self.calculo.as_ref().is_some_and(|k| k.coluna == c && k.versao == self.versao);
-        if !ocupado && self.calculo.is_none() {
-            let tabela = self.tabela.clone()?;
-            let retrato = self.retrato.as_ref()?;
-            let tipo = retrato.tipos.get(c).copied()?;
-            let decimal = retrato.formato.decimal;
-            let promessa = Promessa::rodar(ectx, move || {
-                let valores = sessao::ler_colunas(&tabela, &[c], &mut |_, _| Ok(()))?;
-                let coluna = valores.into_iter().next().unwrap_or_default();
-                Ok(propriedades::calcular_estatistica(&coluna, tipo, decimal))
-            });
-            self.calculo = Some(CalculoColuna { coluna: c, versao: self.versao, promessa });
+            return (Some(e.clone()), false);
         }
         // a de uma versão anterior, enquanto a nova não chega
-        self.estatisticas.get(&c).map(|(_, e)| e.clone())
+        let anterior = self.estatisticas.get(&c).map(|(_, e)| e.clone());
+        if self.calculo.as_ref().is_some_and(|k| k.coluna == c && k.versao == self.versao) {
+            return (anterior, true);
+        }
+        if self.calculo_falhou == Some((c, self.versao)) {
+            return (anterior, false);
+        }
+        self.calculo = None;
+        let pedido = (|| {
+            let tabela = self.tabela.clone()?;
+            let retrato = self.retrato.as_ref()?;
+            Some((tabela, retrato.tipos.get(c).copied()?, retrato.formato.decimal))
+        })();
+        let Some((tabela, tipo, decimal)) = pedido else { return (anterior, false) };
+        let controle = Controle::novo();
+        let na_tarefa = Arc::clone(&controle);
+        let promessa = Promessa::rodar(ectx, move || {
+            let mut contas = propriedades::Contas::nova(tipo, decimal);
+            sessao::instantaneo(&tabela)?.percorrer_coluna(
+                c,
+                &mut |feito, total| na_tarefa.avisar(feito, total),
+                |valor| {
+                    contas.somar(valor);
+                    Ok(true)
+                },
+            )?;
+            Ok(contas.estatistica())
+        });
+        self.calculo = Some(CalculoColuna { coluna: c, versao: self.versao, promessa, controle });
+        (anterior, true)
     }
 
     /// A volta do foco da janela confere se o arquivo mudou por fora.
@@ -895,11 +932,11 @@ impl TelaCsv {
             Some((c, r.nomes.get(c)?.clone(), *r.tipos.get(c)?))
         });
         if let Some((c, nome, tipo)) = da_coluna {
-            let estatistica = self.estatistica(&ectx, c);
+            let (estatistica, calculando) = self.estatistica(&ectx, c);
             let livre = self.livre_para_editar();
             let renomear = self.renomear_permitido();
             let mut acao = None;
-            propriedades::secao_coluna(ui, &self.id, &nome, tipo, estatistica.as_ref(), |ui| {
+            propriedades::secao_coluna(ui, &self.id, &nome, tipo, estatistica.as_ref(), calculando, |ui| {
                 acao = propriedades::acoes_da_coluna(ui, livre, renomear);
             });
             match acao {
@@ -909,6 +946,9 @@ impl TelaCsv {
                 Some(propriedades::AcaoColuna::Excluir) => self.excluir_colunas(vec![c]),
                 None => {}
             }
+        } else {
+            // a coluna saiu das Propriedades: a conta dela para
+            self.calculo = None;
         }
     }
 

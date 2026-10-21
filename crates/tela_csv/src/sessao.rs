@@ -382,6 +382,17 @@ impl Instantaneo {
         }
         Ok(saida)
     }
+
+    /// Os valores da coluna `c` (pelo número na grade), um por vez, com as alterações, sem juntá-los: o
+    /// `tabular::csv::percorrer_coluna` com o leitor e as alterações do instantâneo.
+    pub(crate) fn percorrer_coluna(
+        &mut self,
+        c: usize,
+        ao_progresso: &mut dyn FnMut(u64, u64) -> Resultado<()>,
+        quando_um_valor: impl FnMut(&str) -> Resultado<bool>,
+    ) -> Resultado<()> {
+        tabular::csv::percorrer_coluna(&mut self.leitor, &self.edicoes, c, ao_progresso, quando_um_valor)
+    }
 }
 
 /// [`Instantaneo::colunas`] de uma tabela compartilhada: o `Mutex` fica travado só para tirar o instantâneo.

@@ -183,55 +183,130 @@ pub struct Estatistica {
     pub maior_texto: Option<usize>,
 }
 
-/// Calcula as estatísticas da coluna: Vazias sempre; nas numéricas, Mínimo, Máximo (o texto da célula, como está
-/// no arquivo) e Soma (no formato do arquivo); nas de data, Mínimo e Máximo pela ordem do texto; nas de texto, o
-/// Maior texto.
-pub fn calcular_estatistica(valores: &[String], tipo: TipoDetectado, decimal: char) -> Estatistica {
-    let vazias = valores.iter().filter(|v| v.trim().is_empty()).count() as u64;
-    let mut e = Estatistica { tipo, vazias, minimo: None, maximo: None, soma: None, maior_texto: None };
-    match tipo {
-        TipoDetectado::Inteiro | TipoDetectado::Decimal => {
-            let mut soma = 0.0_f64;
-            let mut casas = 0usize;
-            let mut menor: Option<(f64, &str)> = None;
-            let mut maior: Option<(f64, &str)> = None;
-            for v in valores {
-                let Some(n) = analisar_numero(v, decimal) else { continue };
-                soma += n;
-                if let Some((_, f)) = v.trim().split_once(decimal) {
-                    casas = casas.max(f.chars().take_while(char::is_ascii_digit).count());
-                }
-                if menor.is_none_or(|(m, _)| n < m) {
-                    menor = Some((n, v.trim()));
-                }
-                if maior.is_none_or(|(m, _)| n > m) {
-                    maior = Some((n, v.trim()));
-                }
-            }
-            e.minimo = menor.map(|(_, t)| t.to_string());
-            e.maximo = maior.map(|(_, t)| t.to_string());
-            e.soma = menor.is_some().then(|| textos::numero_no_formato(soma, decimal, casas.min(6)));
-        }
-        TipoDetectado::Data => {
-            let datas = valores.iter().map(|v| v.trim()).filter(|v| !v.is_empty());
-            e.minimo = datas.clone().min().map(str::to_string);
-            e.maximo = datas.max().map(str::to_string);
-        }
-        _ => {
-            e.maior_texto = valores.iter().map(|v| v.chars().count()).max();
+/// As contas de uma coluna feitas numa passada, um valor por vez, sem guardar os valores (memória constante numa
+/// coluna de milhões de linhas): Vazias sempre; nas numéricas, Mínimo, Máximo (o texto da célula, como está no
+/// arquivo) e Soma (no formato do arquivo); nas de data, Mínimo e Máximo pela ordem do texto; nas de texto, o Maior
+/// texto. [`calcular_estatistica`] faz o mesmo sobre um iterador.
+#[derive(Debug, Clone)]
+pub struct Contas {
+    tipo: TipoDetectado,
+    decimal: char,
+    vazias: u64,
+    soma: f64,
+    casas: usize,
+    /// O menor e o maior número com o texto da célula (nas numéricas).
+    menor: Option<(f64, String)>,
+    maior: Option<(f64, String)>,
+    /// A menor e a maior data pela ordem do texto.
+    primeira: Option<String>,
+    ultima: Option<String>,
+    maior_texto: Option<usize>,
+}
+
+impl Contas {
+    pub fn nova(tipo: TipoDetectado, decimal: char) -> Contas {
+        Contas {
+            tipo,
+            decimal,
+            vazias: 0,
+            soma: 0.0,
+            casas: 0,
+            menor: None,
+            maior: None,
+            primeira: None,
+            ultima: None,
+            maior_texto: None,
         }
     }
-    e
+
+    /// Conta mais um valor da coluna.
+    pub fn somar(&mut self, valor: &str) {
+        let aparado = valor.trim();
+        if aparado.is_empty() {
+            self.vazias += 1;
+        }
+        match self.tipo {
+            TipoDetectado::Inteiro | TipoDetectado::Decimal => {
+                let Some(n) = analisar_numero(valor, self.decimal) else { return };
+                self.soma += n;
+                if let Some((_, f)) = aparado.split_once(self.decimal) {
+                    self.casas = self.casas.max(f.chars().take_while(char::is_ascii_digit).count());
+                }
+                if self.menor.as_ref().is_none_or(|(m, _)| n < *m) {
+                    self.menor = Some((n, aparado.to_string()));
+                }
+                if self.maior.as_ref().is_none_or(|(m, _)| n > *m) {
+                    self.maior = Some((n, aparado.to_string()));
+                }
+            }
+            TipoDetectado::Data => {
+                if aparado.is_empty() {
+                    return;
+                }
+                if self.primeira.as_deref().is_none_or(|p| aparado < p) {
+                    self.primeira = Some(aparado.to_string());
+                }
+                if self.ultima.as_deref().is_none_or(|u| aparado > u) {
+                    self.ultima = Some(aparado.to_string());
+                }
+            }
+            _ => {
+                let n = valor.chars().count();
+                self.maior_texto = Some(self.maior_texto.map_or(n, |m| m.max(n)));
+            }
+        }
+    }
+
+    /// As contas de todos os valores somados.
+    pub fn estatistica(self) -> Estatistica {
+        let mut e = Estatistica {
+            tipo: self.tipo,
+            vazias: self.vazias,
+            minimo: None,
+            maximo: None,
+            soma: None,
+            maior_texto: self.maior_texto,
+        };
+        match self.tipo {
+            TipoDetectado::Inteiro | TipoDetectado::Decimal => {
+                e.soma =
+                    self.menor.is_some().then(|| textos::numero_no_formato(self.soma, self.decimal, self.casas.min(6)));
+                e.minimo = self.menor.map(|(_, t)| t);
+                e.maximo = self.maior.map(|(_, t)| t);
+            }
+            TipoDetectado::Data => {
+                e.minimo = self.primeira;
+                e.maximo = self.ultima;
+            }
+            _ => {}
+        }
+        e
+    }
+}
+
+/// Calcula as estatísticas da coluna numa passada pelos `valores` (as [`Contas`]), sem guardá-los.
+pub fn calcular_estatistica<S: AsRef<str>>(
+    valores: impl IntoIterator<Item = S>,
+    tipo: TipoDetectado,
+    decimal: char,
+) -> Estatistica {
+    let mut contas = Contas::nova(tipo, decimal);
+    for v in valores {
+        contas.somar(v.as_ref());
+    }
+    contas.estatistica()
 }
 
 /// A seção "Coluna {nome}" (só com uma coluna escolhida): o tipo detectado com a pastilha e as estatísticas (ou
-/// "…" enquanto a tarefa calcula). `acoes` desenha os botões embaixo da ficha.
+/// "Calculando…" enquanto a tarefa conta, `calculando`; "—" se a conta falhou). `acoes` desenha os botões embaixo
+/// da ficha.
 pub(crate) fn secao_coluna(
     ui: &mut Ui,
     id: &str,
     nome: &str,
     tipo: TipoDetectado,
     estatistica: Option<&Estatistica>,
+    calculando: bool,
     acoes: impl FnOnce(&mut Ui),
 ) {
     let _ = Secao::new(("propriedades::coluna", id), "Coluna").extra(nome).mostrar(ui, |ui| {
@@ -245,9 +320,10 @@ pub(crate) fn secao_coluna(
                     texto_simples(ui, textos::rotulo_do_tipo(tipo), 12.0, t);
                 });
             });
-            let pendente = "…";
+            // sem as contas: "Calculando…" na primeira linha e "…" nas outras (ou "—", se a conta falhou)
+            let pendente = if calculando { "…" } else { "—" };
             let vazias = estatistica.map(|e| formatar_numero(e.vazias));
-            f.linha_texto("Vazias", vazias.as_deref(), pendente);
+            f.linha_texto("Vazias", vazias.as_deref(), if calculando { textos::CALCULANDO } else { pendente });
             match tipo {
                 TipoDetectado::Inteiro | TipoDetectado::Decimal => {
                     let e = estatistica;
@@ -333,16 +409,12 @@ pub(crate) fn acoes_da_coluna(ui: &mut Ui, livre: bool, renomear: bool) -> Optio
 mod testes {
     use super::*;
 
-    fn v(lista: &[&str]) -> Vec<String> {
-        lista.iter().map(|s| s.to_string()).collect()
-    }
-
     #[test]
     fn estatistica_da_coluna_numerica() {
-        let e = calcular_estatistica(&v(&["1", "23", "", "4"]), TipoDetectado::Inteiro, ',');
+        let e = calcular_estatistica(["1", "23", "", "4"], TipoDetectado::Inteiro, ',');
         assert_eq!(e.vazias, 1);
         assert_eq!((e.minimo.as_deref(), e.maximo.as_deref(), e.soma.as_deref()), (Some("1"), Some("23"), Some("28")));
-        let d = calcular_estatistica(&v(&["12,90", "1.056,30", "4,5"]), TipoDetectado::Decimal, ',');
+        let d = calcular_estatistica(["12,90", "1.056,30", "4,5"], TipoDetectado::Decimal, ',');
         assert_eq!(d.minimo.as_deref(), Some("4,5"));
         assert_eq!(d.maximo.as_deref(), Some("1.056,30"));
         assert_eq!(d.soma.as_deref(), Some("1.073,7"));
@@ -350,9 +422,9 @@ mod testes {
 
     #[test]
     fn estatistica_de_texto_e_de_data() {
-        let t = calcular_estatistica(&v(&["Sul", "Centro-Oeste", " "]), TipoDetectado::Texto, ',');
+        let t = calcular_estatistica(["Sul", "Centro-Oeste", " "], TipoDetectado::Texto, ',');
         assert_eq!((t.vazias, t.maior_texto), (1, Some(12)));
-        let d = calcular_estatistica(&v(&["2025-01-03", "2025-01-02", ""]), TipoDetectado::Data, ',');
+        let d = calcular_estatistica(["2025-01-03", "2025-01-02", ""], TipoDetectado::Data, ',');
         assert_eq!((d.minimo.as_deref(), d.maximo.as_deref()), (Some("2025-01-02"), Some("2025-01-03")));
     }
 }

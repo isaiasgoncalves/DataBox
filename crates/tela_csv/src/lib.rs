@@ -36,9 +36,11 @@
 //!
 //! - **A tabela fica numa tarefa**: `Arc<Mutex<tabular::csv::Tabela>>`, e toda chamada que lê disco ou
 //!   altera vai numa fila do documento, uma de cada vez (`sessao::Trabalho`). Cada tarefa devolve o [`Retrato`] e a
-//!   [`Pagina`] já relidos; a grade pinta dessas cópias e nunca espera o `Mutex`. As leituras de coluna inteira (as
-//!   estatísticas da seção Coluna) tiram um instantâneo (um leitor próprio do arquivo e a cópia das alterações) e
-//!   leem fora do `Mutex`, pelo `Leitor::varrer`.
+//!   [`Pagina`] já relidos; a grade pinta dessas cópias e nunca espera o `Mutex`. As leituras de coluna inteira (o
+//!   Copiar coluna, o filtro, as contas da seção Coluna) tiram um instantâneo (um leitor próprio do arquivo e a cópia
+//!   das alterações) e leem fora do `Mutex`, pelo `Leitor::varrer`. As contas não juntam a coluna: as [`Contas`]
+//!   somam um valor por vez (`tabular::csv::percorrer_coluna`), com "Calculando…" enquanto contam, e trocar de
+//!   coluna ou alterar a tabela cancela a conta velha.
 //! - **Abrir:** `Tabela::abrir_com_progresso`; o card com a barra de progresso e o Cancelar (que fecha a aba,
 //!   `Acao::FecharAba(None)`) só depois de [`ESPERA_DO_CARD`]. Falhou (UTF-16, bytes nulos, arquivo sumido): o aviso
 //!   de perigo com a frase do núcleo no alto do documento, e [`TelaCsv::erro_ao_abrir`] diz a frase.
@@ -133,7 +135,7 @@ mod trazer;
 mod verbos;
 
 pub use filtro::{Condicao, OPERADORES, OperadorCsv, Ordem};
-pub use propriedades::{Estatistica, calcular_estatistica};
+pub use propriedades::{Contas, Estatistica, calcular_estatistica};
 pub use sessao::{Pagina, Retrato};
 pub use tela::{ESPERA_DO_CARD, Ganchos, TelaCsv};
 pub use trazer::{MARCAR_SEM_PAR, PREFIXO_ACAO_TOAST, abrir_fonte};
