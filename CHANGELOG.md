@@ -5,6 +5,31 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Mover as abas de documento:** arraste uma aba na faixa para mudar o lugar dela (um fio na cor de destaque marca
+  onde ela cai; Esc cancela). O clique direito na aba abre o menu com "Mover à esquerda", "Mover à direita" e "Fechar
+  aba"; Ctrl+Shift+PageUp e Ctrl+Shift+PageDown movem a aba ativa.
+- **Exibir › Barra de status**, para mostrar ou esconder a barra; a escolha fica guardada.
+- **Gravação** na seção Arquivo das Propriedades (do banco e da tabela): "imediata", "transação aberta" ou "só
+  leitura", com a explicação na dica.
+- `--moldura-do-sistema`: abre a janela com a barra de título e as bordas do sistema.
+
+### Alterado
+
+- **Linux:** a janela usa a barra de título do DataBox, como no Windows: os botões Minimizar, Maximizar e Fechar
+  ficam na linha dos menus, sem a barra do GNOME em cima (e sem o título repetido).
+- **A barra de status fica escondida por padrão:** o que ela mostrava já está nas Propriedades (o modo de gravação, a
+  versão do SQLite, a codificação), nos rodapés dos documentos e nas abas. Sem ela, o aviso que aparece embaixo fica
+  logo acima do rodapé do documento.
+- Na doca mais estreita, o seletor Resumo · Colunas · Índices · SQL das Propriedades mostra só os ícones, com o nome
+  na dica, em vez de cortar os nomes com "…".
+
+### Corrigido
+
+- O canto de cima à esquerda do documento, com a primeira aba ativa, tinha um recorte: a faixa de cima do documento
+  continuava arredondada embaixo da aba reta.
+
 ## [0.2.1] - 2026-10-20
 
 ### Adicionado
