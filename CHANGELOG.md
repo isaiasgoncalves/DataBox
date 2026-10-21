@@ -7,6 +7,11 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ### Adicionado
 
+- **Selecionar um intervalo de células** nos Dados, no CSV, na planilha do Excel e no resultado da Consulta SQL:
+  arraste de uma célula a outra (a grade rola sozinha perto da borda), use Shift+clique ou Shift com as setas,
+  PageUp/PageDown e Home/End (com Ctrl, até a borda). Ctrl+C copia o intervalo como o Excel, com tabulações, para colar
+  numa planilha; no CSV, as linhas que ainda não estavam lidas são lidas na hora. Esc volta à célula ativa.
+- Ctrl+C na aba Dados copia a célula ativa (antes não fazia nada fora da janela da linha).
 - **Mover as abas de documento:** arraste uma aba na faixa para mudar o lugar dela (um fio na cor de destaque marca
   onde ela cai; Esc cancela). O clique direito na aba abre o menu com "Mover à esquerda", "Mover à direita" e "Fechar
   aba"; Ctrl+Shift+PageUp e Ctrl+Shift+PageDown movem a aba ativa.

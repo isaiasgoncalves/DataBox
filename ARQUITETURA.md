@@ -120,8 +120,9 @@ databox/
 ```
 
 Dependências (sem ciclos): `comum` ← `ddl` ← `esquema`; `comum` ← `banco`, `exportar`, `prefs`, `planilha`,
-`tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum` e egui) ← `estado`,
-`tela_*`, `editor`. As telas de arquivo falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
+`tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum`, `tabular` e egui)
+← `estado`, `tela_*`, `editor`. O `interface` usa do `tabular` só o `colunas::escrever_tsv`: a grade copia um intervalo
+de células como o Excel (desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV. As telas de arquivo falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
 `tela_texto` → `texto`, `tela_planilha` → `planilha`), sem passar pelo `servico`, que é a sessão de um banco.
 
 O contrato entre as telas e a casca mora no `estado::documento` (§4.8): as telas, cada uma no crate dela,
@@ -492,7 +493,7 @@ pasta), `rotulos::chip_filtro` e `etiqueta_mais`, `Entrada::pastilha`/`somente_l
 **Código:** `interface::codigo` tem as 147 palavras reservadas do SQLite (saíram do
 `tela_consulta`, que passa a usar a lista daqui), um léxico próprio (`trechos_sql`: palavras-chave, textos,
 identificadores citados, números, comentários `--` e `/* */`, pontuação; nunca perde um byte) e `realcar_sql`, sem
-depender do `ddl` (o `interface` continua só com `comum` e o egui). As quatro "cores do código" (`CoresCodigo`,
+depender do `ddl` (o `interface` continua sem ele). As quatro "cores do código" (`CoresCodigo`,
 espelho do `prefs::CoresCodigo`) resolvem para `CoresResolvidas { fundo, texto, kw, st, nu, pu }` com os valores da
 prancheta 13; a DataBox segue o tema (`--c`, `--t`, `--kw`, `--st`, `--nu`, `--t3`). A `AparenciaCodigo { cores,
 familia, tamanho }` mora no contexto (`codigo::definir`/`atual`) e vale na hora para o `AreaTexto::codigo` (o

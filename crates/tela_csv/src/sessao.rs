@@ -222,6 +222,9 @@ pub(crate) enum Trabalho {
     Salvar,
     /// As linhas inteiras destas posições (o Ctrl+C das linhas marcadas), com o cabeçalho na frente.
     LerLinhas(Vec<u64>),
+    /// Um intervalo da grade (o Ctrl+C de um intervalo que passa da página em mãos): destas posições, só estas
+    /// colunas da tabela, sem o cabeçalho (None: a coluna provisória, que vai vazia).
+    LerIntervalo { posicoes: Vec<u64>, colunas: Vec<Option<usize>> },
 }
 
 /// O que a tarefa fez, além de reler o retrato e a página.
@@ -237,6 +240,8 @@ pub(crate) enum Efeito {
     MudouNoDisco,
     /// As linhas pedidas (a primeira é o cabeçalho).
     Linhas(Vec<Vec<String>>),
+    /// As células do intervalo pedido, linha a linha.
+    Intervalo(Vec<Vec<String>>),
 }
 
 /// Quantas células uma cópia leva, no máximo.
@@ -261,7 +266,10 @@ pub(crate) fn executar(
     let mut progresso = |f, total| controle.avisar(f, total);
     // os que não mudam a tabela não releem o retrato (os tipos leem as primeiras 2.000 linhas a cada vez): a tela
     // fica com o que tem
-    let mesmo_retrato = matches!(trabalho, Trabalho::Pagina | Trabalho::ConferirDisco | Trabalho::LerLinhas(_));
+    let mesmo_retrato = matches!(
+        trabalho,
+        Trabalho::Pagina | Trabalho::ConferirDisco | Trabalho::LerLinhas(_) | Trabalho::LerIntervalo { .. }
+    );
     let efeito = match trabalho {
         Trabalho::Pagina => Efeito::Nada,
         Trabalho::Reabrir(opcoes) => {
@@ -296,6 +304,16 @@ pub(crate) fn executar(
                 controle.avisar(i as u64, posicoes.len() as u64)?;
             }
             Efeito::Linhas(linhas)
+        }
+        Trabalho::LerIntervalo { posicoes, colunas } => {
+            let mut linhas = Vec::with_capacity(posicoes.len());
+            for (i, &p) in posicoes.iter().enumerate() {
+                let linha = t.pagina(p, 1)?.into_iter().next().unwrap_or_default();
+                linhas
+                    .push(colunas.iter().map(|c| c.and_then(|c| linha.get(c).cloned()).unwrap_or_default()).collect());
+                controle.avisar(i as u64, posicoes.len() as u64)?;
+            }
+            Efeito::Intervalo(linhas)
         }
     };
     // o arquivo mudou por fora: as leituras recusam (409) até reler, e a tela fica com o que já mostrava

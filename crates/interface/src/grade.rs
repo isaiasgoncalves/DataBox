@@ -21,6 +21,10 @@
 //! desenhada em `--acct` (a `.seta-ord` da revisão de UI de 19/10/2026, [`pintar_seta_ordem`]). Fica grudado no topo
 //! ao rolar.
 //!
+//! O intervalo (0.2.2, [`Intervalo`]): arrastar de uma célula a outra, o Shift+clique e o Shift com as setas marcam um
+//! retângulo de células a partir da ativa, com o fundo `--tint` e o contorno de 1px `--acc`; o Ctrl+C de quem chama o
+//! leva em TSV ([`tsv_do_intervalo`]).
+//!
 //! A planilha (etapa 6) usa o mesmo núcleo com o painel congelado ([`NucleoGrade::com_congelado`]: linhas sob o
 //! cabeçalho e colunas presas à esquerda, o fio de 2px `--b2` na emenda), as células mescladas
 //! ([`NucleoGrade::com_mesclas`]), as larguras do arquivo ([`larguras_do_arquivo`]) e o clique no número da linha
@@ -1182,6 +1186,11 @@ impl NucleoGrade {
     pub fn intervalo(&self) -> Option<Intervalo> {
         let a = self.selecao?;
         Some(Intervalo::entre(a, self.extremo.unwrap_or(a)))
+    }
+
+    /// Desfaz o intervalo (fica só a célula ativa), sem rolar. Devolve se havia um.
+    pub fn recolher_intervalo(&mut self) -> bool {
+        self.extremo.take().is_some()
     }
 
     /// Estende o intervalo da célula ativa até `celula` (presa à grade e às colunas navegáveis); sem célula ativa, ela

@@ -16,7 +16,7 @@ use estado::{
     Oferta, Ofertas, Promessa, Reacao, TabelaAberta, Verbo,
 };
 use interface::formato::{formatar_numero, formatar_segundos, nome_do_caminho, plural};
-use interface::grade::{texto_celula, texto_exibicao};
+use interface::grade::{frase_do_intervalo_copiado, texto_celula, texto_exibicao, tsv_do_intervalo};
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::avisos::{aviso_texto, carregando, vazio};
 use interface::pecas::botao::Botao;
@@ -1099,6 +1099,25 @@ impl AbaDados {
         }
         acoes.excluir = r.excluir;
         acoes.espaco = r.espaco;
+        // o Ctrl+C: a célula ativa, ou o intervalo como o Excel copia; a célula gravando agora vai com o texto digitado
+        if r.copiar
+            && let Some(iv) = grade.nucleo.intervalo()
+        {
+            let pendentes = &self.pendentes;
+            let texto_de = |l: usize, c: usize| -> Option<String> {
+                let c = c.checked_sub(primeira)?;
+                let pendente =
+                    pendentes.iter().rev().find(|g| g.geracao == dados.geracao && g.linha == l && g.coluna == c);
+                pendente.map(|g| g.texto.clone()).or_else(|| dados.celula(l, c).map(texto_celula))
+            };
+            let texto = if iv.varias() {
+                tsv_do_intervalo(iv, texto_de)
+            } else {
+                texto_de(iv.linha0, iv.coluna0).unwrap_or_default()
+            };
+            ui.ctx().copy_text(texto);
+            toast_concluido(ui.ctx(), frase_do_intervalo_copiado(iv));
+        }
     }
 
     /// O rodapé do documento (34px): "Linhas 1–41 de 41" e " · 2 marcadas" em `--t3`; à direita, o "100 por página"

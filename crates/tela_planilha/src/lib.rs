@@ -528,12 +528,24 @@ impl TelaPlanilha {
         }
     }
 
-    /// O Ctrl+C, por prioridade: as colunas selecionadas (lidas numa tarefa, inteiras, pela regra do
+    /// O Ctrl+C, por prioridade: o intervalo de células (o texto de cada uma como vai para fora, das linhas que já
+    /// chegaram), as colunas selecionadas (lidas numa tarefa, inteiras, pela regra do
     /// `fonte`), as linhas selecionadas (as que já chegaram) e a célula ativa (o texto de exibição).
     fn copiar(&mut self, egui: &Context) {
         let Some(p) = self.pronta() else { return };
         let Some(aba) = &p.aba else { return };
         let (g, s) = (&aba.grade, &aba.sessao);
+        // o intervalo da grade (as linhas que já chegaram), como o Excel copia
+        if let Some(iv) = g.nucleo.intervalo().filter(interface::grade::Intervalo::varias) {
+            let texto = interface::grade::tsv_do_intervalo(iv, |l, c| {
+                let coluna = g.coluna_do_arquivo(c)?;
+                let celula = s.linha(l as u32 + 1)?.celula(coluna)?;
+                Some(texto_para_levar(s.pasta(), celula, DECIMAL_PADRAO))
+            });
+            egui.copy_text(texto);
+            toast_concluido(egui, interface::grade::frase_do_intervalo_copiado(iv));
+            return;
+        }
         if !g.colunas_selecionadas.is_empty() {
             if self.copia.is_some() {
                 return;
@@ -897,15 +909,18 @@ fn selecao_em_palavras(g: &Grade) -> Option<String> {
 /// escolhe a coluna e o do número a linha (Ctrl e Shift somam); com o foco na grade, Ctrl+Espaço escolhe a coluna da
 /// célula ativa e Shift+Espaço a linha. Devolve se pediu o Ctrl+C.
 fn tratar_resposta(grade: &mut Grade, r: &RespostaNucleo, foco: bool, ui: &Ui) -> bool {
-    if r.clicou.is_some() {
+    if r.clicou.is_some() || r.intervalo_mudou {
         grade.limpar_selecao();
     }
+    // escolher colunas ou linhas desfaz o intervalo (o Ctrl+C leva o que foi escolhido por último)
     if let Some((c, toques)) = r.clicou_cabecalho {
         grade.clicar_coluna(c, toques);
+        grade.nucleo.recolher_intervalo();
         grade.nucleo.focar(ui);
     }
     if let Some((l, toques)) = r.clicou_numero_da_linha {
         grade.clicar_linha(l, toques);
+        grade.nucleo.recolher_intervalo();
         grade.nucleo.focar(ui);
     }
     if foco {
