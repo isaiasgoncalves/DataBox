@@ -36,6 +36,10 @@ pub(crate) struct Leitor {
     pub desenhadas: Range<usize>,
     /// A linha (de 0) que a rolagem deve trazer à vista no próximo quadro.
     pub rolar_para: Option<usize>,
+    /// O trecho (em bytes do texto) que a busca da barra achou, pintado com o fundo `--sel`, e se a rolagem vai até
+    /// ele no próximo quadro.
+    pub achado: Option<Range<usize>>,
+    pub rolar_ao_achado: bool,
 }
 
 impl Leitor {
@@ -49,6 +53,8 @@ impl Leitor {
             json: lido.json.map(EstadoJson::com_resposta).unwrap_or_default(),
             desenhadas: 0..0,
             rolar_para: None,
+            achado: None,
+            rolar_ao_achado: false,
         }
     }
 
@@ -71,6 +77,21 @@ impl Leitor {
         self.linhas.partition_point(|&n| n as usize <= byte).saturating_sub(1)
     }
 
+    /// O pedaço do trecho `bytes` que cai na linha `i`, em caracteres da linha (cortado no que o leitor desenha).
+    fn colunas_do_trecho(&self, i: usize, bytes: &Range<usize>) -> Option<Range<usize>> {
+        let inicio = *self.linhas.get(i)? as usize;
+        let linha = self.linha(i);
+        let fim = inicio + linha.len();
+        if bytes.end <= inicio || bytes.start > fim || (bytes.start == fim && bytes.end > fim) {
+            return None;
+        }
+        let a = bytes.start.max(inicio) - inicio;
+        let b = bytes.end.min(fim) - inicio;
+        let coluna =
+            |byte: usize| linha.get(..byte).map_or(0, |t| t.chars().count()).min(MAXIMO_DE_CARACTERES_DA_LINHA);
+        Some(coluna(a)..coluna(b))
+    }
+
     /// Desenha o leitor em `rect`: a calha parada na rolagem horizontal, as linhas visíveis e, no JSON inválido, a
     /// linha do erro com o fundo e o número em `--perigo`.
     pub(crate) fn desenhar(&mut self, ui: &mut Ui, sal: egui::Id, rect: Rect, linguagem: Linguagem) {
@@ -87,6 +108,16 @@ impl Leitor {
         let altura_conteudo = RECUO_Y * 2.0 + n as f32 * altura;
         let erro: Option<ErroJson> = self.json.erro.clone();
         let rolar = self.rolar_para.take();
+        // o trecho achado pela busca: a linha e as colunas dele, e o retângulo aproximado (a fonte é monoespaçada) para
+        // a rolagem levá-lo à vista também na horizontal
+        let achado = self.achado.clone();
+        let rolar_achado = match (std::mem::take(&mut self.rolar_ao_achado), &achado) {
+            (true, Some(a)) => {
+                let i = self.linha_do_byte(a.start);
+                self.colunas_do_trecho(i, a).map(|colunas| (i, colunas))
+            }
+            _ => None,
+        };
 
         ui.painter().rect_filled(rect, 0.0, cores.fundo);
         let mut origem_y = rect.top();
@@ -106,6 +137,14 @@ impl Leitor {
                 let alvo = Rect::from_min_size(pos2(conteudo.left(), topo), vec2(rect.width(), altura));
                 ui.scroll_to_rect(alvo, Some(egui::Align::Center));
             }
+            if let Some((linha, colunas)) = &rolar_achado {
+                let topo = conteudo.top() + RECUO_Y + *linha as f32 * altura;
+                let x = conteudo.left() + LARGURA_CALHA + RECUO_X + colunas.start as f32 * largura_do_char;
+                let largura = (colunas.end - colunas.start).max(1) as f32 * largura_do_char;
+                let alvo = Rect::from_min_size(pos2(x, topo), vec2(largura, altura))
+                    .expand2(vec2(LARGURA_CALHA + RECUO_X, 0.0));
+                ui.scroll_to_rect(alvo, Some(egui::Align::Center));
+            }
             let pintor = ui.painter().clone();
             for i in visiveis.clone() {
                 let topo = conteudo.top() + RECUO_Y + i as f32 * altura;
@@ -118,7 +157,15 @@ impl Leitor {
                 }
                 let job = job_da_linha(self.linha(i), linguagem, &cores, &fonte, altura);
                 let galley = ui.fonts_mut(|f| f.layout_job(job));
-                pintor.galley(pos2(conteudo.left() + LARGURA_CALHA + RECUO_X, topo), galley, cores.texto);
+                let origem = pos2(conteudo.left() + LARGURA_CALHA + RECUO_X, topo);
+                if let Some(colunas) = achado.as_ref().and_then(|a| self.colunas_do_trecho(i, a)) {
+                    let x0 = galley.pos_from_cursor(egui::text::CCursor::new(colunas.start)).min.x;
+                    let x1 = galley.pos_from_cursor(egui::text::CCursor::new(colunas.end)).min.x;
+                    let r =
+                        Rect::from_min_max(pos2(origem.x + x0, topo), pos2(origem.x + x1.max(x0 + 2.0), topo + altura));
+                    pintor.rect_filled(r, 2.0, e.sel);
+                }
+                pintor.galley(origem, galley, cores.texto);
             }
         });
         self.desenhadas = visiveis.clone();
@@ -192,6 +239,8 @@ mod testes {
             json: EstadoJson::default(),
             desenhadas: 0..0,
             rolar_para: None,
+            achado: None,
+            rolar_ao_achado: false,
         }
     }
 
@@ -204,6 +253,16 @@ mod testes {
             [l.linha_do_byte(0), l.linha_do_byte(2), l.linha_do_byte(3), l.linha_do_byte(7), l.linha_do_byte(99)],
             [0, 0, 1, 2, 3]
         );
+    }
+
+    #[test]
+    fn o_trecho_achado_cai_nas_colunas_da_linha() {
+        let l = leitor("ab\nação x\n\nfim");
+        // "ção" está nos bytes 4..9 do texto (na linha 1, as colunas 1..4)
+        assert_eq!(l.colunas_do_trecho(1, &(4..9)), Some(1..4));
+        assert_eq!(l.colunas_do_trecho(0, &(4..9)), None);
+        assert_eq!(l.colunas_do_trecho(3, &(13..16)), Some(0..3));
+        assert_eq!(l.colunas_do_trecho(2, &(4..9)), None);
     }
 
     #[test]

@@ -176,7 +176,10 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 - **Tema** Claro, Escuro ou Seguir o Windows (Exibir › Tema).
 - **Preferências** (Arquivo › Preferências, Ctrl+,): tema, cores e fonte do código, opções de exportação, limpar os
   recentes e o histórico de SQL. As mudanças aparecem na hora; só ficam gravadas no **Salvar**.
-- **Busca da barra** (Ctrl+F) e a lista completa de atalhos em Ajuda › Atalhos do teclado.
+- **Busca da barra** (Ctrl+F) em todo documento: nos Dados, na Visão geral, na Estrutura e na Consulta SQL, e no CSV,
+  na planilha do Excel e no texto/JSON, no arquivo inteiro, sem diferenciar maiúsculas nem acentos. Enter e Shift+Enter
+  vão ao próximo e ao anterior, a faixa diz "3 de 41" e Esc volta para onde você estava. A lista completa de atalhos
+  está em Ajuda › Atalhos do teclado.
 - **Arrastar para a janela:** solte uma pasta, um banco ou um arquivo de dados na janela para abrir.
 - **Ao fechar** uma aba, a pasta ou o programa com alterações não salvas, ele pergunta "Salvar as alterações em
   vendas.csv?" (Salvar · Não salvar · Cancelar).
@@ -212,6 +215,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   detectado de cada coluna no cabeçalho.
 - Editar célula (duplo clique, Enter ou F2), Nova linha, Nova coluna, Duplicar, Excluir, Desfazer e Refazer.
 - **Filtrar** com condições, como na aba Dados de um banco, e **ordenar** pela seta do cabeçalho.
+- **Buscar** (Ctrl+F) no arquivo inteiro, com as alterações ainda não salvas e só nas linhas que o filtro mostra: a
+  célula achada vira a ativa e a grade rola até ela.
 - Copiar e colar colunas (Ctrl+C, Ctrl+V; Ctrl+Shift+V cola casando pelas chaves); renomear e excluir colunas pelo
   menu do cabeçalho.
 - **Trazer colunas:** casa as linhas deste CSV com as de outro arquivo (outro CSV aberto, uma planilha do Excel, a
@@ -228,12 +233,14 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   Propriedades.
 - **Limite de edição de 0,5 MiB** (512 KiB, em [`crates/texto/src/limites.rs`](crates/texto/src/limites.rs)): acima
   disso, o arquivo abre só para leitura, até 32 MiB. A codificação, o fim de linha e a quebra no fim voltam como eram.
+- **Buscar** (Ctrl+F) no texto inteiro, também no que abre só para leitura: o trecho achado fica pintado.
 
 ### Excel
 
 - Só leitura. As planilhas ficam em abas embaixo (as ocultas aparecem com "Mostrar planilhas ocultas", nas
   Propriedades), com as larguras de coluna, as células mescladas e os painéis congelados do arquivo.
 - Planilhas grandes mostram a primeira página na hora e terminam de ler em segundo plano.
+- **Buscar** (Ctrl+F) na planilha inteira, pelo texto como ele aparece na grade (as colunas ocultas ficam de fora).
 - Ctrl+C copia a célula ou a coluna; o clique direito no cabeçalho oferece **Trazer colunas desta planilha** para o
   CSV aberto. Ctrl+PageUp e Ctrl+PageDown trocam de planilha.
 - Arquivo com senha ou no formato antigo (`.xls`) diz o que fazer e oferece **Abrir no programa padrão**.
@@ -306,7 +313,7 @@ nesta ordem (sugestões são bem-vindas nas [issues](../../issues)):
 | 📊 | **Perfil de colunas** | Nulos, distintos, média, valores mais frequentes e histograma de cada coluna, para saber "o que tem aqui" num olhar. |
 | 🧾 | **Mais formatos** | JSON Lines (`.jsonl`, `.ndjson`) como tabela, scripts `.sql` abertos na Consulta SQL e logs grandes (acima de 32 MiB) com busca. |
 | 🔁 | **Conversão entre formatos** (Salvar como) | CSV para Excel ou SQLite, e de volta, com os tipos certos; e **Salvar tudo**. |
-| 🔎 | **Busca no CSV e no texto** | Achar um valor em qualquer lugar do arquivo; editar texto acima de 0,5 MiB. |
+| ✏️ | **Texto grande** | Editar texto acima de 0,5 MiB. |
 | 🧮 | **SQL sobre CSV** | Rodar `SELECT … GROUP BY` direto num CSV ou numa planilha. |
 | 📈 | **Gráficos** | Barras, linhas, histograma e dispersão desenhados no próprio DataBox, a partir de uma tabela, consulta ou CSV; e **Abrir no Python**, que gera o script Seaborn/Matplotlib e roda com o Python que você já tem. |
 | 🗄️ | **Outros bancos** | Um contrato único de fonte de dados, começando pelo **PostgreSQL** (só leitura por padrão); depois **MySQL/MariaDB**, **SQL Server** (pelo ODBC) e, numa versão opcional, **DuckDB e Parquet**. As senhas ficam no cofre de credenciais do sistema. |

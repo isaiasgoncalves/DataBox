@@ -20,6 +20,9 @@
 //!   .tamanho() -> (linhas, colunas)     .meta() -> &MetaFolha     .indice() -> Option<&Indice>
 //!   .pagina(primeira_linha, quantidade) -> Resultado<Pagina>     (linhas do Excel, a partir de 1, sem buracos)
 //!   .definir_cache(blocos)  .liberar()  .aberturas_do_fluxo()
+//!   .buscar(texto, (linha, coluna), parar) -> Resultado<Option<(linha, coluna)>>   a próxima célula com o termo, sem
+//!                                caixa nem acento, no texto como a grade o mostra (em fluxo, a aba inteira)
+//!   .achar_todos(texto, parar, |linha, coluna| -> bool) -> Resultado<bool>       todas, na ordem
 //!
 //! Pagina { primeira_linha, linhas: Vec<Linha> }
 //! Linha { numero, oculta, altura, celulas: Vec<Celula> }    .celula(col) .valor(col) .valores(n)
@@ -82,6 +85,7 @@
 // Os testes ficam de fora: neles, o pânico é a falha que se quer ver.
 #![cfg_attr(not(test), deny(clippy::indexing_slicing))]
 
+mod busca;
 mod datas;
 mod erros;
 mod fluxo;

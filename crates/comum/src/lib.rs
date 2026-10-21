@@ -16,6 +16,8 @@
 //!   regra dos ocultos e os tipos `Entrada` e `Listagem` da árvore de pastas (o tamanho e a data só de arquivo).
 //!   Quem varre a pasta é o `servico`.
 //!   (O `arquivos::Entrada` é uma linha da árvore; não confundir com a [`Entrada`] de valores.)
+//! - [`texto`]: a comparação sem caixa e sem acento das buscas e dos filtros (`sem_acento`, `letra_sem_acento`) e a
+//!   [`texto::Agulha`], o termo da busca da barra que acha as ocorrências num texto sem copiá-lo.
 
 // Índice e fatia que estouram viram pânico; aqui eles passam por .get() ou iterador (ARQUITETURA.md §3).
 // Os testes ficam de fora: neles, o pânico é a falha que se quer ver.
@@ -24,6 +26,7 @@
 pub mod app;
 pub mod arquivos;
 mod erro;
+pub mod texto;
 mod valores;
 
 pub use erro::{Codigo, ErroBanco, Resultado, traduzir_io, traduzir_sqlite};

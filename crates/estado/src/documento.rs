@@ -87,6 +87,8 @@ pub enum EventoBusca {
     Mudou,
     /// Enter no campo.
     Enter,
+    /// Shift+Enter no campo: o achado anterior (quem não volta trata como o [`EventoBusca::Enter`]).
+    Anterior,
     /// Esc no campo com texto: a casca já limpou o texto.
     Limpar,
 }
@@ -436,7 +438,7 @@ pub fn focar_busca_da_barra(ctx: &egui::Context, aba: u64, texto: &str) {
 
 /// A busca da barra de ferramentas da aba `aba` sobre o texto que o documento empresta: a `Entrada::busca` de 250px
 /// com a lupa, a dica do documento ("Buscar em clientes", que é também o rótulo) e o `.kbd` Ctrl+F. Sem busca
-/// (`None`), a desligada ("Buscar"). Devolve o que aconteceu nela neste quadro: o texto mudou, Enter, ou Esc com
+/// (`None`), a desligada ("Buscar"). Devolve o que aconteceu nela neste quadro: o texto mudou, Enter, Shift+Enter, ou Esc com
 /// texto (o `input[type=search]`: o texto já foi limpo). Depois do Enter e do Esc, o foco continua no campo.
 pub fn busca_da_barra(ui: &mut Ui, busca: Option<BuscaDaBarra<'_>>, aba: u64) -> Option<EventoBusca> {
     use interface::pecas::campos::{Entrada, enter_no_campo};
@@ -461,6 +463,9 @@ pub fn busca_da_barra(ui: &mut Ui, busca: Option<BuscaDaBarra<'_>>, aba: u64) ->
     if enter_no_campo(ui, &r) {
         ui.memory_mut(|m| m.request_focus(id));
         Some(EventoBusca::Enter)
+    } else if shift_enter_no_campo(ui, &r) {
+        ui.memory_mut(|m| m.request_focus(id));
+        Some(EventoBusca::Anterior)
     } else if esc && !texto.is_empty() {
         texto.clear();
         ui.memory_mut(|m| m.request_focus(id));
@@ -470,6 +475,18 @@ pub fn busca_da_barra(ui: &mut Ui, busca: Option<BuscaDaBarra<'_>>, aba: u64) ->
     } else {
         None
     }
+}
+
+/// O Shift+Enter tirou o foco do campo de uma linha neste quadro (o egui solta o foco no Enter com ou sem o Shift; o
+/// [`interface::pecas::campos::enter_no_campo`] só vale sem ele).
+fn shift_enter_no_campo(ui: &Ui, resposta: &egui::Response) -> bool {
+    resposta.lost_focus()
+        && ui.input(|i| {
+            i.events.iter().any(|e| {
+                matches!(e, egui::Event::Key { key: egui::Key::Enter, pressed: true, modifiers, .. }
+                    if modifiers.shift && !modifiers.ctrl && !modifiers.alt && !modifiers.command)
+            })
+        })
 }
 
 /// O tipo da tabela em uma palavra: "tabela", "visão", "virtual" ou "sem rowid".
@@ -1001,6 +1018,10 @@ mod testes {
         assert_eq!(h.state().tela.doc.busca, "Recife");
         h.key_press(Key::Enter);
         h.run_steps(2);
+        // o Shift+Enter (o achado anterior) também deixa o foco no campo
+        h.key_press_modifiers(egui::Modifiers::SHIFT, Key::Enter);
+        h.run_steps(2);
+        assert!(h.state().tela.doc.eventos.ends_with(&[EventoBusca::Enter, EventoBusca::Anterior]));
         h.key_press(Key::Escape);
         h.run_steps(2);
         let eventos = &h.state().tela.doc.eventos;

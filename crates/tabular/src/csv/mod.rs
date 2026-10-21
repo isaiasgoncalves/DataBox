@@ -13,10 +13,13 @@
 //!   dezenas de registros. `abrir_com_progresso` aceita acompanhar e cancelar.
 //! - [`Tabela`]: o `Leitor` com as [`Edicoes`] por cima e as operações do editor.
 //! - [`percorrer_coluna`]: os valores de uma coluna, com as alterações, um por vez (as contas da coluna).
+//! - [`Tabela::buscar`] e [`Tabela::achar_todos`]: a busca da barra no arquivo inteiro, pelo índice, sem diferenciar
+//!   maiúsculas nem acentos, com as alterações por cima; [`CopiaParaBuscar`] busca sem segurar a tabela.
 //! - [`escrever_registro`]: o registro como bytes, com aspas e codificação do [`Formato`].
 
 mod analise;
 mod arquivos;
+mod busca;
 pub mod codificacao;
 mod deteccao;
 mod edicoes;
@@ -33,6 +36,7 @@ mod testes;
 
 pub(crate) use analise::{Campo, decodificar_campo, proximo_registro};
 
+pub use busca::CopiaParaBuscar;
 pub use codificacao::{BOM_UTF8, Codificacao, detectar_codificacao};
 pub use deteccao::{
     REGISTROS_DA_AMOSTRA, detectar_aspas, detectar_cabecalho, detectar_decimal, detectar_fim_de_linha,

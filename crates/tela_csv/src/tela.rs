@@ -191,6 +191,8 @@ pub struct TelaCsv {
     confirmar_descartar: Option<Confirmacao>,
     /// O Cancelar do card de carregamento foi clicado: a aba fecha no fim do quadro.
     cancelar_abertura: bool,
+    /// A busca da barra (Ctrl+F) no arquivo inteiro.
+    pub(crate) busca: crate::busca::BuscaCsv,
     #[doc(hidden)]
     pub ganchos: Ganchos,
 }
@@ -259,6 +261,7 @@ impl TelaCsv {
             com_foco: true,
             confirmar_descartar: None,
             cancelar_abertura: false,
+            busca: Default::default(),
             ganchos: Ganchos::default(),
         }
     }
@@ -511,6 +514,7 @@ impl TelaCsv {
         if self.aberta() {
             self.pedir_vista(ectx);
         }
+        self.passo_da_busca(ectx);
         self.fonte_deste();
         self.iniciar_proximo(ectx);
     }
@@ -1009,6 +1013,19 @@ impl Documento for TelaCsv {
         egui.request_repaint();
     }
 
+    /// "Buscar em vendas.csv": no arquivo inteiro, nas linhas que o filtro mostra (o módulo `busca`).
+    fn busca(&mut self) -> Option<estado::BuscaDaBarra<'_>> {
+        if !self.aberta() {
+            return None;
+        }
+        let dica = self.dica_da_busca();
+        Some(estado::BuscaDaBarra { texto: &mut self.busca.texto, dica: dica.into() })
+    }
+
+    fn evento_busca(&mut self, evento: estado::EventoBusca, egui: &egui::Context, _ctx: &mut Contexto) {
+        self.evento_da_busca(evento, egui);
+    }
+
     fn tem_propriedades(&self) -> bool {
         true
     }
@@ -1029,6 +1046,7 @@ impl Documento for TelaCsv {
             || self.leitura_sobre.is_some()
             || self.trazer.as_ref().is_some_and(JanelaTrazer::ocupada)
             || self.calculo_vista.is_some()
+            || self.busca.ocupada()
     }
 
     fn em_segundo_plano(&mut self, egui: &egui::Context, ctx: &mut Contexto) {

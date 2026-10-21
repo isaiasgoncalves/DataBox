@@ -79,7 +79,8 @@ databox/
 └─ crates/
    ├─ comum/          ErroBanco, Codigo, q(), afinidade(), traduzir_*; Valor, Celula, Chave, Entrada;
    │                  app (o nome DataBox e as pastas por pessoa); arquivos (os tipos de arquivo, o cabeçalho do
-   │                  SQLite, os ocultos, a ordem natural e a Listagem de uma pasta, sem disco)
+   │                  SQLite, os ocultos, a ordem natural e a Listagem de uma pasta, sem disco); texto (sem_acento,
+   │                  letra_sem_acento e a Agulha: o termo da busca, que acha as ocorrências sem caixa nem acento)
    ├─ amostras/       bancos de exemplo para testes (dados/exemplo.db, gerados uma vez com semente fixa)
    ├─ ddl/            tokenizador SQL, analisador de CREATE TABLE, ColunaDef
    ├─ esquema/        planos de mudança de estrutura (ALTER nativo e reconstrução)
@@ -320,7 +321,10 @@ células saem tipadas (`Valor::{Vazio, Texto, Numero, Booleano, Erro, Data, Hora
 do estilo, sistemas 1900 e 1904) e `pasta.exibir(&celula)` escreve como o Excel (pt-BR). `.xls`, `.xlsb` e arquivo com
 senha dão erro em português (`ErroBanco`), e também textos compartilhados que ocupariam mais de 512 MB na memória
 (`LIMITE_TEXTOS`, contra zip bomb no `sharedStrings.xml`: a leitura para assim que passa). O XML é lido por um leitor "pull" próprio, em fluxo (`xml.rs`), e o zip é
-descomprimido numa linha de execução à parte (`fluxo.rs`).
+descomprimido numa linha de execução à parte (`fluxo.rs`). A busca da barra (`busca.rs`):
+`Planilha::buscar(texto, (linha, coluna), parar) -> Resultado<Option<(linha, coluna)>>` e
+`Planilha::achar_todos(texto, parar, |linha, coluna| -> bool)`, em fluxo pela `Pasta::linhas`, sobre o texto como a
+grade o mostra (`Pasta::exibir`), sem diferenciar maiúsculas nem acentos.
 
 ### 4.4c `tabular` (o CSV e o Trazer colunas)
 
@@ -337,7 +341,13 @@ recusa: o núcleo copia as linhas intactas do arquivo de origem e não tem como 
 (por isso o CSV não tem "Salvar mesmo assim", decisão de 17/10/2026). `reabrir(&OpcoesAbertura)` (o Formato das
 Propriedades) só sem alterações pendentes. `tabular::colunas` é o motor do copiar, colar e trazer colunas
 (`ler_tsv`/`escrever_tsv`, `colunas_coladas`, `posicionar`, `casar` com as três opções de normalização, `sugerir_chaves`,
-`atualizar_coluna`, `nome_da_coluna_trazida`); `tabular::numero`, o número e o tipo de um texto de célula.
+`atualizar_coluna`, `nome_da_coluna_trazida`); `tabular::numero`, o número e o tipo de um texto de célula. A busca da
+barra (`csv::busca`): `Tabela::buscar(texto, (linha, coluna), parar) -> Resultado<Option<(linha, coluna)>>` (a próxima
+célula com o termo a partir da posição, sem volta) e `Tabela::achar_todos(texto, parar, |linha, coluna| -> bool)`
+(todas, na ordem da grade), sem diferenciar maiúsculas nem acentos (`comum::texto::Agulha`), pelo índice e trecho a
+trecho das `Edicoes` (as linhas do arquivo lidas sem montar páginas, as novas só das alterações, as células alteradas
+por cima); `Tabela::copia_para_buscar() -> CopiaParaBuscar` (um leitor próprio e a cópia das alterações) busca numa
+tarefa sem segurar a tabela.
 
 Os formatos de cópia do menu da célula (0.2.3) ficam em `tabular::colunas`, ao lado do `escrever_tsv`, sem tela: as
 células chegam como `ValorCopia { Nulo, Numero { texto, literal }, Texto }` (o banco decide pela célula; o CSV e o
@@ -459,7 +469,8 @@ passam por um "pode fechar?"), `confirmar`, `toast`, `ajuda` (balão), `campo`, 
 `texto_pre`, `zona_risco`, célula da grade (`Celula` → NULL, chip de BLOB, "…", números à direita em fonte tabular)
 e uma grade só leitura com cabeçalho fixo e rolagem virtual (a da Consulta SQL). Formatação pt-BR: `formatar_bytes`,
 `partes_bytes`, `formatar_numero`, `formatar_data`, `formatar_ms`, `plural`, e `sem_acento` (a chave das buscas e
-dos filtros, a única). Um **mostruário** (exemplo e teste com captura em PNG pelo `egui_kittest`) mostra cada peça
+dos filtros, a única: mora em `comum::texto`, com a `Agulha` que o `tabular`, o `planilha` e o texto usam na busca da
+barra, e o `interface::formato` a reexporta). Um **mostruário** (exemplo e teste com captura em PNG pelo `egui_kittest`) mostra cada peça
 nos dois temas. As peças da casca: `abas_documento`, `arvore`, `painel`, `barra_status`, `barra_titulo`,
 `ferramentas` e os itens do `PainelMenu` (desligado, marcado, submenu, item de duas linhas, com ícones).
 
@@ -597,7 +608,7 @@ trait Documento     anatomia() -> Anatomia { faixa, rodape, rolagem: Rolagem::{P
                     faixa(ui, ctx) · conteudo(ui, ctx) (o único obrigatório) · rodape(ui, ctx)
                     ofertas(&Estado) -> Ofertas · executar(Verbo, &egui::Context, ctx)   (antes do conteúdo)
                     busca() -> Option<BuscaDaBarra { texto: &mut String, dica }> · evento_busca(EventoBusca::{Mudou,
-                        Enter, Limpar}, …)
+                        Enter, Anterior (o Shift+Enter), Limpar}, …)
                     tem_propriedades() · propriedades(ui, ctx) · propriedades_rolam() (false: o documento cuida da
                         rolagem do painel) · status(&Estado) -> Option<String> · ocupada()
                     em_segundo_plano(&egui::Context, ctx)   (a cada quadro, com a aba fora de vista)
@@ -638,9 +649,22 @@ O que cada tela diz (a anatomia, a busca da barra e as Propriedades; os textos e
 | Índices e gatilhos | faixa, página | desligada | Tabela, Índice (o selecionado) |
 | Definição SQL | faixa, própria | desligada | Tabela, Abrir na Consulta SQL |
 | Consulta SQL | faixa, rodapé, própria | "Buscar no editor" | Execução, Tabelas (com o Inserir) |
-| CSV (`tela_csv`) | rodapé, própria (a faixa "Filtros" só com condição) | desligada | Formato, Arquivo, Coluna {nome} |
-| Texto e JSON (`tela_texto`) | faixa, rodapé, própria | desligada | Estrutura do documento (JSON) ou Texto, Arquivo |
-| Planilha (`tela_planilha`) | faixa, rodapé, própria (a faixa das planilhas entre a grade e o rodapé) | desligada | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
+| CSV (`tela_csv`) | rodapé, própria (a faixa "Filtros" só com condição) | "Buscar em vendas.csv" | Formato, Arquivo, Coluna {nome} |
+| Texto e JSON (`tela_texto`) | faixa, rodapé, própria | "Buscar em notas.txt" | Estrutura do documento (JSON) ou Texto, Arquivo |
+| Planilha (`tela_planilha`) | faixa, rodapé, própria (a faixa das planilhas entre a grade e o rodapé) | "Buscar em Plan1" | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
+
+**A busca nos arquivos (0.2.3).** No CSV, na planilha e no texto, a busca da barra procura no arquivo inteiro, numa
+tarefa, pelo `estado::busca::BuscaEmFundo<P>`: `nova(egui, origem, em_ordem, |&mut Coletor<P>| …)` roda a passada,
+que entrega cada achado ao `Coletor` (`achou(p) -> continua`, `sinal_de_parar()`; entregues à tela a cada 80 ms, até
+`LIMITE_DE_ACHADOS`, 1.000.000, e só contados depois disso); a tela chama `passo(egui) -> Option<P>` a cada quadro (o
+primeiro achado a partir da `origem`, assim que se sabe qual é) e `seguinte(adiante)` no `EventoBusca::Enter` e no
+`Anterior` (o Shift+Enter), com volta; `rotulo()` é o "3 de 41" ("41+" enquanto conta, "Nenhum resultado") que a faixa
+mostra com `rotulo_na_faixa`. Soltar a busca a cancela (a cada tecla, a de antes é solta). `P` é a posição na ordem em
+que o Enter anda: no CSV, (linha da vista, coluna), pela `Tabela::copia_para_buscar` e `achar_todos` (só as linhas da
+vista; com a vista ordenada, `em_ordem` falso e a tarefa ordena no fim); na planilha, (linha do Excel, coluna), pelo
+`Planilha::achar_todos`, fora das colunas ocultas; no texto, o trecho em bytes, pela `comum::texto::Agulha` sobre o
+texto do editor ou do leitor (pintado com `AreaTexto::destacar` no editor e com o `--sel` no leitor). O Esc
+(`EventoBusca::Limpar`) volta à célula, ao cursor ou à linha de antes.
 
 **Os documentos de arquivo (etapas 5 e 6).** O trait ganhou, todos com padrão: `alterado()` (o ponto `--acct` da aba,
 que vira × no hover), `alteracoes()` (a contagem da pergunta ao fechar), `salvando()`, `tomar_erro_de_gravacao()`,

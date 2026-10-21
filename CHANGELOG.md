@@ -11,6 +11,13 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   (vazias, mínimo, máximo, soma, maior texto) conta numa passada pelo arquivo, um valor por vez, com a memória
   constante num CSV de milhões de linhas (antes, centenas de MB a cada clique numa coluna de textos longos). Mostra
   "Calculando…" enquanto conta, e trocar de coluna ou alterar a tabela cancela a conta velha.
+- **Ctrl+F no CSV, na planilha do Excel e no texto/JSON:** a busca da barra ficava desligada nesses documentos. Agora
+  ela procura no **arquivo inteiro**, não só no que está à vista (num CSV de 400 mil linhas, "onde aparece este CPF?"
+  tem resposta), sem diferenciar maiúsculas nem acentos. A célula achada vira a ativa e a grade rola até ela (no texto,
+  o trecho fica pintado); Enter e Shift+Enter vão ao próximo e ao anterior; a faixa diz "3 de 41" ("41+" enquanto
+  conta); Esc limpa e volta à célula de antes. No CSV, conta as alterações ainda não salvas e só as linhas que o
+  filtro mostra; no Excel, deixa de fora as colunas ocultas; no texto, vale também para os arquivos grandes, abertos
+  só para leitura (até 32 MiB).
 
 ## [0.2.2] - 2026-10-21
 

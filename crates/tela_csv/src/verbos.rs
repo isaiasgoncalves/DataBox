@@ -501,6 +501,7 @@ impl TelaCsv {
             .com(Verbo::Refazer, refazer)
             .com(Verbo::Atualizar, Oferta::ligada().ligada_se(sem_posicoes))
             .com(Verbo::Filtrar, Oferta::ligada().marcada_se(!self.filtros.is_empty()).com_dica(self.dica_filtrar()))
+            .ligar(Verbo::Buscar)
     }
 
     pub(crate) fn executar_verbo(&mut self, verbo: Verbo, ectx: &egui::Context) {
