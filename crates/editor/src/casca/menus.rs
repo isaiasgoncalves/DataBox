@@ -22,7 +22,8 @@
 //! - **Banco** (revisão de UI de 19/10/2026, prancheta 3; só com um banco aberto, entre Exibir e Ajuda, o
 //!   `.menu-ctx` de 290px com as silhuetas): Visão geral · Nova consulta SQL · Nova tabela (desligada em só leitura) |
 //!   Verificar integridade · Verificar chaves estrangeiras · Otimizar · Compactar (VACUUM) (com as silhuetas da
-//!   Manutenção das Propriedades; os dois últimos só com o banco gravando) | Fazer cópia de segurança · Exportar o banco | Abrir só para leitura (ou "Abrir para gravação",
+//!   Manutenção das Propriedades; os dois últimos só com o banco gravando) | Fazer cópia de segurança · Exportar o
+//!   banco | Abrir só para leitura (ou "Abrir para gravação",
 //!   no banco só leitura) · Fechar o banco. As manutenções e a cópia põem a Visão geral à vista, que as executa.
 //! - **Tabela** (prancheta 2; só com uma tabela ou visão à vista, depois do Banco): as vistas das Propriedades
 //!   Colunas (Alt+2), Índices e gatilhos (Alt+3) e Definição SQL (Alt+4; a visão só tem esta) | Abrir na Consulta

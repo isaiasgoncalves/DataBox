@@ -1299,8 +1299,8 @@ impl NucleoGrade {
                     // cada tecla navegável move; as outras não desfazem o que as anteriores moveram
                     let mut nova: Option<(usize, usize)> = None;
                     let ctrl = modifiers.ctrl || modifiers.command;
-                    // com o Shift, as setas, o PageUp/PageDown e o Home/End estendem o intervalo a partir da outra ponta
-                    // (com o Ctrl, até a borda da grade); o Shift+Tab continua sendo o Tab de volta
+                    // com o Shift, as setas, o PageUp/PageDown e o Home/End estendem o intervalo a partir da outra
+                    // ponta (com o Ctrl, até a borda da grade); o Shift+Tab continua sendo o Tab de volta
                     if modifiers.shift
                         && let Some(alvo) = self.alvo_do_shift(*key, ctrl, pagina, (c0, c1))
                     {
@@ -1590,8 +1590,8 @@ impl NucleoGrade {
                 let sob_ponteiro = corpo.hover_pos().and_then(celula_em);
                 resposta.linha_sob_ponteiro = sob_ponteiro.map(|(l, _)| l);
                 let shift = ui.input(|i| i.modifiers.shift);
-                // o arrasto de uma célula a outra marca o intervalo (a que começou fica a ativa); perto da borda, a grade
-                // rola sozinha
+                // o arrasto de uma célula a outra marca o intervalo (a que começou fica a ativa); perto da borda, a
+                // grade rola sozinha
                 let id_arrasto = id.with("arrasto-do-intervalo");
                 if corpo.drag_started() {
                     corpo.request_focus();
@@ -1698,7 +1698,7 @@ impl NucleoGrade {
                             let celula = Rect::from_min_max(pos2(esq(c), y), pos2(direita, y + ALTURA_LINHA - 1.0));
                             pintor.rect_filled(celula, 0.0, p.estudio.tint);
                         }
-                        // o intervalo de várias células: o `--tint` da coluna selecionada, por baixo dos fios e do texto
+                        // o intervalo de várias células: o `--tint` da coluna selecionada, embaixo dos fios e do texto
                         if let Some(iv) = intervalo.filter(|iv| iv.linhas().contains(&l)) {
                             for &c in colunas.iter().filter(|&&c| iv.colunas().contains(&c)) {
                                 let direita = if com_fio(c) { dir(c) - 1.0 } else { dir(c) };
@@ -2121,8 +2121,8 @@ impl GradeSomenteLeitura {
         self.linhas.get(l)?.get(c).map(texto_celula)
     }
 
-    /// O que o Ctrl+C leva: o intervalo de várias células como o Excel copia ([`tsv_do_intervalo`]), ou o texto da célula
-    /// ativa ([`GradeSomenteLeitura::texto_selecionado`]).
+    /// O que o Ctrl+C leva: o intervalo de várias células como o Excel copia ([`tsv_do_intervalo`]), ou o texto da
+    /// célula ativa ([`GradeSomenteLeitura::texto_selecionado`]).
     pub fn texto_copiado(&self) -> Option<String> {
         let iv = self.nucleo.intervalo()?;
         if !iv.varias() {

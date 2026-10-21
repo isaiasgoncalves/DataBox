@@ -327,16 +327,17 @@
 //!     à direita), `com_coluna_numero` (`td.lin`: o fundo `--p`), célula ativa (clique e teclado:
 //!     [`grade::Navegacao`] `Consulta` ou `Dados`, `com_navegaveis` para pular as colunas que não são dados),
 //!     `mover`, `na_ponta`, `focar`, `definir_linhas`; o intervalo de células ([`grade::Intervalo`], 0.2.2: a célula
-//!     ativa é a âncora; o arrasto com a rolagem perto da borda, o Shift+clique e o Shift com as setas, PageUp/PageDown e
-//!     Home/End o estendem, Esc e as teclas sem Shift o desfazem; fundo `--tint` e contorno `--acc`): `intervalo()`,
+//!     ativa é a âncora; o arrasto com a rolagem perto da borda, o Shift+clique e o Shift com as setas, PageUp/PageDown
+//!     e Home/End o estendem, Esc e as teclas sem Shift o desfazem; fundo `--tint` e contorno `--acc`): `intervalo()`,
 //!     `estender(celula)`, `recolher_intervalo()`, e [`grade::tsv_do_intervalo`] e
-//!     [`grade::frase_do_intervalo_copiado`] para o Ctrl+C de quem chama; o conteúdo vem dos ganchos de [`grade::DesenhoGrade`]
+//!     [`grade::frase_do_intervalo_copiado`] para o Ctrl+C de quem chama; o conteúdo vem dos ganchos de
+//!     [`grade::DesenhoGrade`]
 //!     (`celula(ui, &CelulaVisivel)`, `cabecalho(ui, &CabecalhoVisivel)`, `fundo_linha` para a linha marcada —
 //!     `--sel`, no lugar do hover —, `dica`, `th_selecionada(coluna)`: o núcleo pinta o `th` em `--sel` e as células
 //!     da coluna em `--tint`) e [`grade::RespostaNucleo`] traz `clicou`, `editar` (duplo clique,
 //!     Enter, F2), `texto_digitado` (começa a edição com a tecla), `copiar`, `excluir` (Delete), `espaco`,
-//!     `selecao_mudou`, `intervalo_mudou`, `linha_sob_ponteiro`, `clicou_cabecalho` (`Some((coluna, `[`grade::Toques`]` { ctrl, shift }))`
-//!     no clique no `th` de uma coluna navegável, onde o gancho não pôs um widget que ficou com o clique) e
+//!     `selecao_mudou`, `intervalo_mudou`, `linha_sob_ponteiro`, `clicou_cabecalho` (`Some((coluna, `[`grade::Toques`]`
+//!     { ctrl, shift }))` no clique no `th` de uma coluna navegável, onde o gancho não pôs um widget que ficou com o clique) e
 //!     `menu_cabecalho` (o clique direito) e `clicou_numero_da_linha` (o clique no número da linha, que não é célula
 //!     ativável). Etapa 6 (a planilha; tudo opcional, sem isso a grade é a de sempre): `com_congelado(linhas, colunas)`
 //!     (as linhas ficam sob o cabeçalho e as colunas de dados, mais as especiais, grudam à esquerda, com o fio de 2px

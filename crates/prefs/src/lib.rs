@@ -1702,8 +1702,8 @@ impl Preferencias {
         self.dados_atuais(&mut est).barra_status.unwrap_or(false)
     }
 
-    /// Muda tema, exportação, última pasta, aparência, larguras dos painéis, pasta aberta e/ou a barra de status (None em cada campo
-    /// deixa como está).
+    /// Muda tema, exportação, última pasta, aparência, larguras dos painéis, pasta aberta e/ou a barra de status (None
+    /// em cada campo deixa como está).
     ///
     /// `exportacao`, `aparencia` e `paineis` são mescladas às guardadas. Separador fora de [`SEPARADORES_CSV`] /
     /// [`SEPARADORES_DECIMAIS`], pasta vazia, tamanho do código fora de [`TAMANHO_CODIGO_MINIMO`] a

@@ -122,7 +122,8 @@ databox/
 Dependências (sem ciclos): `comum` ← `ddl` ← `esquema`; `comum` ← `banco`, `exportar`, `prefs`, `planilha`,
 `tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum`, `tabular` e egui)
 ← `estado`, `tela_*`, `editor`. O `interface` usa do `tabular` só o `colunas::escrever_tsv`: a grade copia um intervalo
-de células como o Excel (desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV. As telas de arquivo falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
+de células como o Excel (desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV. As telas de arquivo
+falam com o núcleo delas direto, em tarefas (`tela_csv` → `tabular`,
 `tela_texto` → `texto`, `tela_planilha` → `planilha`), sem passar pelo `servico`, que é a sessão de um banco.
 
 O contrato entre as telas e a casca mora no `estado::documento` (§4.8): as telas, cada uma no crate dela,
@@ -768,7 +769,8 @@ linha" · "Fechar".
     §4.5), gravada ao fim do gesto;
   - a **barra de status** (`status.rs`, 26 px; escondida por padrão desde 20/10/2026, Exibir › Barra de status a
     mostra e `prefs.barra_status()` lembra; sem ela, o corpo vai até a margem de baixo e o toast fica acima do rodapé
-    do documento; o modo de gravação também está na linha "Gravação" das Propriedades): sem banco, o nome da pasta aberta (o ponto `--t3`, a dica com o
+    do documento; o modo de gravação também está na linha "Gravação" das Propriedades): sem banco, o nome da pasta
+    aberta (o ponto `--t3`, a dica com o
     caminho) ou "Nenhuma pasta aberta"; com banco, o banco com o ponto (`--ok`; `--aviso` com a transação aberta), o
     modo de gravação ("Gravação imediata", "Transação aberta" ou "Só leitura", com a frase do aviso de transação na
     dica) e, à direita, o que a aba diz de si ("clientes · 60 linhas · 7 colunas", "SQL"), o SQLite e a codificação
