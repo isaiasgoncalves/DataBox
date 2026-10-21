@@ -61,23 +61,24 @@ jobs:
       - name: Clippy
         run: ./cargo.ps1 clippy --workspace --all-targets '--' -D warnings
 
-      - name: Testes
-        # O renderizador de software do Windows (WARP) às vezes cai com STATUS_ACCESS_VIOLATION quando vários testes
-        # de tela criam o wgpu ao mesmo tempo; se a rodada em paralelo falhar, repete tudo numa thread só.
-        run: |
-          ./cargo.ps1 test --workspace
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Repetindo os testes numa thread só"
-            ./cargo.ps1 test --workspace --no-fail-fast '--' --test-threads=1
-          }
-          exit $LASTEXITCODE
+      # O renderizador de software do Windows (WARP) cai com STATUS_ACCESS_VIOLATION quando vários testes criam o wgpu
+      # ao mesmo tempo. Os testes de tela (egui_kittest com wgpu) moram nos crates editor, interface e tela_*, inclusive
+      # testes de unidade (editor/src/tabela.rs, tela_esquema/src/testes): o corte é por crate, não por alvo. O resto
+      # roda em paralelo; as telas, numa thread só. Sem repetição: teste que cair duas vezes por ambiente vira
+      # #[ignore] com issue aberta.
+      - name: Testes de núcleo
+        run: ./cargo.ps1 test --workspace --exclude editor --exclude interface --exclude 'tela_*' --no-fail-fast
+
+      - name: Testes de tela
+        run: ./cargo.ps1 test -p editor -p interface -p 'tela_*' --no-fail-fast '--' --test-threads=1
 
       - name: Testes do editor sem as telas
-        run: ./cargo.ps1 test -p editor --no-default-features
+        run: ./cargo.ps1 test -p editor --no-default-features '--' --test-threads=1
 
   linux:
     # O porte para Linux: o mesmo fmt, clippy e testes, com o cargo direto (o cargo.ps1 e o intermediário de link
-    # são só do Windows). Os testes de tela renderizam com o lavapipe (Vulkan por software do Mesa).
+    # são só do Windows). Os testes de tela renderizam com o lavapipe (Vulkan por software do Mesa), que aguenta o
+    # paralelo; o Linux é a referência das capturas.
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:

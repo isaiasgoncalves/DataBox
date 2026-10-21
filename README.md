@@ -285,7 +285,10 @@ the system one), and follows GNOME's text size. The Linux build is checked by CI
 from other desktops are welcome.
 
 The screenshots in this README ([`docs/imagens/`](docs/imagens)) come from the screen tests, which render each screen
-headlessly with `egui_kittest` and save PNGs to `capturas\rust\`.
+headlessly with `egui_kittest` and save PNGs to `capturas\rust\`. On Windows, run them on one thread, as CI does
+(`.\cargo.ps1 test -p editor -p interface -p 'tela_*' '--' --test-threads=1`): in parallel, the Windows software
+renderer (WARP) crashes with `STATUS_ACCESS_VIOLATION`. On Linux everything runs in parallel, and its screenshots are
+the reference. A test that fails twice because of the environment gets `#[ignore]` and an issue, never a retry.
 
 More: [`README.pt-BR.md`](README.pt-BR.md) (full guide), [`ARQUITETURA.md`](ARQUITETURA.md) (architecture and crate
 contracts), [`design/README.md`](design/README.md) (visual guide), [`RELEASE.md`](RELEASE.md) (how to publish a
