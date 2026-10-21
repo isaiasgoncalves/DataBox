@@ -29,6 +29,8 @@
 //!     reabrir_para_leitura() (cursor próprio, mesmo índice: para varrer em outra thread) · mudou_no_disco()
 //!     utf8_valido()           o arquivo todo é UTF-8 válido (visto na passada da abertura)
 //!   Edicoes                 o modelo das alterações (células, linhas, colunas, desfazer), sem E/S
+//!   percorrer_coluna(&mut leitor, &edicoes, c, ao_progresso, |valor| Ok(continuar))
+//!                           uma coluna com as alterações, um valor por vez, sem juntá-la (as contas da coluna)
 //!   Formato { codificacao, separador, fim_de_linha, aspas, cabecalho, decimal, termina_em_quebra }
 //!   OpcoesAbertura          o que ficar None é detectado
 //!   Codificacao { Utf8, Utf8ComBom, Windows1252 } · FimDeLinha { Crlf, Lf, Cr } · EstiloAspas { Minimas, NaoNumericos, Todas }

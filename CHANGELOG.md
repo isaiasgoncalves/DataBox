@@ -5,6 +5,13 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Corrigido
+
+- **As contas da coluna do CSV não leem mais a coluna inteira para a memória:** a seção Coluna das Propriedades
+  (vazias, mínimo, máximo, soma, maior texto) conta numa passada pelo arquivo, um valor por vez, com a memória
+  constante num CSV de milhões de linhas (antes, centenas de MB a cada clique numa coluna de textos longos). Mostra
+  "Calculando…" enquanto conta, e trocar de coluna ou alterar a tabela cancela a conta velha.
+
 ## [0.2.2] - 2026-10-21
 
 ### Adicionado

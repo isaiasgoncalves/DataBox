@@ -20,6 +20,8 @@ pub const DICA_SEM_CABECALHO: &str = "Ligue \"Primeira linha é o cabeçalho\" p
 pub const NADA_MUDOU: &str = "Nada mudou: as células já tinham esses valores.";
 /// O aviso de topo quando o foco volta e o arquivo mudou por fora.
 pub const MUDOU_NO_DISCO: &str = "O arquivo mudou no disco.";
+/// As contas da seção Coluna enquanto a tarefa passa pela coluna.
+pub const CALCULANDO: &str = "Calculando…";
 
 /// A pastilha do cabeçalho pelo tipo detectado: data `31`, texto `Aa`, inteiro `12`, decimal `,5`, booleano `✓`.
 pub fn pastilha(tipo: TipoDetectado) -> TipoColuna {

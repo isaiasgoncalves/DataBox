@@ -221,6 +221,18 @@ fn estatistica_da_coluna_numerica() {
 }
 
 #[test]
+fn trocar_de_coluna_mostra_as_contas_da_nova() {
+    let amb = Ambiente::vazio("csv_estatistica_troca");
+    let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(18)));
+    clicar_celula(&mut h, 6, 4);
+    // sem esperar as contas da quantidade (a conta dela, se ainda corre, é cancelada), a coluna regiao
+    clicar_celula(&mut h, 2, 1);
+    esperar_ociosa(&mut h);
+    assert!(h.query_by_label("12 caracteres").is_some(), "o maior texto da regiao (Centro-Oeste)");
+    assert!(h.query_by_label("Calculando…").is_none(), "a conta terminou");
+}
+
+#[test]
 fn trocar_o_separador_reabre_o_arquivo() {
     let amb = Ambiente::vazio("csv_separador");
     let mut h = abrir(&amb, arquivo(&amb, "t.csv", "a;b,c\n1;2,3\n4;5,6\n"));
