@@ -5,6 +5,14 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+## [0.2.1] - 2026-10-20
+
+### Adicionado
+
+- **Desfazer no banco:** na aba Dados, a última edição de célula pode ser desfeita. O aviso da gravação diz onde
+  gravou ("Gravado em clientes (linha 3, email)") e oferece Desfazer por 6 s; Ctrl+Z e Editar › Desfazer fazem o
+  mesmo enquanto não houver outra mudança. O valor de antes é gravado com um UPDATE, só se a célula não mudou depois.
+
 ### Alterado
 
 - Revisão de UI de 19/10/2026 (o uso do app pelo PO):
@@ -29,6 +37,21 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   - **Preferências** com o corpo de altura fixa (a janela não muda de tamanho entre as seções) e a fonte do código
     padrão como "Padrão do sistema (Consolas)". No **Sobre**, os caminhos das preferências e do log são cortados com
     "…" e têm o Copiar caminho ao lado.
+
+  - **Consulta SQL vazia:** a dica fica em itálico, na fonte da interface, e as sugestões "Para começar" (ler as
+    primeiras linhas, contar e ver as colunas da primeira tabela) inserem o SQL no editor; o Executar fica desligado
+    até haver texto, e o rodapé diz "Nada executado ainda".
+  - **JSON inválido:** o motivo aparece na faixa de erro embaixo da faixa do documento, com a linha, a coluna e "Ir
+    para o erro", que leva o cursor ao erro (também no leitor de arquivos grandes); o Formatar desligado diz "Corrija
+    o erro para formatar".
+  - **Grade:** a seta de ordenação do cabeçalho agora é desenhada (um triângulo na cor de destaque), e não mais um
+    caractere da fonte, nos Dados e no CSV.
+  - **CSV** com o formato da aba Dados: a faixa com o nome do arquivo e o formato em pílulas (separador, codificação e
+    fim de linha), a barra de filtros sempre à vista embaixo dela e o rodapé "Linhas 1–26 de 1.204", no lugar de
+    "1.204 linhas · 6 colunas".
+- O Desfazer da aba Dados fica desligado, com o motivo na dica, depois de excluir ou incluir linhas, de mudar a
+  estrutura ou quando uma transação da Consulta SQL começou ou terminou depois da edição (antes o Ctrl+Z não fazia
+  nada e o menu continuava oferecendo).
 
 ## [0.2.0] - 2026-10-20
 
@@ -116,7 +139,8 @@ Primeira versão pública.
   painéis redimensionáveis, Preferências, atalhos do teclado e acessibilidade (AccessKit).
 - Executável único, `DataBox.exe`, sem instalação; `--criar-atalho` para os atalhos do Windows.
 
-[Não lançado]: ../../compare/v0.2.0...HEAD
+[Não lançado]: ../../compare/v0.2.1...HEAD
+[0.2.1]: ../../compare/v0.2.0...v0.2.1
 [0.2.0]: ../../compare/v0.1.2...v0.2.0
 [0.1.2]: ../../compare/v0.1.1...v0.1.2
 [0.1.1]: ../../compare/v0.1.0...v0.1.1
