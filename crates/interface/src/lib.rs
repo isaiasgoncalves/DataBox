@@ -259,7 +259,23 @@
 //!   - [`pecas::menu_contexto::MenuContexto`] (`new(id).rotulo(nome).mostrar(&dono, |m| …)`: o `.menu-ctx` da
 //!     prancheta 15, 250px no vidro fosco, itens de 28px com a silhueta de 14px; abre no clique direito do dono, no
 //!     ponteiro, e no Shift+F10 com o foco nele (só com o Shift: o Alt+Shift+F10 e o Ctrl+Shift+F10 não), embaixo, com o foco no primeiro item; ↑ e ↓ andam pelos ligados, Enter
-//!     ativa, Esc fecha e devolve o foco ao dono; `aberto` e `fechar` por `id_salt`).
+//!     ativa, Esc fecha e devolve o foco ao dono; `aberto` e `fechar` por `id_salt`). `mostrar_aberto(ctx, camada,
+//!     id_dono, Option<Abertura { pos, pedir_foco }>, |m| …)` abre sem a resposta de um widget (o menu da célula).
+//!   - o menu da célula (0.2.3): [`grade::menu_da_celula`]`(ui, &mut nucleo, &`[`grade::OfertasCelula`]`) ->
+//!     Option<`[`grade::AcaoCelula`]`>`, chamado todo quadro depois do `NucleoGrade::mostrar`: abre no clique direito
+//!     numa célula (dentro do intervalo, age nele; fora, a célula vira a ativa) e no Shift+F10 com o foco na grade
+//!     (embaixo da célula ativa, com o foco no primeiro item); o Esc fecha e devolve o foco à grade; enquanto ele está
+//!     aberto, as teclas não andam pela grade. Itens na ordem da A.1 do `design/planos-0.2.3.md` (Copiar · Copiar com
+//!     cabeçalho · Copiar como › CSV, JSON, Markdown, INSERT, Lista para IN (…), pandas — Colar · Limpar · Definir
+//!     como NULL — Filtrar por este valor · Excluir este valor do filtro — Marcar as linhas · Abrir a ficha da linha ·
+//!     Excluir as linhas), o fio entre os grupos com algum item; `OfertasCelula::de_leitura(intervalo)` liga os de
+//!     copiar (a lista para `IN` só com uma coluna) e `ligar`, `desligar(acao, motivo)` (o item desligado com o motivo
+//!     na dica e no `description`), `ligar_se` e `com` o resto; o que não tem oferta não aparece. O atalho vai no texto
+//!     e no `keyboard_shortcut` do AccessKit. A tecla Menu não chega ao egui 0.36. Para copiar:
+//!     [`grade::tsv_do_intervalo_com_cabecalho`], [`grade::texto_do_intervalo_como`] (`FormatoCopia`, os nomes, cada
+//!     célula como `tabular::colunas::ValorCopia`, `OpcoesCopia { separador, tabela }`) e [`grade::valor_de_copia`]
+//!     (`Celula` → NULL, número, texto). A [`grade::GradeSomenteLeitura`] copia o Ctrl+Shift+C sozinha e tem
+//!     `texto_copiado_com_cabecalho`, `texto_copiado_como(formato, &opcoes)` e `nucleo_mut` (para o menu).
 //!   - [`pecas::acao::Acao`] (`new(titulo, Icone).atalho("Ctrl+O").primaria(true).habilitado(..)`, `ui.add`: o `.acao`
 //!     do Início, 220×69 com o círculo de 36 e a silhueta de 20, o nome em 13/600 e o atalho no `.kbd`; o primário
 //!     usa o degradê do botão principal, o halo de 30px no hover e o texto branco).
@@ -335,7 +351,9 @@
 //!     (`celula(ui, &CelulaVisivel)`, `cabecalho(ui, &CabecalhoVisivel)`, `fundo_linha` para a linha marcada —
 //!     `--sel`, no lugar do hover —, `dica`, `th_selecionada(coluna)`: o núcleo pinta o `th` em `--sel` e as células
 //!     da coluna em `--tint`) e [`grade::RespostaNucleo`] traz `clicou`, `editar` (duplo clique,
-//!     Enter, F2), `texto_digitado` (começa a edição com a tecla), `copiar`, `excluir` (Delete), `espaco`,
+//!     Enter, F2), `texto_digitado` (começa a edição com a tecla), `copiar`, `copiar_com_cabecalho` (o Ctrl+Shift+C,
+//!     que chega do egui-winit como `Event::Copy` com o Shift e é consumido pela grade com o foco), `menu_celula` (o
+//!     menu da célula foi pedido), `excluir` (Delete), `espaco`,
 //!     `selecao_mudou`, `intervalo_mudou`, `linha_sob_ponteiro`, `clicou_cabecalho` (`Some((coluna, `[`grade::Toques`]`
 //!     { ctrl, shift }))` no clique no `th` de uma coluna navegável, onde o gancho não pôs um widget que ficou com o clique) e
 //!     `menu_cabecalho` (o clique direito) e `clicou_numero_da_linha` (o clique no número da linha, que não é célula

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use egui::UiBuilder;
 use egui_kittest::Harness;
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 use interface::mostruario::Mostruario;
 use interface::tema::{self, Tema};
 use interface::{fontes, pintura};
@@ -152,6 +152,89 @@ fn menu_de_contexto_claro_e_escuro() {
                 h.run_steps(2);
                 h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::F10);
                 h.run_steps(4);
+            },
+        );
+    }
+}
+
+/// O clique direito numa célula da grade de exemplo: a `linha` e `x` a partir da borda esquerda (o retângulo da
+/// "Grade" é o corpo, abaixo do cabeçalho).
+fn clique_direito_na_grade(h: &mut Harness<'_, Mostruario>, linha: usize, x: f32) {
+    let grade = h.get_by_label("Grade").rect();
+    let pos = egui::pos2(grade.left() + x, grade.top() + interface::grade::ALTURA_LINHA * (linha as f32 + 0.5));
+    h.hover_at(pos);
+    h.run_steps(1);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Secondary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+    }
+    h.run_steps(3);
+}
+
+/// Um intervalo de 3 linhas × 2 colunas (nome e cidade) na grade de exemplo, com a primeira célula ativa.
+fn intervalo_na_grade(h: &mut Harness<'_, Mostruario>) {
+    let grade = h.get_by_label("Grade").rect();
+    let pos = egui::pos2(grade.left() + 100.0, grade.top() + interface::grade::ALTURA_LINHA * 1.5);
+    h.hover_at(pos);
+    h.run_steps(1);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+    }
+    h.run_steps(2);
+    for tecla in [egui::Key::ArrowDown, egui::Key::ArrowDown, egui::Key::ArrowRight] {
+        h.key_press_modifiers(egui::Modifiers::SHIFT, tecla);
+        h.run_steps(1);
+    }
+}
+
+/// O menu da célula (0.2.3) aberto pelo clique direito dentro de um intervalo, com o submenu "Copiar como" à vista,
+/// e pelo Shift+F10 com o ponteiro no "Definir como NULL" desligado (a dica com o motivo), nos dois temas (capturas
+/// `menu-da-celula-{claro,escuro}` e `menu-da-celula-desligado-{claro,escuro}`).
+#[test]
+fn menu_da_celula_claro_e_escuro() {
+    let pagina = |m: &mut Mostruario| m.mostrar_contexto(true);
+    for (tema_escolhido, nome) in [(Tema::Claro, "claro"), (Tema::Escuro, "escuro")] {
+        capturar_em(
+            tema_escolhido,
+            &format!("menu-da-celula-{nome}.png"),
+            egui::vec2(960.0, 1000.0),
+            1.0,
+            pagina,
+            |h| {
+                intervalo_na_grade(h);
+                clique_direito_na_grade(h, 2, 100.0);
+                let menu = h.get_by_role(egui::accesskit::Role::Menu).accesskit_node().label();
+                assert_eq!(menu.as_deref(), Some("Menu da seleção"), "dentro do intervalo, o menu age nele");
+                h.get_by_label("Copiar como").hover();
+                h.run_steps(3);
+                let _ = h.get_by_label("Lista para IN (…)");
+            },
+        );
+        capturar_em(
+            tema_escolhido,
+            &format!("menu-da-celula-desligado-{nome}.png"),
+            egui::vec2(960.0, 1000.0),
+            1.0,
+            pagina,
+            |h| {
+                clique_direito_na_grade(h, 3, 100.0);
+                h.key_press(egui::Key::Escape);
+                h.run_steps(2);
+                h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::F10);
+                h.run_steps(4);
+                let menu = h.get_by_role(egui::accesskit::Role::Menu).accesskit_node().label();
+                assert_eq!(menu.as_deref(), Some("Menu da célula"), "o Shift+F10 abre na célula ativa");
+                h.get_by_label("Definir como NULL").hover();
+                h.run_steps(6);
             },
         );
     }

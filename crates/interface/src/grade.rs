@@ -25,6 +25,12 @@
 //! retângulo de células a partir da ativa, com o fundo `--tint` e o contorno de 1px `--acc`; o Ctrl+C de quem chama o
 //! leva em TSV ([`tsv_do_intervalo`]).
 //!
+//! O menu da célula (0.2.3, [`menu_da_celula`]): o clique direito numa célula (dentro do intervalo, o menu age nele;
+//! fora, a célula vira a ativa) e o Shift+F10 com o foco na grade pedem o menu ([`RespostaNucleo::menu_celula`]); a
+//! tela diz o que liga ([`OfertasCelula`]) e cumpre a [`AcaoCelula`] escolhida. O Ctrl+Shift+C com o foco na grade é
+//! o "Copiar com cabeçalho" ([`RespostaNucleo::copiar_com_cabecalho`]); os formatos do "Copiar como" ficam no
+//! [`tabular::colunas`] ([`texto_do_intervalo_como`]).
+//!
 //! A planilha (etapa 6) usa o mesmo núcleo com o painel congelado ([`NucleoGrade::com_congelado`]: linhas sob o
 //! cabeçalho e colunas presas à esquerda, o fio de 2px `--b2` na emenda), as células mescladas
 //! ([`NucleoGrade::com_mesclas`]), as larguras do arquivo ([`larguras_do_arquivo`]) e o clique no número da linha
@@ -43,16 +49,25 @@ use egui::{
     Color32, CursorIcon, Event, EventFilter, FocusDirection, Galley, Id, Key, Painter, Rect, ScrollArea, Sense, Stroke,
     StrokeKind, Ui, pos2, vec2,
 };
+use tabular::colunas::{FormatoCopia, OpcoesCopia, ValorCopia};
 
 use crate::fontes::{self, Peso};
 use crate::formato::{formatar_bytes, formatar_numero, real_js};
 use crate::icones::{self, Icone, TipoColuna};
+use crate::pecas::menu_contexto::consumir_shift_f10;
 use crate::pecas::rotulos::{pintar_chip_em, tamanho_chip_em};
 use crate::pecas::tabela::PADDING_TABELA;
 use crate::pecas::texto::{formato, linha_de_base};
 use crate::pecas::toast::toast_concluido;
 use crate::pintura::{self, Preenchimento};
 use crate::tema::{Paleta, paleta};
+
+mod menu_celula;
+
+pub use menu_celula::{
+    AcaoCelula, LARGURA_MENU_DA_CELULA, OfertaCelula, OfertasCelula, menu_da_celula, menu_da_celula_aberto,
+    texto_do_intervalo_como, tsv_do_intervalo_com_cabecalho, valor_de_copia,
+};
 
 /// Altura de uma linha (`.grade td{height:28px}`, com o fio de 1px embaixo).
 pub const ALTURA_LINHA: f32 = 28.0;
@@ -927,6 +942,12 @@ pub struct RespostaNucleo {
     pub texto_digitado: Option<String>,
     /// Ctrl+C com a célula ativa (com um intervalo de várias, quem chama copia o [`NucleoGrade::intervalo`]).
     pub copiar: bool,
+    /// Ctrl+Shift+C com a célula ativa: o intervalo com os nomes das colunas na primeira linha
+    /// ([`tsv_do_intervalo_com_cabecalho`]).
+    pub copiar_com_cabecalho: bool,
+    /// O menu da célula foi pedido neste quadro (o clique direito numa célula ou o Shift+F10): ele abre no
+    /// [`menu_da_celula`], que a tela chama todo quadro depois do [`NucleoGrade::mostrar`].
+    pub menu_celula: bool,
     /// Delete com o corpo focado ([`Navegacao::Dados`]: excluir as marcadas).
     pub excluir: bool,
     /// Espaço com o corpo focado ([`Navegacao::Dados`]: marcar a linha ativa).
@@ -977,6 +998,30 @@ pub struct NucleoGrade {
     larguras_externas: bool,
     /// O cabeçalho sem as riscas (a planilha: `.xl th{background:transparent}` sobre o degradê da faixa).
     cabecalho_liso: bool,
+    /// O Shift+F10 pediu o menu da célula; o [`NucleoGrade::mostrar`] põe o menu embaixo da célula ativa.
+    menu_pelo_teclado: bool,
+    /// O menu da célula pedido neste quadro, até o [`menu_da_celula`] abri-lo.
+    pedido_menu: Option<menu_celula::PedidoMenu>,
+}
+
+/// O Ctrl+Shift+C com o foco na grade (só com esses modificadores: o AltGr, que chega como Ctrl+Alt, não conta). O
+/// egui-winit entrega o Ctrl+Shift+C como `Event::Copy`, sem o `Event::Key`; os dois valem e são consumidos (na grade
+/// com o foco, o atalho é o "Copiar com cabeçalho", não o "Copiar caminho" do Explorador).
+fn consumir_copiar_com_cabecalho(ctx: &egui::Context) -> bool {
+    let atalho = egui::Modifiers::COMMAND | egui::Modifiers::SHIFT;
+    ctx.input_mut(|i| {
+        let agora = i.modifiers;
+        let e_o_atalho = |e: &Event| match e {
+            Event::Key { key: Key::C, pressed: true, modifiers, .. } => modifiers.matches_exact(atalho),
+            Event::Copy => agora.matches_exact(atalho),
+            _ => false,
+        };
+        if !i.events.iter().any(&e_o_atalho) {
+            return false;
+        }
+        i.events.retain(|e| !e_o_atalho(e));
+        true
+    })
 }
 
 impl NucleoGrade {
@@ -1004,6 +1049,8 @@ impl NucleoGrade {
             largura_minima: LARGURA_MIN_COLUNA,
             larguras_externas: false,
             cabecalho_liso: false,
+            menu_pelo_teclado: false,
+            pedido_menu: None,
         }
     }
 
@@ -1280,6 +1327,17 @@ impl NucleoGrade {
             )
         });
         let (c0, c1) = (self.navegaveis.start, self.navegaveis.end - 1);
+        if consumir_shift_f10(ui.ctx()) {
+            // o menu nasce na célula ativa (sem ela, na primeira)
+            if self.selecao.is_none() {
+                self.selecao = Some((0, c0));
+                self.rolar_para_selecao = true;
+            }
+            self.menu_pelo_teclado = true;
+        }
+        if consumir_copiar_com_cabecalho(ui.ctx()) {
+            resposta.copiar_com_cabecalho = true;
+        }
         let pagina = if dados {
             PASSO_PAGINA_DADOS
         } else {
@@ -1426,7 +1484,9 @@ impl NucleoGrade {
     pub fn mostrar(&mut self, ui: &mut Ui, altura_max: f32, desenho: &mut dyn DesenhoGrade) -> RespostaNucleo {
         let mut resposta = RespostaNucleo::default();
         let p = paleta(ui);
-        if ui.memory(|m| m.has_focus(self.id_corpo())) {
+        self.pedido_menu = None;
+        // com o menu da célula aberto, as teclas são dele (as setas andam pelos itens, o Esc fecha)
+        if ui.memory(|m| m.has_focus(self.id_corpo())) && !menu_da_celula_aberto(ui.ctx(), self) {
             self.teclado(ui, altura_max, &mut resposta);
         }
         let larguras = self.larguras.clone();
@@ -1456,6 +1516,8 @@ impl NucleoGrade {
         let mut clique_numero: Option<(usize, Toques)> = None;
         let mut clique_cabecalho: Option<(usize, Toques)> = None;
         let mut menu_cabecalho: Option<usize> = None;
+        let menu_pelo_teclado = std::mem::take(&mut self.menu_pelo_teclado);
+        let mut pedido_menu: Option<menu_celula::PedidoMenu> = None;
         let selecionadas: Vec<bool> = (0..n_col).map(|c| desenho.th_selecionada(c)).collect();
 
         // a calha de 8px da barra de rolagem: quando a grade rola, o conteúdo não passa por baixo da barra (a 960 a
@@ -1648,6 +1710,31 @@ impl NucleoGrade {
                             }
                         }
                     }
+                }
+
+                // o clique direito numa célula pede o menu: dentro do intervalo, ele age no intervalo; fora, a célula
+                // vira a ativa
+                if corpo.secondary_clicked()
+                    && let Some(pos) = corpo.interact_pointer_pos()
+                    && let Some((l, c)) = celula_em(pos).filter(|&(_, c)| coluna_numero != Some(c))
+                {
+                    let (l, c) = canto_da_mescla(l, c);
+                    if navegaveis.contains(&c) {
+                        corpo.request_focus();
+                        if !intervalo.is_some_and(|iv| iv.contem(l, c)) {
+                            clique = Some((l, c));
+                        }
+                        pedido_menu = Some(menu_celula::PedidoMenu { pos, teclado: false });
+                    }
+                }
+                // o Shift+F10: o menu embaixo da célula ativa, um pouco para dentro (preso à parte visível)
+                if menu_pelo_teclado && let Some((l, c)) = selecao {
+                    let canto = pos2(esq(c) + menu_celula::RECUO_TECLADO, y_de(l) + ALTURA_LINHA);
+                    let pos = pos2(
+                        canto.x.clamp(corpo_tela.left(), corpo_tela.right()),
+                        canto.y.clamp(corpo_tela.top(), corpo_tela.bottom()),
+                    );
+                    pedido_menu = Some(menu_celula::PedidoMenu { pos, teclado: true });
                 }
 
                 let fio = Stroke::new(1.0, p.estudio.b);
@@ -1966,8 +2053,13 @@ impl NucleoGrade {
         resposta.clicou_numero_da_linha = clique_numero;
         resposta.clicou_cabecalho = clique_cabecalho;
         resposta.menu_cabecalho = menu_cabecalho;
-        if resposta.copiar && self.selecao.is_none() {
+        if self.selecao.is_none() {
             resposta.copiar = false;
+            resposta.copiar_com_cabecalho = false;
+        }
+        if pedido_menu.is_some() && self.selecao.is_some() {
+            self.pedido_menu = pedido_menu;
+            resposta.menu_celula = true;
         }
         let corpo = saida.inner;
         corpo.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Grade"));
@@ -2005,6 +2097,9 @@ pub struct RespostaGrade {
     pub copiado: Option<String>,
     /// A célula escolhida mudou.
     pub selecao_mudou: bool,
+    /// O menu da célula foi pedido ([`RespostaNucleo::menu_celula`]): a tela chama o [`menu_da_celula`] com o
+    /// [`GradeSomenteLeitura::nucleo_mut`].
+    pub menu_celula: bool,
 }
 
 /// Os ganchos da grade só leitura: as células de `comum::Celula` e o `th` com o nome.
@@ -2131,6 +2226,29 @@ impl GradeSomenteLeitura {
         Some(tsv_do_intervalo(iv, |l, c| self.linhas.get(l)?.get(c).map(texto_celula)))
     }
 
+    /// O que o Ctrl+Shift+C leva: o intervalo (ou a célula ativa) com os nomes das colunas na primeira linha
+    /// ([`tsv_do_intervalo_com_cabecalho`]).
+    pub fn texto_copiado_com_cabecalho(&self) -> Option<String> {
+        let iv = self.nucleo.intervalo()?;
+        let nome = |c: usize| self.colunas.get(c).map(|col| col.nome.clone()).unwrap_or_default();
+        Some(tsv_do_intervalo_com_cabecalho(iv, nome, |l, c| self.linhas.get(l)?.get(c).map(texto_celula)))
+    }
+
+    /// O intervalo (ou a célula ativa) no `formato` do "Copiar como" ([`texto_do_intervalo_como`]).
+    pub fn texto_copiado_como(&self, formato: FormatoCopia, opcoes: &OpcoesCopia<'_>) -> Option<String> {
+        let iv = self.nucleo.intervalo()?;
+        let nome = |c: usize| self.colunas.get(c).map(|col| col.nome.clone()).unwrap_or_default();
+        let valor = |l: usize, c: usize| {
+            self.linhas.get(l).and_then(|linha| linha.get(c)).map_or(ValorCopia::Nulo, valor_de_copia)
+        };
+        Some(texto_do_intervalo_como(formato, iv, nome, valor, opcoes))
+    }
+
+    /// O núcleo, para o [`menu_da_celula`].
+    pub fn nucleo_mut(&mut self) -> &mut NucleoGrade {
+        &mut self.nucleo
+    }
+
     /// As larguras das colunas (depois do primeiro quadro).
     pub fn larguras(&self) -> Option<&[f32]> {
         self.larguras_prontas.then(|| self.nucleo.larguras())
@@ -2157,10 +2275,15 @@ impl GradeSomenteLeitura {
         let mut desenho =
             DesenhoSomenteLeitura { colunas: &self.colunas, linhas: &self.linhas, numericas: &self.numericas };
         let r = self.nucleo.mostrar(ui, altura_max, &mut desenho);
-        let mut resposta = RespostaGrade { copiado: None, selecao_mudou: r.selecao_mudou };
-        if r.copiar
-            && let Some(t) = self.texto_copiado()
-        {
+        let mut resposta = RespostaGrade { copiado: None, selecao_mudou: r.selecao_mudou, menu_celula: r.menu_celula };
+        let copiado = if r.copiar {
+            self.texto_copiado()
+        } else if r.copiar_com_cabecalho {
+            self.texto_copiado_com_cabecalho()
+        } else {
+            None
+        };
+        if let Some(t) = copiado {
             ui.ctx().copy_text(t.clone());
             let frase = self.nucleo.intervalo().map_or_else(|| "Copiado.".to_string(), frase_do_intervalo_copiado);
             toast_concluido(ui.ctx(), frase);

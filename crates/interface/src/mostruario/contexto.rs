@@ -1,10 +1,17 @@
 //! A página do menu de contexto e dos cartões de ação no mostruário (as pranchetas 15 e 4): o Explorador de exemplo
 //! com a pasta, um CSV, um texto e um banco, cada um com o seu menu de contexto (clique direito ou Shift+F10 no item),
-//! e a fileira dos cartões de ação do Início. As ações só mudam a linha "Última ação".
+//! a fileira dos cartões de ação do Início e a grade com o menu da célula (0.2.3: clique direito ou Shift+F10 na
+//! célula, com os itens dos Dados e o "Definir como NULL" desligado). As ações só mudam a linha "Última ação" (os
+//! itens de copiar copiam de verdade).
 
+use comum::Celula;
 use egui::{Align, Layout, Rect, Sense, Ui, UiBuilder, pos2, vec2};
+use tabular::colunas::OpcoesCopia;
 
 use super::Mostruario;
+use crate::grade::{
+    AcaoCelula, ColunaGrade, GradeSomenteLeitura, OfertasCelula, frase_do_intervalo_copiado, menu_da_celula,
+};
 use crate::icones::{Icone, TipoArquivo};
 use crate::pecas::acao::Acao;
 use crate::pecas::arranjo::fluxo;
@@ -19,13 +26,48 @@ use crate::pecas::toast::toast_concluido;
 /// O estado da página.
 pub(super) struct EstadoContexto {
     ultima_acao: String,
+    /// A grade do menu da célula.
+    grade: GradeSomenteLeitura,
+    ultima_acao_grade: String,
 }
 
 impl EstadoContexto {
     pub(super) fn new() -> Self {
-        EstadoContexto { ultima_acao: "nenhuma".into() }
+        EstadoContexto {
+            ultima_acao: "nenhuma".into(),
+            grade: grade_de_clientes(),
+            ultima_acao_grade: "nenhuma".into(),
+        }
     }
 }
+
+/// Os clientes do banco de exemplo, em miniatura.
+fn grade_de_clientes() -> GradeSomenteLeitura {
+    let colunas = ["id", "nome", "cidade", "limite"].map(ColunaGrade::new).to_vec();
+    let clientes: [(i64, &str, Option<&str>, f64); 5] = [
+        (1, "Bruno Almeida", Some("Recife"), 13741.03),
+        (2, "Carla Souza", Some("Curitiba"), 8200.0),
+        (3, "Diego Lima", None, 154.03),
+        (4, "Elisa Rocha", Some("Recife"), 17810.34),
+        (5, "Fábio Nunes", Some("Belém"), 920.5),
+    ];
+    let linhas = clientes
+        .iter()
+        .map(|&(id, nome, cidade, limite)| {
+            vec![
+                Celula::Inteiro(id),
+                Celula::Texto(nome.into()),
+                cidade.map_or(Celula::Nulo, |c| Celula::Texto(c.into())),
+                Celula::Real(limite),
+            ]
+        })
+        .collect();
+    GradeSomenteLeitura::new("contexto::clientes", colunas, linhas)
+}
+
+/// Largura e altura da grade de exemplo (o cabeçalho e as cinco linhas).
+const LARGURA_GRADE: f32 = 440.0;
+const ALTURA_GRADE: f32 = 30.0 + 5.0 * 28.0;
 
 /// O que o item do Explorador de exemplo é: muda os itens do menu.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -87,6 +129,55 @@ impl Mostruario {
         self.card_menu_contexto(&mut ui);
         ui.add_space(16.0);
         self.card_acoes(&mut ui);
+        ui.add_space(16.0);
+        self.card_menu_da_celula(&mut ui);
+    }
+
+    /// A grade com o menu da célula (0.2.3): os itens dos Dados, com o "Definir como NULL" desligado e o motivo.
+    fn card_menu_da_celula(&mut self, ui: &mut Ui) {
+        Cartao::new("menu-da-celula")
+            .titulo("Menu da célula")
+            .hint("clique direito ou Shift+F10 na célula · dentro do intervalo age nele; fora, a célula vira a ativa")
+            .mostrar(ui, |c| {
+                c.corpo(|ui| {
+                    let estado = &mut self.contexto;
+                    let topo = ui.cursor().min;
+                    let lugar = Rect::from_min_size(topo, vec2(LARGURA_GRADE, ALTURA_GRADE));
+                    let mut filho = ui.new_child(UiBuilder::new().id_salt("clientes").max_rect(lugar));
+                    estado.grade.mostrar(&mut filho, ALTURA_GRADE);
+                    let ofertas = estado
+                        .grade
+                        .nucleo()
+                        .intervalo()
+                        .map(OfertasCelula::de_leitura)
+                        .unwrap_or_default()
+                        .ligar(AcaoCelula::Colar)
+                        .ligar(AcaoCelula::Limpar)
+                        .desligar(AcaoCelula::DefinirNulo, "A coluna nome é NOT NULL.")
+                        .ligar(AcaoCelula::FiltrarPorValor)
+                        .ligar(AcaoCelula::ExcluirValorDoFiltro)
+                        .ligar(AcaoCelula::MarcarLinhas)
+                        .ligar(AcaoCelula::AbrirFicha)
+                        .ligar(AcaoCelula::ExcluirLinhas);
+                    if let Some(acao) = menu_da_celula(&filho, estado.grade.nucleo_mut(), &ofertas) {
+                        let opcoes = OpcoesCopia { separador: ',', tabela: "clientes" };
+                        let texto = match acao {
+                            AcaoCelula::Copiar => estado.grade.texto_copiado(),
+                            AcaoCelula::CopiarComCabecalho => estado.grade.texto_copiado_com_cabecalho(),
+                            AcaoCelula::CopiarComo(formato) => estado.grade.texto_copiado_como(formato, &opcoes),
+                            _ => None,
+                        };
+                        if let (Some(texto), Some(iv)) = (texto, estado.grade.nucleo().intervalo()) {
+                            ui.ctx().copy_text(texto);
+                            toast_concluido(ui.ctx(), frase_do_intervalo_copiado(iv));
+                        }
+                        estado.ultima_acao_grade = acao.rotulo().to_string();
+                    }
+                    ui.allocate_rect(lugar, Sense::hover());
+                    ui.add_space(8.0);
+                    hint(ui, &format!("Última ação: {}", estado.ultima_acao_grade));
+                });
+            });
     }
 
     /// Os três cartões de ação do Início (prancheta 4): Abrir pasta (o primário), Abrir arquivo e Novo banco.
