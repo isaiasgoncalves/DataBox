@@ -85,8 +85,11 @@
 //! RegioesJanela { livre: Vec<Rect>, botoes: [Rect; 3], borda: f32 } · regioes_da_janela(&egui::Context)
 //!     as regiões da barra própria no último quadro (a porta para um WM_NCHITTEST próprio)
 //! linha_comando::{analisar(&[OsString]) -> Result<Comando, ErroArgumentos>, Comando::{Executar(Argumentos),
-//!     Ajuda, Versao}, Argumentos { caminho, somente_leitura, renderizador, criar_atalho }, Renderizador::{Glow, Wgpu},
-//!     ErroArgumentos { mensagem } · texto(), argumentos_para_relancar(&Argumentos, Renderizador), USO, AJUDA}
+//!     Ajuda, Versao}, Argumentos { caminho, somente_leitura, renderizador, criar_atalho, moldura_do_sistema },
+//!     Renderizador::{Glow, Wgpu}, ErroArgumentos { mensagem } · texto(), argumentos_para_relancar(&Argumentos,
+//!     Renderizador), USO, AJUDA}
+//! escala::{fator_do_sistema() -> f32 (o `text-scaling-factor` do GNOME no Linux; 1 sem ele), ler_fator(&str) ->
+//!     Option<f32>, tamanho_com_fator([f32; 2], f32) -> [f32; 2]}
 //! registro::{iniciar(PathBuf) -> bool, instalar_gancho_de_panico(), RegistroCompartilhado::novo(arquivo,
 //!     max_bytes, copias) · escrever(linha) · com_adiamento, Registro (log::Log), formatar_linha, nivel_do_alvo,
 //!     MAX_BYTES (1.000.000), COPIAS (2), ADIAR_ROTACAO (60 s)}
@@ -418,6 +421,7 @@ mod app;
 pub mod atalho;
 mod casca;
 mod documento;
+pub mod escala;
 mod inicio;
 pub mod linha_comando;
 mod pedir_caminho;

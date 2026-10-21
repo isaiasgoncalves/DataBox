@@ -839,6 +839,10 @@ linha" · "Fechar".
   a janela (`Minimized(false)` e `Focus`) e liga o `fechar_pendente`, decidido no fim do primeiro quadro da janela
   restaurada, depois do `aplicar` (`decidir_fechar_pendente`): com o motivo, a pergunta; sem ele, a janela fecha,
   como a pessoa pediu. Com a janela à vista, o `logica` não faz nada.
+- **Tamanho da interface** (`editor/src/escala.rs`): no Linux, o main.rs lê uma vez, antes da janela, o
+  `text-scaling-factor` do GNOME (`gsettings`; sem ele, ou com valor fora de 0,5 a 3, é 1) e o aplica como o zoom do
+  egui (`set_zoom_factor`), com a janela inicial e a mínima multiplicadas por ele; a escala do monitor continua com o
+  winit.
 - **Janela sem decoração** (no Windows e no Linux, `BARRA_PROPRIA` no main.rs, menos com o `--moldura-do-sistema`; o
   código em `editor/src/casca/janela.rs`, que diz também o que muda no Linux): a
   barra de título é a faixa de 30 px do DataBox (logo, menus Arquivo/Editar/Exibir/Ajuda, o título "arquivo ·

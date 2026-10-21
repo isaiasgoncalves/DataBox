@@ -27,6 +27,9 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ### Corrigido
 
+- **Linux:** o DataBox segue o tamanho do texto do GNOME (Acessibilidade › Texto grande, ou o fator de escala das
+  fontes no Ajustes): com 125%, a interface inteira e a janela inicial crescem 25%, e ele deixa de parecer menor que
+  os outros programas na mesma tela.
 - O canto de cima à esquerda do documento, com a primeira aba ativa, tinha um recorte: a faixa de cima do documento
   continuava arredondada embaixo da aba reta.
 
