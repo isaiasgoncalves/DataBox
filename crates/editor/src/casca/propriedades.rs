@@ -18,7 +18,7 @@
 //! de ferramentas, Ctrl+Alt+B) fica só na sessão; com o documento abaixo de [`DOCUMENTO_MINIMO`], o painel some sem
 //! mudar a escolha da pessoa (`flex:999 1 560px` da seção do documento nas pranchetas). Com o painel escondido (pela
 //! pessoa ou pela largura), as telas de rolagem de página mostram as mesmas seções no fim do documento
-//! (`estado::propriedades_no_fim`, chamado no `app.rs`). As seções abrem e fecham no clique do título.
+//! (`estado::propriedades_no_fim`, chamado no `app/quadro.rs`). As seções abrem e fecham no clique do título.
 
 use egui::{ScrollArea, Ui};
 use estado::{Contexto, IdAba};
