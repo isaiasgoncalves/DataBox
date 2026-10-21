@@ -116,6 +116,16 @@ fn capturas_do_csv_e_do_trazer_colunas() {
             capturar(&mut h, "etapa56-trazer-colunas-escuro.png");
             h.key_press(Key::Escape);
             h.run_steps(2);
+            // a do README, sem a barra de status
+            alternar_barra_de_status(&mut h);
+            clicar_botao(&mut h, "Trazer colunas");
+            esperar(&mut h, "a janela", |h| tem_texto(h, "para vendas_2025.csv"));
+            assentar(&mut h);
+            h.remove_cursor();
+            h.run_steps(2);
+            capturar(&mut h, "readme-csv-trazer-colunas-escuro.png");
+            h.key_press(Key::Escape);
+            h.run_steps(2);
         }
     }
 }
@@ -128,6 +138,9 @@ fn capturas_do_json_e_do_texto() {
         let mut h = editor(&amb, tema);
         abrir(&mut h, &config, "JSON válido");
         capturar(&mut h, &format!("etapa56-json-{sufixo}.png"));
+        if tema == Tema::Claro {
+            capturar_para_o_readme(&mut h, "json-estrutura-claro.png");
+        }
         let quebrado = gravar(
             &amb,
             "config_com_erro.json",

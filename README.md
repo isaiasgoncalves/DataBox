@@ -29,13 +29,13 @@
 </p>
 
 <p align="center">
-  <img src="docs/imagens/dados-sqlite-escuro.png" alt="The Data tab of a SQLite table in DataBox, dark theme: filter, grid, Explorer and Properties" width="900">
+  <img src="docs/imagens/dados-sqlite-escuro.png" alt="The clientes table of a SQLite database in DataBox, dark theme: filter, grid, Explorer and the columns in Properties" width="900">
 </p>
 
 **DataBox** is a free, open-source data toolbox for data scientists, data engineers and developers. It is a Windows
-desktop app that opens, shows and edits everyday data files: **SQLite** databases, whole folders with their data
-files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). The UI is drawn straight on the GPU with
-[egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.2**.
+desktop app (with a Linux AppImage) that opens, shows and edits everyday data files: **SQLite** databases, whole folders
+with their data files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). The UI is drawn straight
+on the GPU with [egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.2**.
 
 > The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now (the full guide is
 > [README.pt-BR.md](README.pt-BR.md)). An English UI is on the roadmap; contributions are welcome.
@@ -53,7 +53,8 @@ files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). Th
   CSV saves keep the file's format and leave unchanged lines alone, and never overwrite a file another program changed.
 - 🧰 **A toolbox, not just an editor.** Open a folder and work with its databases, CSV, workbooks and JSON side by side
   in tabs, and join one file with another.
-- 🎨 **Pleasant to use.** Light and dark themes, frosted glass, its own icon set, keyboard shortcuts for everything.
+- 🎨 **Pleasant to use.** Light and dark themes, frosted glass, its own icon set, panels you can arrange your way
+  and keyboard shortcuts for everything.
 
 ---
 
@@ -61,8 +62,8 @@ files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). Th
 
 <table>
   <tr>
-    <td width="50%" valign="top"><a href="docs/imagens/inicio-pasta-claro.png"><img src="docs/imagens/inicio-pasta-claro.png" alt="Home with a folder open: databases, CSV, JSON, text and workbooks in the Explorer"></a><br><sub><b>Home</b> with a folder open: databases, CSV, JSON, text and workbooks in the Explorer</sub></td>
-    <td width="50%" valign="top"><a href="docs/imagens/consulta-sql-escuro.png"><img src="docs/imagens/consulta-sql-escuro.png" alt="SQL Query with several statements: a result for each, and the error shows where it stopped"></a><br><sub><b>SQL Query</b> with several statements: a result for each, and the error shows where it stopped</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/inicio-pasta-claro.png"><img src="docs/imagens/inicio-pasta-claro.png" alt="Home with a folder open: databases, CSV, JSON, text and workbooks in the Explorer, and the panel shortcuts"></a><br><sub><b>Home</b> with a folder open: databases, CSV, JSON, text and workbooks in the Explorer, and the panel shortcuts</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/consulta-sql-escuro.png"><img src="docs/imagens/consulta-sql-escuro.png" alt="SQL Query with several statements: a result for each, the error shows where it stopped, and the History alongside"></a><br><sub><b>SQL Query</b> with several statements: a result for each, the error shows where it stopped, and the History alongside</sub></td>
   </tr>
   <tr>
     <td width="50%" valign="top"><a href="docs/imagens/csv-filtro-escuro.png"><img src="docs/imagens/csv-filtro-escuro.png" alt="A 1,180-row CSV filtered by region and sorted by quantity"></a><br><sub>A 1,180-row <b>CSV</b> filtered by region and sorted by quantity</sub></td>
@@ -107,10 +108,14 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 1. **File › Open folder** (Ctrl+Shift+O) and pick the database's folder, or drag the `.db` onto the window. To look
    without risk, tick **Open databases read-only** on the Home screen.
 2. The **Overview** shows how many tables, views, indexes and triggers the database has. Click a table in the Explorer.
-3. In the **Data** tab (*Dados*), use search, **filters** and the header arrow to sort. Double-click a cell to edit
-   it; the row form shows BLOB, NULL and generated columns.
-4. The **Structure**, **Indexes and triggers** and **SQL definition** tabs show how the table is built. Altering a
-   column or creating an index always shows the SQL that will run first.
+3. The table's tab shows its data: use search, **filters** and the header arrow to sort. Double-click a cell to edit
+   it; it is saved right away, and the notice says where and offers **Undo** (or Ctrl+Z). The row form shows BLOB,
+   NULL and generated columns.
+4. Drag from one cell to another (or Shift with the arrows) to **select a range**; Ctrl+C copies it like Excel does,
+   ready to paste into a spreadsheet.
+5. **Properties** shows how the table is built: **Summary**, **Columns**, **Indexes** and **SQL** (Alt+1 to Alt+4);
+   the chosen column lights up in the grid. Altering a column or creating an index always shows the SQL that will run
+   first.
 
 ### Clean a CSV and join it with a spreadsheet
 
@@ -146,9 +151,15 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 ## Features
 
 **Everywhere**
-- Document tabs with a single **Back/Forward** history across tabs (Alt+←/→ or the mouse side buttons).
-- Custom window: title bar with menus, one toolbar for every tab, Explorer and query History on the left,
-  Properties on the right, status bar at the bottom; resizable side panels.
+- Document tabs with a single **Back/Forward** history across tabs (Alt+←/→ or the mouse side buttons); drag a tab
+  to reorder it (or Ctrl+Shift+PageUp/PageDown), and "All tabs" lists them.
+- Custom window on Windows and Linux: title bar with the File, Edit, View, Database, Table and Help menus, one
+  toolbar for every tab, Explorer and query History docked on the left, Properties on the right; optional status bar
+  (View › Status bar).
+- **Docked panels:** drag a panel's tab to the other dock, or out of the window to open it in a window of its own
+  (or use *Destacar em janela*, "Pop out"). Each panel's place and width are remembered.
+- **Select a range of cells** in Data, CSV, Excel and SQL results: drag, Shift+click or Shift with the arrows;
+  Ctrl+C copies it tab-separated, ready for a spreadsheet.
 - Frosted glass on menus, lists and dialogs; Light, Dark or Follow Windows theme.
 - Preferences (Ctrl+,): theme, code colors and font, export options; changes preview live and persist on **Save**.
 - Drag and drop a folder, database or data file onto the window to open it.
@@ -161,10 +172,12 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 
 **SQLite**
 - Database overview with counters of tables, views, indexes and triggers.
-- **Data** grid with search, filters, sorting, in-place editing, marked rows, a row form (BLOB, NULL, generated
-  columns), New row, Duplicate and Delete.
-- **Structure**, **Indexes and triggers** and **SQL definition** for each table; New table, New index and Alter
-  column, always showing the SQL that will run before it runs.
+- **Data** grid with search, filters, sorting, in-place editing (the last edit can be undone), marked rows, a row
+  form (BLOB, NULL, generated columns), New row, Duplicate and Delete.
+- **Columns**, **Indexes and triggers** and **SQL** for each table in Properties; New table, New column, New index
+  and Alter column, always showing the SQL that will run before it runs.
+- **Database** menu (maintenance, backup copy, export, close) and **Table** menu (views, Open in SQL Query, Copy
+  name, Rename, Delete).
 - **SQL Query**: as many queries as you like at once, syntax colors, query History and **Stop** (Esc).
 - **Export** to Excel, CSV or JSON (a table, only what search and filters show, marked rows, a query result or the
   whole database), with progress. 1 million rows to Excel in about 7 s.
@@ -267,8 +280,9 @@ ferramentas/appimage.sh                  # builds dist/DataBox-<version>-x86_64.
 ```
 
 At run time it uses the desktop's file dialogs (`xdg-desktop-portal`), `xdg-open` (package `xdg-utils`) and the Noto
-Sans or DejaVu fonts. The Linux build is checked by CI but has not been tried on many desktops yet: reports are
-welcome.
+Sans or DejaVu fonts. The window has DataBox's own title bar, as on Windows (`--moldura-do-sistema` switches back to
+the system one), and follows GNOME's text size. The Linux build is checked by CI and has been tried on GNOME; reports
+from other desktops are welcome.
 
 The screenshots in this README ([`docs/imagens/`](docs/imagens)) come from the screen tests, which render each screen
 headlessly with `egui_kittest` and save PNGs to `capturas\rust\`.

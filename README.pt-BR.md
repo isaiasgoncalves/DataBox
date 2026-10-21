@@ -29,14 +29,14 @@
 </p>
 
 <p align="center">
-  <img src="docs/imagens/dados-sqlite-escuro.png" alt="A aba Dados de uma tabela SQLite no DataBox, tema escuro: filtro, grade, Explorador e Propriedades" width="900">
+  <img src="docs/imagens/dados-sqlite-escuro.png" alt="A tabela clientes de um banco SQLite no DataBox, tema escuro: filtro, grade, Explorador e as colunas nas Propriedades" width="900">
 </p>
 
-O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto, para cientistas de dados, engenheiros
-de dados e desenvolvedores. É um programa de mesa para Windows que abre, mostra e edita os arquivos do dia a dia:
-bancos **SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e **planilhas do
-Excel** (só leitura). A interface é desenhada direto na placa de vídeo com [egui](https://github.com/emilk/egui), em
-Rust. Versão atual: **0.2.2**.
+O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto, para cientistas de dados, engenheiros de
+dados e desenvolvedores. É um programa de mesa para Windows (e Linux, em AppImage) que abre, mostra e edita os arquivos
+do dia a dia: bancos **SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e
+**planilhas do Excel** (só leitura). A interface é desenhada direto na placa de vídeo com
+[egui](https://github.com/emilk/egui), em Rust. Versão atual: **0.2.2**.
 
 **Sumário:** [Por que o DataBox](#por-que-o-databox) · [Galeria](#galeria) · [Baixar](#baixar) ·
 [Guias rápidos](#guias-rápidos) · [Recursos](#recursos) · [Primeiro uso](#primeiro-uso) ·
@@ -59,7 +59,8 @@ Rust. Versão atual: **0.2.2**.
   programa alterou.
 - 🧰 **Uma caixa de ferramentas, não só um editor.** Abra uma pasta e trabalhe com os bancos, CSV, planilhas e JSON
   dela lado a lado, em abas, e cruze um arquivo com outro.
-- 🎨 **Bonito e confortável.** Tema claro e escuro, vidro fosco, ícones próprios, atalhos de teclado para tudo.
+- 🎨 **Bonito e confortável.** Tema claro e escuro, vidro fosco, ícones próprios, painéis que você arruma do seu
+  jeito e atalhos de teclado para tudo.
 
 ---
 
@@ -67,8 +68,8 @@ Rust. Versão atual: **0.2.2**.
 
 <table>
   <tr>
-    <td width="50%" valign="top"><a href="docs/imagens/inicio-pasta-claro.png"><img src="docs/imagens/inicio-pasta-claro.png" alt="Início com uma pasta aberta: bancos, CSV, JSON, textos e planilhas no Explorador"></a><br><sub><b>Início</b> com uma pasta aberta: bancos, CSV, JSON, textos e planilhas no Explorador</sub></td>
-    <td width="50%" valign="top"><a href="docs/imagens/consulta-sql-escuro.png"><img src="docs/imagens/consulta-sql-escuro.png" alt="Consulta SQL com vários comandos: resultado de cada um, e o erro aponta onde parou"></a><br><sub><b>Consulta SQL</b> com vários comandos: resultado de cada um, e o erro aponta onde parou</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/inicio-pasta-claro.png"><img src="docs/imagens/inicio-pasta-claro.png" alt="Início com uma pasta aberta: bancos, CSV, JSON, textos e planilhas no Explorador, e os atalhos dos painéis"></a><br><sub><b>Início</b> com uma pasta aberta: bancos, CSV, JSON, textos e planilhas no Explorador, e os atalhos dos painéis</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/consulta-sql-escuro.png"><img src="docs/imagens/consulta-sql-escuro.png" alt="Consulta SQL com vários comandos: resultado de cada um, o erro aponta onde parou, e o Histórico ao lado"></a><br><sub><b>Consulta SQL</b> com vários comandos: resultado de cada um, o erro aponta onde parou, e o Histórico ao lado</sub></td>
   </tr>
   <tr>
     <td width="50%" valign="top"><a href="docs/imagens/csv-filtro-escuro.png"><img src="docs/imagens/csv-filtro-escuro.png" alt="CSV de 1.180 linhas filtrado por região e ordenado por quantidade"></a><br><sub><b>CSV</b> de 1.180 linhas filtrado por região e ordenado por quantidade</sub></td>
@@ -111,10 +112,13 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 1. **Arquivo › Abrir pasta** (Ctrl+Shift+O) e escolha a pasta do banco, ou arraste o `.db` para a janela. Para olhar
    sem risco, marque **Abrir bancos só para leitura** no Início.
 2. A **Visão geral** mostra quantas tabelas, visões, índices e gatilhos o banco tem. Clique numa tabela no Explorador.
-3. Na aba **Dados**, use a busca, os **filtros** e a seta do cabeçalho para ordenar. Duplo clique numa célula edita;
-   a ficha da linha mostra BLOB, NULL e colunas geradas.
-4. As abas **Estrutura**, **Índices e gatilhos** e **Definição SQL** mostram como a tabela é feita. Alterar uma
-   coluna ou criar um índice sempre mostra antes o SQL que vai rodar.
+3. A aba da tabela mostra os dados: use a busca, os **filtros** e a seta do cabeçalho para ordenar. Duplo clique numa
+   célula edita, e grava na hora; o aviso diz onde gravou e oferece **Desfazer** (ou Ctrl+Z). A ficha da linha mostra
+   BLOB, NULL e colunas geradas.
+4. Arraste de uma célula a outra (ou Shift com as setas) para **selecionar um intervalo**; Ctrl+C copia como o Excel,
+   pronto para colar numa planilha.
+5. As **Propriedades** mostram como a tabela é feita: **Resumo**, **Colunas**, **Índices** e **SQL** (Alt+1 a Alt+4);
+   a coluna escolhida acende na grade. Alterar uma coluna ou criar um índice sempre mostra antes o SQL que vai rodar.
 
 ### Limpar e cruzar um CSV com uma planilha
 
@@ -154,13 +158,18 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 
 - **Abas de documento:** cada coisa aberta fica numa aba ("clientes", "Consulta 1", "vendas.csv"…), com
   **Voltar e Avançar** num histórico só, que atravessa as abas (Alt+← e Alt+→, ou os botões laterais do mouse).
-- **Janela própria:** barra de título com os menus Arquivo, Editar, Exibir, Banco, Tabela e Ajuda; barra de
-  ferramentas que é sempre a mesma (cada aba liga só os botões que fazem sentido nela); Explorador e Histórico de
-  consultas numa doca à esquerda; Propriedades numa doca à direita; barra de status embaixo.
+  Arraste uma aba para mudar o lugar dela (ou Ctrl+Shift+PageUp e PageDown); "Todas as abas", na ponta da faixa, lista
+  todas.
+- **Janela própria**, no Windows e no Linux: barra de título com os menus Arquivo, Editar, Exibir, Banco, Tabela e
+  Ajuda e os botões da janela; barra de ferramentas que é sempre a mesma (cada aba liga só os botões que fazem sentido
+  nela); Explorador e Histórico de consultas numa doca à esquerda; Propriedades numa doca à direita. A barra de status
+  é opcional (Exibir › Barra de status).
 - **Painéis em docas:** arraste a aba de um painel para a outra doca, ou para fora da janela para abrir o painel numa
   janela própria (ou use "Destacar em janela"). O lugar de cada painel fica guardado.
 - **Tabelas numa aba só:** a aba mostra os dados; as colunas, os índices e o SQL de criação ficam nas Propriedades
   (Alt+1 a Alt+4), e a coluna escolhida acende na grade.
+- **Selecionar um intervalo de células** nos Dados, no CSV, no Excel e no resultado da Consulta SQL: arraste,
+  Shift+clique ou Shift com as setas; Ctrl+C copia com tabulações, para colar numa planilha.
 - **Painéis redimensionáveis:** arraste a divisória entre o painel e o documento; duplo clique volta à largura padrão.
   A largura fica guardada para a próxima vez.
 - **Vidro fosco** nos menus, nas listas e nas janelas, que ficam por cima do resto.
@@ -185,10 +194,12 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 ### Banco SQLite
 
 - **Visão geral** do banco, com os contadores de tabelas, visões, índices e gatilhos.
-- **Dados:** grade com busca, filtros, ordenação, edição no lugar, linhas marcadas, a ficha da linha (com BLOB, NULL
-  e colunas geradas), Nova linha, Duplicar e Excluir.
-- **Estrutura**, **Índices e gatilhos** e **Definição SQL** de cada tabela; Nova tabela, Novo índice e Alterar a
-  coluna, sempre mostrando antes o SQL que vai rodar.
+- **Dados:** grade com busca, filtros, ordenação, edição no lugar (a última edição tem **Desfazer**), linhas
+  marcadas, a ficha da linha (com BLOB, NULL e colunas geradas), Nova linha, Duplicar e Excluir.
+- **Colunas**, **Índices e gatilhos** e **SQL** de cada tabela nas Propriedades; Nova tabela, Nova coluna, Novo
+  índice e Alterar a coluna, sempre mostrando antes o SQL que vai rodar.
+- Menus **Banco** (manutenções, cópia de segurança, exportar, fechar) e **Tabela** (vistas, Abrir na Consulta SQL,
+  Copiar o nome, Renomear, Excluir).
 - **Consulta SQL:** quantas consultas quiser ao mesmo tempo, com cores no código, Histórico de consultas e o botão
   **Interromper** (Esc) para parar uma consulta longa.
 - **Exportar** para Excel, CSV ou JSON (uma tabela, só o que a busca e os filtros mostram, as linhas marcadas, o
@@ -241,6 +252,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 | Alt+Home | Início |
 | Alt+1 a Alt+4 | Resumo, Colunas, Índices e SQL nas Propriedades da tabela |
 | Alt+← / Alt+→ | Voltar / Avançar |
+| Ctrl+Shift+PageUp / PageDown | Mover a aba ativa para a esquerda / a direita |
+| Ctrl+C | Copiar a célula ou o intervalo selecionado |
 
 ---
 
@@ -276,7 +289,7 @@ DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador
 
 | O quê | Onde |
 |---|---|
-| Preferências (tema, recentes, histórico de SQL, exportação, larguras dos painéis, pasta aberta) | `%APPDATA%\DataBox\preferencias.json` |
+| Preferências (tema, recentes, histórico de SQL, exportação, lugar e largura dos painéis, barra de status, pasta aberta) | `%APPDATA%\DataBox\preferencias.json` |
 | Registro de problemas (log) | `%LOCALAPPDATA%\DataBox\databox.log` |
 
 Em Ajuda › Sobre o DataBox, os links abrem essas duas pastas. Apagar o `preferencias.json` volta tudo ao padrão.
@@ -352,8 +365,9 @@ ferramentas/appimage.sh                  # monta dist/DataBox-<versão>-x86_64.A
 
 Para rodar, ele usa os diálogos de arquivo da área de trabalho (`xdg-desktop-portal`), o `xdg-open` (pacote
 `xdg-utils`) e as fontes Noto Sans ou DejaVu. As preferências ficam em `~/.config/DataBox` e o log em
-`~/.local/state/DataBox`. A janela usa a moldura do sistema (a barra de título própria é só do Windows). O build do
-Linux passa no CI, mas ainda foi pouco testado em áreas de trabalho de verdade: conte nas issues como foi.
+`~/.local/state/DataBox`. A janela tem a barra de título do DataBox, como no Windows (`--moldura-do-sistema` volta
+à do sistema), e segue o tamanho do texto do GNOME. O build do Linux passa no CI e foi testado no GNOME; em outras
+áreas de trabalho, conte nas issues como foi.
 
 ### Testar
 

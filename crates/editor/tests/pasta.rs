@@ -891,5 +891,8 @@ fn capturas_da_parada_da_etapa_4() {
         h.state_mut().ir(Rota::Inicio);
         assentar(&mut h);
         capturar(&mut h, &format!("etapa4-inicio-{sufixo}.png"));
+        if tema == Tema::Claro {
+            capturar_para_o_readme(&mut h, "inicio-pasta-claro.png");
+        }
     }
 }

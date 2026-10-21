@@ -3487,6 +3487,7 @@ fn cena_dos_dados_com_filtro_entre_as_abas() {
     assert!(ligado(&h, Role::Link, "clientes"));
     assert!(existe(&h, Role::Label, "clientes · 60 linhas · 7 colunas"), "{:?}", textos(&h));
     capturar(&mut h, "casca-dados-abas-escuro.png");
+    capturar_para_o_readme(&mut h, "dados-sqlite-escuro.png");
 }
 
 /// A prancheta 3: a Consulta 2 escura com o roteiro de três comandos (o último com erro) e o Histórico à esquerda.
@@ -3527,6 +3528,7 @@ fn cena_da_consulta_com_o_historico() {
     assert_eq!(ativa, "Consulta 2");
     assert!(h.query(by().role(Role::Button).label("PRAGMA integrity_check")).is_some(), "{:?}", textos(&h));
     capturar(&mut h, "casca-consulta-2-escuro.png");
+    capturar_para_o_readme(&mut h, "consulta-sql-escuro.png");
 }
 
 /// A prancheta 6: clientes clara, com a vista Colunas e a transação aberta (o aviso no documento e o modo na barra
