@@ -102,12 +102,21 @@ fn partes(texto: &str, decimal: char, aceita_expoente: bool) -> Option<Partes> {
 /// Lê o texto como número, com o `decimal` do arquivo. Espaços nas pontas não contam; aceita sinal, milhar
 /// (`1.234,5` com decimal `,`) e notação científica (`1,5E3`).
 pub fn analisar_numero(texto: &str, decimal: char) -> Option<f64> {
+    literal_numerico(texto, decimal)?.parse().ok()
+}
+
+/// O número escrito como literal de código, que o JSON, o SQL e o Python leem igual: o `-` só no negativo, o
+/// ponto decimal, sem milhar e sem zeros à esquerda (`0` antes da vírgula que começa o número), o expoente em
+/// `e` (`1,5E3` → `1.5e3`). Os zeros à direita da parte decimal ficam como estão (`12,50` → `12.50`). Lê como o
+/// [`analisar_numero`]; `None` quando o texto não é número.
+pub fn literal_numerico(texto: &str, decimal: char) -> Option<String> {
     let p = partes(texto.trim(), decimal, true)?;
-    let mut s = String::with_capacity(p.inteiro.len() + p.fracao.len() + 8);
+    let inteiro = p.inteiro.trim_start_matches('0');
+    let mut s = String::with_capacity(inteiro.len() + p.fracao.len() + 8);
     if p.negativo {
         s.push('-');
     }
-    s.push_str(if p.inteiro.is_empty() { "0" } else { &p.inteiro });
+    s.push_str(if inteiro.is_empty() { "0" } else { inteiro });
     if !p.fracao.is_empty() {
         s.push('.');
         s.push_str(&p.fracao);
@@ -116,7 +125,7 @@ pub fn analisar_numero(texto: &str, decimal: char) -> Option<f64> {
         s.push('e');
         s.push_str(&e.to_string());
     }
-    s.parse().ok()
+    Some(s)
 }
 
 /// A forma canônica de um número escrito, para comparar "007", "7", "7,0" e "+7" pelo valor: sem sinal `+`,
@@ -326,6 +335,22 @@ mod testes {
         assert_eq!(analisar_numero("1e-3", '.'), Some(0.001));
         assert_eq!(analisar_numero("+3", '.'), Some(3.0));
         assert_eq!(analisar_numero("1,5", '.'), None);
+    }
+
+    #[test]
+    fn literal_de_codigo() {
+        assert_eq!(literal_numerico("13.741,03", ',').as_deref(), Some("13741.03"));
+        assert_eq!(literal_numerico("-1.234,50", ',').as_deref(), Some("-1234.50"));
+        assert_eq!(literal_numerico(",5", ',').as_deref(), Some("0.5"));
+        assert_eq!(literal_numerico("007", ',').as_deref(), Some("7"));
+        assert_eq!(literal_numerico("0", ',').as_deref(), Some("0"));
+        assert_eq!(literal_numerico("+7", '.').as_deref(), Some("7"));
+        assert_eq!(literal_numerico("1,5E3", ',').as_deref(), Some("1.5e3"));
+        assert_eq!(literal_numerico("1e-3", '.').as_deref(), Some("1e-3"));
+        assert_eq!(literal_numerico("1,234.5", '.').as_deref(), Some("1234.5"));
+        assert_eq!(literal_numerico("1.5", ','), None);
+        assert_eq!(literal_numerico("abc", '.'), None);
+        assert_eq!(literal_numerico("", '.'), None);
     }
 
     #[test]
