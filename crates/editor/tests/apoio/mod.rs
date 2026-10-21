@@ -365,6 +365,22 @@ pub fn capturar(h: &mut H, nome: &str) -> PathBuf {
     destino
 }
 
+/// Mostra ou esconde a barra de status pelo Exibir › Barra de status.
+pub fn alternar_barra_de_status(h: &mut H) {
+    abrir_menu(h, "Exibir");
+    clicar_item(h, "Barra de status");
+    assentar(h);
+}
+
+/// Grava `capturas/rust/readme-<nome>`, a captura que vai para `docs/imagens/<nome>` e para a galeria do README: sem
+/// a barra de status, como o app abre desde a 0.2.2 (e a põe de volta depois).
+pub fn capturar_para_o_readme(h: &mut H, nome: &str) -> PathBuf {
+    alternar_barra_de_status(h);
+    let destino = capturar(h, &format!("readme-{nome}"));
+    alternar_barra_de_status(h);
+    destino
+}
+
 /// Cria um banco SQLite pequeno com o SQL dado (pelo serviço de um ambiente descartável).
 pub fn criar_banco(caminho: &Path, sql: &str) {
     let prefs = prefs::Preferencias::abrir(Some(caminho.with_extension("prefs.json")));
