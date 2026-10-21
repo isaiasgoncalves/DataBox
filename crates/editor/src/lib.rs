@@ -47,6 +47,9 @@
 //!       (`prefs.paineis()`, lidas antes da janela); as divisórias as mudam e a casca as guarda ao fim do gesto
 //!   com_lugares(prefs::LugaresPaineis) -> Editor   onde cada painel morava (a doca da esquerda, a da direita ou a
 //!       janela própria; `prefs.lugares()`); mudar o painel de lugar grava o lugar novo
+//!   com_barra_status(bool) -> Editor   a barra de status à vista (padrão: sim; o main.rs passa
+//!       `prefs.barra_status()`, escondida enquanto a pessoa não a mostrar); o Exibir › Barra de status a alterna e
+//!       grava a escolha
 //!   desenhar(&mut self, ui: &mut egui::Ui, frame: Option<&eframe::Frame>)
 //!       um quadro inteiro na janela (`ui` = a janela toda, sem margem; frame None nos testes, sem diálogos)
 //!   titulo() -> &str        "vendas.db · DataBox" (sem banco, "DataBox"); vai para a janela sozinho

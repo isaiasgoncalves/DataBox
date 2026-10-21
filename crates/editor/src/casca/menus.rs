@@ -15,7 +15,8 @@
 //! - **Exibir** (a prancheta Main, 262px): Início (Alt+Home; a aba Início, que o trilho abria até 19/10/2026) |
 //!   Explorador (Ctrl+B), Propriedades (Ctrl+Alt+B) e Histórico de consultas, marcados quando à vista na doca ou na
 //!   janela própria (as Propriedades seguem o botão da barra: desligadas quando sumiram por falta de largura e no
-//!   Início, que não as tem) | Tema ▸ (210px: Seguir o Windows, Claro e Escuro, com o ponto no
+//!   Início, que não as tem), e a Barra de status (escondida por padrão desde 20/10/2026; o que ela mostrava está
+//!   nas Propriedades e nos rodapés dos documentos) | Tema ▸ (210px: Seguir o Windows, Claro e Escuro, com o ponto no
 //!   escolhido, e "Preferências de aparência", que abre as Preferências na seção Aparência).
 //! - **Banco** (revisão de UI de 19/10/2026, prancheta 3; só com um banco aberto, entre Exibir e Ajuda, o
 //!   `.menu-ctx` de 290px com as silhuetas): Visão geral · Nova consulta SQL · Nova tabela (desligada em só leitura) |
@@ -82,6 +83,8 @@ pub(crate) struct Menus<'a> {
     /// O estado do botão Painel de propriedades da barra (a marca e o desligado do item Propriedades).
     pub propriedades: EstadoPainel,
     pub tema: Tema,
+    /// A barra de status à vista (a marca do Exibir › Barra de status).
+    pub barra_status: bool,
     /// O banco aberto (com ele, o menu Banco).
     pub banco: Option<&'a BancoInfo>,
     /// A tabela ou visão à vista (com ela, o menu Tabela).
@@ -121,6 +124,8 @@ pub(crate) enum PedidoMenu {
     Verbo(Verbo),
     /// Mostrar ou esconder o Explorador, as Propriedades ou o Histórico de consultas.
     Painel(Painel),
+    /// Mostrar ou esconder a barra de status.
+    BarraStatus,
     /// Um item do menu Tabela, para a tabela à vista.
     Tabela(ItemTabela),
     /// A janela "Atalhos do teclado" e a "Sobre o DataBox".
@@ -240,6 +245,9 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
         }
         if p.item_marcado("Histórico de consultas", None, a_vista(Painel::Historico)).clicked() {
             pedido = Some(PedidoMenu::Painel(Painel::Historico));
+        }
+        if p.item_marcado("Barra de status", None, m.barra_status).clicked() {
+            pedido = Some(PedidoMenu::BarraStatus);
         }
         p.separador();
         p.submenu("Tema", LARGURA_TEMA, |p| {

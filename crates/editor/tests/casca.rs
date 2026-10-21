@@ -439,8 +439,12 @@ fn visao_geral_so_leitura_so_tem_verificacoes_e_copia() {
     let mut h = harness_com(&amb, Tema::Claro, TAMANHO, partida, |_| None);
     // a pílula "só leitura" na faixa, logo depois do nome
     assert!(tem_texto(&h, "só leitura"));
-    let pilula = h.get(by().label("só leitura")).rect();
-    assert!(pilula.top() > documento(&h).top() && pilula.bottom() < documento(&h).top() + 42.0, "{pilula:?}");
+    // (e outra na linha "Gravação" das Propriedades, revisão de 20/10/2026)
+    let doc = documento(&h);
+    let pilulas: Vec<egui::Rect> = h.query_all(by().label("só leitura")).map(|n| n.rect()).collect();
+    assert_eq!(pilulas.len(), 2, "{pilulas:?}");
+    let pilula = pilulas.iter().find(|r| doc.contains_rect(**r)).copied().expect("a pílula da faixa");
+    assert!(pilula.top() > doc.top() && pilula.bottom() < doc.top() + 42.0, "{pilula:?}");
     // a Manutenção nas Propriedades: só as verificações e a cópia
     let t = textos_das_propriedades(&h);
     for item in
@@ -4935,4 +4939,29 @@ fn abas_das_docas_dizem_qual_esta_a_vista() {
     // pelo Exibir, de volta ao Explorador
     exibir(&mut h, "Explorador");
     assert!(aba_do_painel_ativa(&h, "Explorador"));
+}
+
+#[test]
+fn barra_de_status_escondida_pelas_preferencias_e_mostrada_pelo_exibir() {
+    let amb = Ambiente::exemplo("casca_sem_status");
+    let editor = editor::Editor::novo(std::sync::Arc::clone(&amb.servico), Tema::Claro, Partida::default())
+        .com_barra_status(amb.servico.prefs().barra_status());
+    let mut h = harness_editor(editor, Tema::Claro, TAMANHO);
+    // escondida por padrão (revisão de 20/10/2026): o modo de gravação fica nas Propriedades, com a frase na dica
+    assert!(!h.state().barra_status_a_vista());
+    assert!(!existe(&h, Role::Label, "Gravação imediata"), "sem a barra");
+    assert!(textos_das_propriedades(&h).iter().any(|t| t == "imediata"), "{:?}", textos_das_propriedades(&h));
+    let dica = ler_dica(&mut h, Role::Label, "imediata");
+    assert!(dica.contains("Tudo o que for salvo grava no arquivo na hora."), "{dica:?}");
+    // Exibir › Barra de status: aparece, e a escolha fica nas preferências
+    abrir_menu(&mut h, "Exibir");
+    clicar_item(&mut h, "Barra de status");
+    assert!(h.state().barra_status_a_vista());
+    assert!(existe(&h, Role::Label, "Gravação imediata"));
+    esperar(&mut h, "a preferência gravar", |_| amb.servico.prefs().barra_status());
+    // e some de novo
+    abrir_menu(&mut h, "Exibir");
+    clicar_item(&mut h, "Barra de status");
+    assert!(!existe(&h, Role::Label, "Gravação imediata"));
+    esperar(&mut h, "a preferência gravar", |_| !amb.servico.prefs().barra_status());
 }

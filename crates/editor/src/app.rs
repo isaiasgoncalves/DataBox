@@ -624,6 +624,8 @@ pub struct Editor {
     /// A janela não tem a decoração do sistema: a barra de título desenha os botões minimizar, maximizar e fechar,
     /// arrasta a janela e a redimensiona pelas bordas ([`casca::janela`]).
     barra_propria: bool,
+    /// A barra de status à vista (Exibir › Barra de status; o main.rs passa a das preferências, escondida por padrão).
+    barra_status: bool,
     pode_fechar: bool,
     /// Um pedido de fechar chegou com a janela minimizada ou encoberta e foi cancelado (ver [`Editor::logica`]):
     /// a pergunta sai no primeiro quadro da janela restaurada.
@@ -716,6 +718,7 @@ impl Editor {
             titulo: titulo_da_janela(None, None),
             titulo_enviado: None,
             barra_propria: true,
+            barra_status: true,
             pode_fechar: false,
             fechar_pendente: false,
             pendentes: Vec::new(),
@@ -763,6 +766,19 @@ impl Editor {
         self.larguras = Larguras::from(paineis);
         self.larguras_guardadas = self.larguras;
         self
+    }
+
+    /// Com ou sem a barra de status (`prefs.barra_status()`, lida pelo executável antes da janela; escondida enquanto
+    /// a pessoa não a mostrar pelo Exibir). O padrão do `Editor` é com ela, como o dos testes de tela.
+    pub fn com_barra_status(mut self, sim: bool) -> Editor {
+        self.barra_status = sim;
+        self
+    }
+
+    /// A barra de status está à vista.
+    #[doc(hidden)]
+    pub fn barra_status_a_vista(&self) -> bool {
+        self.barra_status
     }
 
     /// Com os lugares dos painéis que a pessoa escolheu nas sessões de antes (`prefs.lugares()`, lidos pelo
@@ -3383,6 +3399,15 @@ impl Editor {
         self.depois_de_mover(ctx, mudou);
     }
 
+    /// O Exibir › Barra de status: mostra ou esconde a barra e grava a escolha nas preferências, numa tarefa.
+    fn alternar_barra_status(&mut self, ctx: &egui::Context) {
+        self.barra_status = !self.barra_status;
+        let mudanca = prefs::Mudanca::barra_status(self.barra_status);
+        let promessa = self.tarefa(ctx, move |s, _| s.gravar_preferencias(mudanca).map(|_| ()));
+        self.tarefas.push(Tarefa::Gravar(promessa));
+        ctx.request_repaint();
+    }
+
     fn depois_de_mover(&mut self, ctx: &egui::Context, mudou: bool) {
         if mudou {
             let mudanca = prefs::Mudanca::lugares(self.paineis.para_prefs());
@@ -3444,21 +3469,22 @@ impl Editor {
         };
 
         // as medidas, de cima para baixo: a barra de título de 30px, a barra de ferramentas (`margin:6px 8px 0`,
-        // 44px) e o corpo (`padding:8px; gap:8px`), até a barra de status (`margin:0 8px 8px`): a doca da esquerda, a
-        // seção do documento (a faixa de abas e o `.doc`) e a doca da direita
+        // 44px) e o corpo (`padding:8px; gap:8px`), até a barra de status (`margin:0 8px 8px`; sem ela, até a margem
+        // de baixo): a doca da esquerda, a seção do documento (a faixa de abas e o `.doc`) e a doca da direita
         let janela = ctx.content_rect();
         let topo = Rect::from_min_size(janela.min, vec2(janela.width(), ALTURA_TITULO));
         let rect_barra = Rect::from_min_size(
             pos2(janela.left() + ESPACO, topo.bottom() + MARGEM_BARRA),
             vec2(janela.width() - 2.0 * ESPACO, ALTURA_BARRA),
         );
+        let altura_status = if self.barra_status { ALTURA_STATUS + ESPACO } else { 0.0 };
         let rect_status = Rect::from_min_max(
             pos2(janela.left() + ESPACO, janela.bottom() - ESPACO - ALTURA_STATUS),
             pos2(janela.right() - ESPACO, janela.bottom() - ESPACO),
         );
         let corpo = Rect::from_min_max(
             pos2(janela.left() + ESPACO, rect_barra.bottom() + ESPACO),
-            pos2(janela.right() - ESPACO, rect_status.top() - ESPACO),
+            pos2(janela.right() - ESPACO, janela.bottom() - ESPACO - altura_status),
         );
         let pronta = matches!(self.situacao, Situacao::Pronta);
 
@@ -3494,6 +3520,7 @@ impl Editor {
             tem_propriedades: pronta && self.abas.ativa().conteudo.tem_propriedades(),
             propriedades: self.medidas(corpo).botao_do_painel,
             tema: self.tema,
+            barra_status: self.barra_status,
             banco: self.estado.banco.as_ref(),
             tabela: match (pronta, &self.abas.ativa().conteudo) {
                 (true, Documento::Tabela(t)) => Some(MenuTabela {
@@ -3512,6 +3539,7 @@ impl Editor {
             Some(PedidoMenu::Acao(a)) => acoes.push((None, a)),
             Some(PedidoMenu::Verbo(v)) => verbo = Some(v),
             Some(PedidoMenu::Painel(painel)) => self.paineis.alternar(painel),
+            Some(PedidoMenu::BarraStatus) => self.alternar_barra_status(&ctx),
             Some(PedidoMenu::Tabela(item)) => self.item_da_tabela(&ctx, item),
             Some(PedidoMenu::Atalhos) => self.janelas.atalhos = true,
             Some(PedidoMenu::Sobre) => {
@@ -3786,10 +3814,12 @@ impl Editor {
         let do_status = self.documento().and_then(|d| d.status(&self.estado));
         // a aba de arquivo que diz o próprio status (os editores da etapa 5): a barra do arquivo, no lugar da do banco
         let do_arquivo = self.documento().and_then(|d| d.doc_ref().status_do_arquivo(&self.estado));
-        let mut ui_status = raiz.new_child(UiBuilder::new().id_salt("barra-status").max_rect(rect_status));
-        let consulta = self.nome_da_consulta_da_transacao();
-        let (estado, versao) = (&self.estado, self.versao);
-        self.casca.status(&mut ui_status, estado, versao, do_status.as_deref(), &consulta, do_arquivo.as_ref());
+        if self.barra_status {
+            let mut ui_status = raiz.new_child(UiBuilder::new().id_salt("barra-status").max_rect(rect_status));
+            let consulta = self.nome_da_consulta_da_transacao();
+            let (estado, versao) = (&self.estado, self.versao);
+            self.casca.status(&mut ui_status, estado, versao, do_status.as_deref(), &consulta, do_arquivo.as_ref());
+        }
 
         // a aba que outra aba mudou no quadro anterior relê agora (a célula em edição já gravou neste quadro)
         self.reler_a_ativa(&ctx, reler_ativa);
@@ -3858,8 +3888,14 @@ impl Editor {
         // a fila de perguntas ao fechar abas alteradas: a gravação esperada, a próxima pergunta ou o destino
         self.andar_fila(&ctx);
         self.mostrar_confirmacao(&ctx, frame);
-        // o toast fica acima da barra de status, com o espaço de sempre entre os painéis
-        desenhar_toast(&ctx, rect_status.top() - ESPACO);
+        // o toast fica acima da barra de status, com o espaço de sempre entre os painéis; sem ela, acima do rodapé
+        // do documento (a paginação e o "Linhas 1–60 de 60" continuam à vista)
+        let limite_toast = if self.barra_status {
+            rect_status.top() - ESPACO
+        } else {
+            corpo.bottom() - interface::pecas::documento::ALTURA_RODAPE - ESPACO
+        };
+        desenhar_toast(&ctx, limite_toast);
         // os controles da janela sem decoração, por cima de tudo (também da janela modal)
         if self.barra_propria {
             casca::janela::controles_da_janela(&mut raiz, faixa.logo, faixa.livre);

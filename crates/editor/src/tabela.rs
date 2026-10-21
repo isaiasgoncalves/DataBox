@@ -551,9 +551,13 @@ impl estado::Documento for TelaTabela {
                 dados.propriedades(ui, ctx, tabela);
                 let (caminho, tamanho) =
                     self.arquivo.as_ref().map(|(_, c, t)| (c.as_str(), t.as_str())).unwrap_or_default();
+                let banco = ctx.estado.banco.as_ref();
                 let _ = Secao::new("propriedades::arquivo_curto", "Arquivo").mostrar(ui, |ui| {
                     ficha(ui, |d| {
                         d.linha_texto("Caminho", Some(caminho), "—");
+                        if let Some(b) = banco {
+                            crate::casca::status::linha_da_gravacao(d, b);
+                        }
                         d.linha_texto("Tamanho", Some(tamanho), "—");
                     });
                 });

@@ -2293,3 +2293,27 @@ fn lugares_estranhos_voltam_ao_padrao_e_as_chaves_novas_ficam() {
     gravar_texto(&arquivo, r#"{"tema": "dark", "lugares_paineis": "janela"}"#);
     assert_eq!(abrir(&arquivo).lugares(), LugaresPaineis::default());
 }
+
+#[test]
+fn barra_status_escondida_por_padrao_grava_e_volta() {
+    let tmp = PastaTemp::nova("barra-status");
+    let arquivo = tmp.arquivo();
+    let p = abrir(&arquivo);
+    assert!(!p.barra_status(), "escondida por padrão");
+    p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
+    assert!(!fs::read_to_string(&arquivo).unwrap().contains("barra_status"), "a chave só entra quando muda");
+    p.atualizar(Mudanca::barra_status(true)).unwrap();
+    assert!(p.barra_status());
+    assert_eq!(json_lido(&arquivo).campo("barra_status"), Some(&Json::Bool(true)));
+    assert!(abrir(&arquivo).barra_status(), "outra instância lê o mesmo");
+    assert_eq!(p.tema(), Tema::Escuro, "o resto fica como estava");
+    p.atualizar(Mudanca::barra_status(false)).unwrap();
+    assert!(!abrir(&arquivo).barra_status());
+    // valor que não é booleano: escondida
+    for valor in ["1", "\"sim\"", "null", "{}"] {
+        let tmp = PastaTemp::nova("barra-status-estranha");
+        let arquivo = tmp.arquivo();
+        gravar_texto(&arquivo, &format!(r#"{{"tema": "dark", "barra_status": {valor}}}"#));
+        assert!(!abrir(&arquivo).barra_status(), "{valor}");
+    }
+}

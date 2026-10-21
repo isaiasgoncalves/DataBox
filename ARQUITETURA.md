@@ -374,7 +374,10 @@ respeitado. `recentes()` devolve os três tipos (`existe` da pasta = é pasta qu
 arquivo = é arquivo comum) e esconde, guardados, os de `"tipo"` desconhecido; `limpar_recentes` tira os três.
 `pasta_aberta() → Option<String>` e `Mudanca.pasta_aberta: Option<Option<PathBuf>>` (None não mexe, `Some(None)`
 apaga, vazio → 400 "A pasta aberta precisa ser um caminho."): a chave `"pasta_aberta"` vem depois de
-`"larguras_paineis"` e **só existe enquanto há pasta aberta** (apagada no Fechar pasta).
+`"larguras_paineis"` e **só existe enquanto há pasta aberta** (apagada no Fechar pasta). `barra_status() → bool` e
+`Mudanca.barra_status: Option<bool>` (`Mudanca::barra_status(b)`): a chave `"barra_status"` vem depois de
+`"pasta_aberta"`, só entra no arquivo na primeira mudança, e sem ela (ou com valor que não é booleano) a barra de
+status fica escondida.
 
 **Aparência do código:** `aparencia() → Aparencia { cores_codigo: CoresCodigo::{DataBox, AltoContraste,
 SolarizedEscuro, Monokai}, fonte_codigo: Option<String> /* None = Consolas */, tamanho_codigo: f32 }` (padrão
@@ -762,7 +765,9 @@ linha" · "Fechar".
     padrão, as setas andam 16 pt. Numa janela estreita, os dois painéis encolhem antes de as Propriedades sumirem
     (agora abaixo de ~1052 pt, não mais ~1182). A escolha vale entre as sessões (a chave `"larguras_paineis"`,
     §4.5), gravada ao fim do gesto;
-  - a **barra de status** (`status.rs`, 26 px): sem banco, o nome da pasta aberta (o ponto `--t3`, a dica com o
+  - a **barra de status** (`status.rs`, 26 px; escondida por padrão desde 20/10/2026, Exibir › Barra de status a
+    mostra e `prefs.barra_status()` lembra; sem ela, o corpo vai até a margem de baixo e o toast fica acima do rodapé
+    do documento; o modo de gravação também está na linha "Gravação" das Propriedades): sem banco, o nome da pasta aberta (o ponto `--t3`, a dica com o
     caminho) ou "Nenhuma pasta aberta"; com banco, o banco com o ponto (`--ok`; `--aviso` com a transação aberta), o
     modo de gravação ("Gravação imediata", "Transação aberta" ou "Só leitura", com a frase do aviso de transação na
     dica) e, à direita, o que a aba diz de si ("clientes · 60 linhas · 7 colunas", "SQL"), o SQLite e a codificação

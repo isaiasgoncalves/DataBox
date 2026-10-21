@@ -141,6 +141,7 @@ fn executar(args: &Argumentos) -> ExitCode {
     let aparencia = prefs.aparencia();
     let paineis = prefs.paineis();
     let lugares = prefs.lugares();
+    let barra_status = prefs.barra_status();
     let servico = Arc::new(servico::Servico::novo(prefs));
     let servico_ao_sair = Arc::clone(&servico);
     let reduzido = movimento_reduzido_do_windows();
@@ -170,7 +171,8 @@ fn executar(args: &Argumentos) -> ExitCode {
                     .com_barra_propria(BARRA_PROPRIA)
                     .com_renderizador(renderizador)
                     .com_larguras(paineis)
-                    .com_lugares(lugares),
+                    .com_lugares(lugares)
+                    .com_barra_status(barra_status),
             ))
         }),
     );
