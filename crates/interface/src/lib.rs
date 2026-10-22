@@ -213,7 +213,8 @@
 //!   - [`pecas::filtros`]: os filtros das grades, iguais nos Dados e no CSV (revisão de UI de 19/10/2026) —
 //!     [`pecas::filtros::filtros`]`(ui, &[EtiquetaFiltro], &ContagemFiltros) -> RespostaFiltros { abrir, tirar,
 //!     limpar, nova_condicao }` ("Filtros", as etiquetas, "+ Condição", a contagem e "Limpar filtros"),
-//!     [`pecas::filtros::barra_filtros`] (a `.barra-filtros` de 38px do CSV) e
+//!     [`pecas::filtros::filtros_com_direita`]`(…, |ui| …)` (o mesmo, com mais alguma coisa na ponta direita: a contagem
+//!     da busca do CSV), [`pecas::filtros::barra_filtros`] (a `.barra-filtros` de 38px do CSV) e
 //!     [`pecas::filtros::popover_condicao`]`(ctx, id, &mut CondicaoEmEdicao, colunas, operadores, sem_valor) ->
 //!     Option<FimCondicao>` (Coluna, Operador, Valor, Cancelar e Aplicar).
 //!   - [`pecas::divisoria::Divisoria`] (a alça dos painéis laterais da casca; ver "Mudanças de API").
@@ -284,7 +285,8 @@
 //!     casas)`, `somar_texto`, `juntar`, `partes`, `texto` = "Contagem 33 · Soma 98.231,40 · Média 8.930,13 · Mín.
 //!     154,03 · Máx. 17.810,34"), [`grade::rodape_da_selecao`]`(ui, &resumo)` (12px `--t2` na largura que sobra; o que
 //!     não cabe sai, primeiro o Mín. e o Máx., depois a Média, e vai para a dica) e [`grade::rodape_somando`] (o
-//!     "Somando…" de [`grade::SOMANDO`], com o ponto pulsante).
+//!     "Somando…" de [`grade::SOMANDO`], com o ponto pulsante) e [`grade::largura_minima_da_selecao`] (a contagem e a
+//!     soma, ou o "Somando…": o mínimo que a tela que divide o rodapé deixa para as contas).
 //!   - [`pecas::acao::Acao`] (`new(titulo, Icone).atalho("Ctrl+O").primaria(true).habilitado(..)`, `ui.add`: o `.acao`
 //!     do Início, 220×69 com o círculo de 36 e a silhueta de 20, o nome em 13/600 e o atalho no `.kbd`; o primário
 //!     usa o degradê do botão principal, o halo de 30px no hover e o texto branco).

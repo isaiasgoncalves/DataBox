@@ -229,3 +229,44 @@ fn capturas_do_menu_da_celula() {
         capturar(&mut h, nome);
     }
 }
+
+/// O rodapé dividido (0.2.3, item F): a contagem de linhas e o formato à esquerda, as contas da seleção à direita. As
+/// contas encolhem primeiro; o formato só sai (para a dica da contagem) quando nem a contagem e a soma caberiam.
+#[test]
+fn rodape_divide_o_espaco_entre_o_formato_e_as_contas() {
+    let amb = Ambiente::vazio("csv_rodape_dividido");
+    let conteudo = vendas(30);
+    let formato = "· Ponto e vírgula · UTF-8 · CRLF";
+    let selecionar = |h: &mut H| {
+        // pelo teclado: na janela estreita a coluna quantidade começa fora da vista
+        clicar_celula(h, 0, 0);
+        for _ in 0..4 {
+            tecla(h, Key::ArrowRight, Modifiers::NONE);
+        }
+        tecla(h, Key::ArrowDown, Modifiers::SHIFT);
+        tecla(h, Key::ArrowDown, Modifiers::SHIFT);
+        tecla(h, Key::ArrowRight, Modifiers::SHIFT);
+    };
+    let completo = contas(&conteudo, 0..3, &[4, 5]);
+    let pintado = |h: &H, inicio: &str| {
+        h.output()
+            .shapes
+            .iter()
+            .any(|c| matches!(&c.shape, egui::Shape::Text(t) if t.galley.text().starts_with(inicio)))
+    };
+    // da janela larga à estreita: (o formato à vista, as contas inteiras à vista)
+    let mut estados = Vec::new();
+    for largura in (600..=1240).rev().step_by(40) {
+        let tamanho = egui::vec2(largura as f32, 700.0);
+        let mut h = abrir_com(&amb, arquivo(&amb, "vendas_2025.csv", conteudo.clone()), Tema::Claro, tamanho);
+        selecionar(&mut h);
+        assert_eq!(rodape_da_selecao(&h), Some(completo.clone()), "o leitor de tela ouve as contas inteiras");
+        assert!(pintado(&h, "Contagem 6 · Soma "), "a contagem e a soma ficam sempre ({largura})");
+        estados.push((h.query_by_label(formato).is_some(), pintado(&h, &completo)));
+    }
+    assert_eq!(estados.first(), Some(&(true, true)), "larga: tudo cabe");
+    assert!(estados.contains(&(true, false)), "as contas encolhem primeiro, com o formato à vista: {estados:?}");
+    assert_eq!(estados.last(), Some(&(false, false)), "estreita: o formato sai para a dica");
+    assert!(!estados.contains(&(false, true)), "o formato nunca sai antes das contas: {estados:?}");
+    assert!(estados.windows(2).all(|w| w[0].0 >= w[1].0 && w[0].1 >= w[1].1), "o que sai não volta: {estados:?}");
+}

@@ -41,17 +41,15 @@ fn abre_o_csv_da_prancheta_7_e_mostra_a_grade() {
     assert!(h.query_by_label_contains("não salva").is_none());
 }
 
-/// A revisão de UI de 19/10/2026 (prancheta 7): a faixa com o nome e o formato em pílulas, a barra dos filtros (a
-/// dos Dados) e o rodapé "Linhas a–b de n" com as linhas à vista.
+/// Sem a faixa (0.2.3, item F; antes, a da revisão de UI de 19/10/2026 com o nome e o formato em pílulas): a barra
+/// dos filtros (a dos Dados) no alto do documento e o rodapé "Linhas a–b de n" com as linhas à vista e o formato.
 #[test]
-fn faixa_com_o_formato_barra_de_filtros_e_rodape_como_os_dados() {
+fn barra_de_filtros_no_alto_e_o_formato_no_rodape() {
     let amb = Ambiente::vazio("csv_faixa");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(1204)));
-    assert!(doc(&h).anatomia().faixa, "a faixa sempre, sem filtro");
-    assert!(h.query_by_label("vendas_2025.csv").is_some(), "o nome na faixa");
-    for pilula in ["Ponto e vírgula", "UTF-8", "CRLF"] {
-        assert!(h.query_by_label(pilula).is_some(), "a pílula {pilula}");
-    }
+    assert!(!doc(&h).anatomia().faixa, "sem a faixa: o nome está na aba e nas Propriedades");
+    assert!(h.query_by_label("Ponto e vírgula").is_none(), "nem as pílulas do formato");
+    assert!(h.query_by_label("· Ponto e vírgula · UTF-8 · CRLF").is_some(), "o formato no rodapé");
     assert!(h.query_by_label("Filtros").is_some(), "a barra dos filtros");
     assert!(h.query_by_label("Nova condição").is_some());
     assert!(h.query_by_label("Limpar filtros").is_none(), "sem condição, sem o Limpar");

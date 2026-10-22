@@ -52,7 +52,9 @@ fn busca_no_arquivo_inteiro_anda_e_volta_a_celula_de_antes() {
     buscar(&mut h, "sao luis");
     // o primeiro achado depois da célula ativa (a linha 52): a 98, o terceiro dos 41
     assert_eq!(rotulo(&h).as_deref(), Some("3 de 41"));
-    assert!(h.query_by_label("3 de 41").is_some(), "a contagem na faixa");
+    // a contagem na ponta direita da barra dos filtros (o CSV não tem a faixa)
+    let barra = h.get_by_label("Filtros").rect().center().y;
+    assert!((h.get_by_label("3 de 41").rect().center().y - barra).abs() < 4.0, "a contagem na barra dos filtros");
     assert_eq!(doc(&h).celula_ativa(), Some((97, 1)));
     h.key_press(Key::Enter);
     h.run_steps(2);

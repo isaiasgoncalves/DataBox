@@ -11,6 +11,7 @@ sem recurso novo. Os recursos (perfil, Salvar como, SQL sobre CSV, gráficos…)
 | C | Contas da coluna do CSV sem ler a coluna inteira na memória | correção | um CSV grande pode esgotar a memória |
 | D | CI confiável no Windows | correção (infra) | a repetição dos testes esconde as falhas intermitentes |
 | E | Fatiar o `editor/src/app.rs` e o `editor/tests/casca.rs` | dívida técnica | a 0.3 mexe nos dois; arquivos de ~5 mil linhas |
+| F | O CSV sem a faixa: o formato no rodapé | refinamento | a faixa repetia o nome da aba e ocupava uma linha |
 
 ---
 
@@ -213,6 +214,25 @@ desligado com a dica e o rodapé da seleção, nos dois temas, antes do PR do me
 
 ---
 
+## F. O CSV sem a faixa: o formato no rodapé
+
+Pedido do Isaías em 21/10/2026: "essa primeira barra onde está escrito validação.csv e as tags vírgula utf-8 lf poderia
+facilmente não existir, e essas informações poderiam estar na barra inferior onde está a contagem de linhas".
+
+- *Problema:* a faixa do CSV (o nome do arquivo e o formato em pílulas) repetia o nome que já está na aba e nas
+  Propriedades e tirava uma linha da grade.
+- *O que muda:* o CSV não tem faixa (`Anatomia` sem `com_faixa`); a barra dos filtros fica no alto do documento, como
+  nos Dados. O separador, a codificação e o fim de linha vão para o rodapé, logo depois de "Linhas 1–17 de 28", em
+  `--t3` ("· Ponto e vírgula · UTF-8 · CRLF"). A contagem da busca da barra ("3 de 41", item B) vai para a ponta
+  direita da barra dos filtros (`interface::pecas::filtros::filtros_com_direita`).
+- *O rodapé dividido:* com a seleção (A.3), as contas ficam à direita e encolhem primeiro (o Mín. e o Máx., depois a
+  Média); o formato só sai, para a dica da contagem, quando nem a contagem e a soma caberiam com ele
+  (`interface::grade::largura_minima_da_selecao`).
+- *Fora:* as faixas do Excel e do texto/JSON ficam como estão (o Isaías ainda vai decidir).
+- *Onde:* no PR 5 (o menu nas telas), num commit separado: ele mexe no mesmo rodapé.
+
+---
+
 ## Ordem e PRs da 0.2.3
 
 1. `ci`: testes de tela num passo próprio, Windows numa thread, sem repetição (D). Primeiro, para os outros PRs já
@@ -221,7 +241,7 @@ desligado com a dica e o rodapé da seleção, nos dois temas, antes do PR do me
 3. `feat(tabular, interface)`: formatos de cópia e o menu da célula na grade, com o mostruário (A).
 4. `fix(tela_csv, tabular)`: as contas da coluna em fluxo (C).
 5. `feat(tela_*)`: o menu nas quatro grades, só os itens de leitura (copiar, filtrar, marcar, ficha) e o rodapé da
-   seleção (A). Depende do 3.
+   seleção (A). Depende do 3. Leva também o CSV sem a faixa (F), num commit à parte.
 6. `feat(banco, tela_dados, tela_csv)`: Colar, Limpar, Definir como NULL e Excluir as linhas, com o Desfazer de uma
    vez (A). Depende do 5.
 7. `fix(tabular, planilha, tela_csv, tela_planilha, tela_texto)`: Ctrl+F nos arquivos (B). Toca as mesmas telas que o

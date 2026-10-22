@@ -15,11 +15,10 @@ use std::path::Path;
 use std::sync::Arc;
 
 use comum::Codigo;
-use egui::{Align, Layout, Ui};
+use egui::Ui;
 use estado::Promessa;
 use interface::grade::{
-    AcaoCelula, Intervalo, OfertasCelula, ResumoSelecao, frase_do_intervalo_copiado, menu_da_celula, rodape_da_selecao,
-    rodape_somando,
+    AcaoCelula, Intervalo, OfertasCelula, ResumoSelecao, frase_do_intervalo_copiado, menu_da_celula,
 };
 use interface::pecas::toast::{toast_atencao, toast_concluido};
 use tabular::colunas::{OpcoesCopia, ValorCopia, escrever_como, escrever_tsv, escrever_tsv_com_cabecalho};
@@ -238,7 +237,7 @@ impl TelaCsv {
 
     /// As contas do rodapé da seleção, com mais de uma célula selecionada: na hora, se o intervalo está na página;
     /// senão numa tarefa (None em `Some(None)`: somando). Uma seleção nova cancela a conta da anterior.
-    fn resumo_da_selecao(&mut self, ectx: &egui::Context) -> Option<Option<ResumoSelecao>> {
+    pub(crate) fn resumo_da_selecao(&mut self, ectx: &egui::Context) -> Option<Option<ResumoSelecao>> {
         let Some(iv) = self.grade.as_ref().and_then(|g| g.nucleo.intervalo()).filter(Intervalo::varias) else {
             self.soma = None;
             return None;
@@ -325,15 +324,6 @@ impl TelaCsv {
             Ok(resumo)
         });
         Some(EstadoSoma::Somando { promessa, controle })
-    }
-
-    /// O lado direito do rodapé com mais de uma célula selecionada: as contas, ou "Somando…".
-    pub(crate) fn rodape_da_selecao(&mut self, ui: &mut Ui) {
-        let Some(resumo) = self.resumo_da_selecao(ui.ctx()) else { return };
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| match resumo {
-            Some(r) => rodape_da_selecao(ui, &r),
-            None => rodape_somando(ui),
-        });
     }
 }
 

@@ -19,6 +19,12 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   numéricas). Onde não cabe, saem o mínimo e o máximo, depois a média, e vão para a dica. No CSV grande, a conta roda
   em segundo plano com "Somando…".
 
+### Alterado
+
+- **O CSV não tem mais a faixa de cima:** o nome do arquivo já está na aba e nas Propriedades, e o formato (separador,
+  codificação e fim de linha) foi para o rodapé, ao lado da contagem de linhas. A barra dos filtros sobe para o alto
+  do documento, como nos Dados, e a contagem da busca ("3 de 41") fica na ponta direita dela. A grade ganha uma linha.
+
 ### Corrigido
 
 - **As contas da coluna do CSV não leem mais a coluna inteira para a memória:** a seção Coluna das Propriedades

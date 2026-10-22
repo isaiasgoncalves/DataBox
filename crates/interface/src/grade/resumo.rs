@@ -162,6 +162,18 @@ pub fn rodape_da_selecao(ui: &mut Ui, resumo: &ResumoSelecao) -> Response {
     if n < partes.len() { r.on_hover_text(partes[n..].join(SEPARADOR)) } else { r }
 }
 
+/// A menor largura do rodapé da seleção: a contagem e a soma (`Some`), ou o "Somando…" (`None`). A tela que divide o
+/// rodapé com outras coisas (o formato do CSV) as tira antes de deixar as contas menores que isto.
+pub fn largura_minima_da_selecao(ui: &Ui, resumo: Option<&ResumoSelecao>) -> f32 {
+    let Some(resumo) = resumo else {
+        // o ponto pulsante (6 + 6) e o texto do `carregando`
+        return 12.0 + galley(ui, SOMANDO, fontes::fonte(11.5, Peso::Normal), paleta(ui).estudio.t3).size().x;
+    };
+    let partes = resumo.partes();
+    let n = partes.len().min(2);
+    galley(ui, &partes[..n].join(SEPARADOR), fontes::fonte(12.0, Peso::Normal), paleta(ui).estudio.t2).size().x
+}
+
 /// O rodapé da seleção enquanto a conta roda: "Somando…" com o ponto pulsante.
 pub fn rodape_somando(ui: &mut Ui) -> Response {
     carregando(ui, SOMANDO)

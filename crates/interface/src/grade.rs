@@ -70,7 +70,7 @@ pub use menu_celula::{
     AcaoCelula, LARGURA_MENU_DA_CELULA, MOTIVO_LISTA_IN, MOTIVO_PROXIMA_ETAPA, OfertaCelula, OfertasCelula,
     menu_da_celula, menu_da_celula_aberto, texto_do_intervalo_como, tsv_do_intervalo_com_cabecalho, valor_de_copia,
 };
-pub use resumo::{ResumoSelecao, SOMANDO, rodape_da_selecao, rodape_somando};
+pub use resumo::{ResumoSelecao, SOMANDO, largura_minima_da_selecao, rodape_da_selecao, rodape_somando};
 
 /// Altura de uma linha (`.grade td{height:28px}`, com o fio de 1px embaixo).
 pub const ALTURA_LINHA: f32 = 28.0;

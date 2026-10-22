@@ -666,7 +666,7 @@ O que cada tela diz (a anatomia, a busca da barra e as Propriedades; os textos e
 | Índices e gatilhos | faixa, página | desligada | Tabela, Índice (o selecionado) |
 | Definição SQL | faixa, própria | desligada | Tabela, Abrir na Consulta SQL |
 | Consulta SQL | faixa, rodapé, própria | "Buscar no editor" | Execução, Tabelas (com o Inserir) |
-| CSV (`tela_csv`) | rodapé, própria (a faixa "Filtros" só com condição) | "Buscar em vendas.csv" | Formato, Arquivo, Coluna {nome} |
+| CSV (`tela_csv`) | rodapé (com o formato), própria; sem faixa (0.2.3), a barra dos filtros no alto | "Buscar em vendas.csv" | Formato, Arquivo, Coluna {nome} |
 | Texto e JSON (`tela_texto`) | faixa, rodapé, própria | "Buscar em notas.txt" | Estrutura do documento (JSON) ou Texto, Arquivo |
 | Planilha (`tela_planilha`) | faixa, rodapé, própria (a faixa das planilhas entre a grade e o rodapé) | "Buscar em Plan1" | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
 
