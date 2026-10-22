@@ -6,8 +6,8 @@
 1 24 "databox.manifest"
 
 1 VERSIONINFO
-FILEVERSION 0,2,2,0
-PRODUCTVERSION 0,2,2,0
+FILEVERSION 0,2,3,0
+PRODUCTVERSION 0,2,3,0
 FILEFLAGSMASK 0x3F
 FILEFLAGS 0x0
 FILEOS 0x40004
@@ -20,12 +20,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "Isaías Gonçalves"
       VALUE "FileDescription", "DataBox"
-      VALUE "FileVersion", "0.2.2"
+      VALUE "FileVersion", "0.2.3"
       VALUE "InternalName", "DataBox"
       VALUE "LegalCopyright", "© 2026 Isaías Gonçalves — licença MIT"
       VALUE "OriginalFilename", "DataBox.exe"
       VALUE "ProductName", "DataBox"
-      VALUE "ProductVersion", "0.2.2"
+      VALUE "ProductVersion", "0.2.3"
     END
   END
   BLOCK "VarFileInfo"

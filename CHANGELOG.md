@@ -5,23 +5,27 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+## [0.2.3] - 2026-10-22
+
 ### Adicionado
 
 - **Clique direito numa célula ou num intervalo** nos Dados, no CSV, na planilha do Excel e no resultado da Consulta
-  SQL (também com o Shift+F10, com o foco na grade): **Copiar**, **Copiar com cabeçalho** (Ctrl+Shift+C com o foco na
-  grade; no Explorador continua o Copiar caminho) e **Copiar como** CSV, JSON, Markdown, `INSERT`, lista para `IN (…)`
-  ou pandas (no CSV e no Excel, o `INSERT` leva o nome do arquivo ou da planilha); **Filtrar por este valor** e
-  **Excluir este valor do filtro** nos Dados e no CSV (o NULL vira "é nulo", o vazio do CSV vira "é vazio"); **Marcar
-  as linhas** nos Dados e no CSV; **Abrir a ficha da linha** nos Dados. **Colar** (Ctrl+V) nos Dados e no CSV: o que
-  foi copiado (do Excel, de outra grade) cai a partir da célula ativa, por cima das células; um valor só preenche o
-  intervalo selecionado; não cria linhas nem colunas, e o aviso diz quantas células ficaram de fora (no CSV, com uma
+  SQL (também com o Shift+F10, com o foco na grade; fora do intervalo, a célula vira a ativa e o menu age só nela):
+  **Copiar**, **Copiar com cabeçalho** (Ctrl+Shift+C com o foco na grade; no Explorador continua o Copiar caminho) e
+  **Copiar como** CSV, JSON, Markdown, `INSERT`, lista para `IN (…)` ou pandas (no CSV e no Excel, o `INSERT` leva o
+  nome do arquivo ou da planilha); **Filtrar por este valor** e **Excluir este valor do filtro** nos Dados e no CSV
+  (o NULL vira "é nulo", o vazio do CSV vira "é vazio"); **Marcar as linhas** nos Dados e no CSV; **Abrir a ficha da
+  linha** nos Dados. O item que não vale ali fica desligado, com o motivo na dica.
+- **Colar, Limpar, Definir como NULL e Excluir as linhas** no mesmo menu, nos Dados e no CSV. **Colar** (Ctrl+V): o
+  que foi copiado (do Excel, de outra grade) cai a partir da célula ativa, por cima das células; um valor só preenche
+  o intervalo selecionado; não cria linhas nem colunas, e o aviso diz quantas células ficaram de fora (no CSV, com uma
   coluna escolhida, o Ctrl+V continua colando como nova coluna). **Limpar** (Delete, sem linhas marcadas): o vazio no
   CSV; nos Dados, o texto vazio nas colunas de texto, o NULL nas outras e o valor padrão na que não aceita NULL.
-  **Definir como NULL** nos Dados. **Excluir as linhas** do intervalo, com a mesma pergunta do Excluir da barra. Nos
-  Dados, o Colar e o Limpar gravam numa transação só (tudo ou nada), perguntam antes acima de 100 células ("Colar 120
-  células em clientes?"), avisam "Gravado em clientes (9 células)" e se desfazem de uma vez com o Ctrl+Z (se uma célula
-  mudou depois, nada é desfeito e o aviso diz qual); no CSV, são um passo só no desfazer. Coluna gerada, banco só
-  leitura e coluna que não aceita NULL desligam o item, com o motivo na dica.
+  **Definir como NULL**, só nos Dados. **Excluir as linhas** do intervalo, com a mesma pergunta do Excluir da barra.
+  Nos Dados, o Colar e o Limpar gravam numa transação só (tudo ou nada), perguntam antes acima de 100 células ("Colar
+  120 células em clientes?"), avisam "Gravado em clientes (9 células)" e **se desfazem de uma vez** com o Ctrl+Z (se
+  uma célula mudou depois, nada é desfeito e o aviso diz qual); no CSV, são um passo só no desfazer. Coluna gerada,
+  banco só leitura e coluna que não aceita NULL desligam o item, com o motivo na dica.
 - **O rodapé soma a seleção:** com mais de uma célula selecionada, "Contagem 33 · Soma 98.231,40 · Média 8.930,13 ·
   Mín. 154,03 · Máx. 17.810,34", como a barra de status do Excel (a contagem das células não vazias; as contas, das
   numéricas). Onde não cabe, saem o mínimo e o máximo, depois a média, e vão para a dica. No CSV grande, a conta roda
@@ -30,26 +34,31 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 ### Alterado
 
 - **O CSV não tem mais a faixa de cima:** o nome do arquivo já está na aba e nas Propriedades, e o formato (separador,
-  codificação e fim de linha) foi para o rodapé, ao lado da contagem de linhas. A barra dos filtros sobe para o alto
-  do documento, como nos Dados, e a contagem da busca ("3 de 41") fica na ponta direita dela. A grade ganha uma linha.
+  codificação e fim de linha) foi para o rodapé, ao lado da contagem de linhas ("· Ponto e vírgula · UTF-8 · CRLF").
+  A barra dos filtros sobe para o alto do documento, como nos Dados, e a contagem da busca ("3 de 41") fica na ponta
+  direita dela. A grade ganha uma linha.
 - **A planilha do Excel também não tem mais a faixa de cima:** a planilha e a célula ativa ("Vendas › B7") e o
   "Somente leitura" vão para o rodapé, antes da contagem de linhas e colunas, e a contagem da busca fica na ponta
-  direita dele. **Abrir no programa padrão** passa para o menu Arquivo, ligado com o Excel, o CSV, o texto/JSON e a
-  ficha de um arquivo. O texto e o JSON continuam com a faixa (o Formatar, o sinal de válido e o caminho do JSON).
+  direita dele. Só a ficha do arquivo que não abriu (com senha, `.xls`) mantém a faixa, com o nome e o caminho. O
+  texto e o JSON continuam com a faixa (o Formatar, o sinal de válido e o caminho do JSON).
+- **Arquivo › Abrir no programa padrão**, ligado com o Excel, o CSV, o texto/JSON e a ficha de um arquivo (antes, só
+  um botão na faixa do Excel e na ficha).
 
 ### Corrigido
 
+- **Ctrl+F no CSV, na planilha do Excel e no texto/JSON:** a busca da barra ficava desligada nesses documentos. Agora
+  ela procura no **arquivo inteiro**, não só no que está à vista (num CSV de 400 mil linhas, "onde aparece este CPF?"
+  tem resposta), sem diferenciar maiúsculas nem acentos. A célula achada vira a ativa e a grade rola até ela (no texto,
+  o trecho fica pintado); Enter e Shift+Enter vão ao próximo e ao anterior; a contagem diz "3 de 41" ("41+" enquanto
+  conta); Esc limpa e volta à célula de antes. No CSV, conta as alterações ainda não salvas e só as linhas que o
+  filtro mostra; no Excel, deixa de fora as colunas ocultas; no texto, vale também para os arquivos grandes, abertos
+  só para leitura (até 32 MiB).
 - **As contas da coluna do CSV não leem mais a coluna inteira para a memória:** a seção Coluna das Propriedades
   (vazias, mínimo, máximo, soma, maior texto) conta numa passada pelo arquivo, um valor por vez, com a memória
   constante num CSV de milhões de linhas (antes, centenas de MB a cada clique numa coluna de textos longos). Mostra
   "Calculando…" enquanto conta, e trocar de coluna ou alterar a tabela cancela a conta velha.
-- **Ctrl+F no CSV, na planilha do Excel e no texto/JSON:** a busca da barra ficava desligada nesses documentos. Agora
-  ela procura no **arquivo inteiro**, não só no que está à vista (num CSV de 400 mil linhas, "onde aparece este CPF?"
-  tem resposta), sem diferenciar maiúsculas nem acentos. A célula achada vira a ativa e a grade rola até ela (no texto,
-  o trecho fica pintado); Enter e Shift+Enter vão ao próximo e ao anterior; a faixa diz "3 de 41" ("41+" enquanto
-  conta); Esc limpa e volta à célula de antes. No CSV, conta as alterações ainda não salvas e só as linhas que o
-  filtro mostra; no Excel, deixa de fora as colunas ocultas; no texto, vale também para os arquivos grandes, abertos
-  só para leitura (até 32 MiB).
+- **Desenvolvimento:** no CI do Windows, os testes de tela rodam num passo próprio, numa thread só e sem repetição (em
+  paralelo, o renderizador de software do Windows caía com `STATUS_ACCESS_VIOLATION`).
 
 ## [0.2.2] - 2026-10-21
 
@@ -222,7 +231,8 @@ Primeira versão pública.
   painéis redimensionáveis, Preferências, atalhos do teclado e acessibilidade (AccessKit).
 - Executável único, `DataBox.exe`, sem instalação; `--criar-atalho` para os atalhos do Windows.
 
-[Não lançado]: ../../compare/v0.2.2...HEAD
+[Não lançado]: ../../compare/v0.2.3...HEAD
+[0.2.3]: ../../compare/v0.2.2...v0.2.3
 [0.2.2]: ../../compare/v0.2.1...v0.2.2
 [0.2.1]: ../../compare/v0.2.0...v0.2.1
 [0.2.0]: ../../compare/v0.1.2...v0.2.0
