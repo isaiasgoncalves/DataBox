@@ -31,10 +31,10 @@ GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um
 ### Passo a passo
 
 1. **Atualize a versão** em `Cargo.toml` (`[workspace.package] version`) e em `crates/editor/recursos/databox.rc`
-   (`FILEVERSION`, `PRODUCTVERSION` e os textos `FileVersion`/`ProductVersion`). (Na 0.2.2, já está feito.)
+   (`FILEVERSION`, `PRODUCTVERSION` e os textos `FileVersion`/`ProductVersion`). (Na 0.2.3, já está feito.)
 2. **Atualize o [`CHANGELOG.md`](CHANGELOG.md):** mova o que está em "Não lançado" para uma seção nova com a versão e
    a data.
-3. Rode os testes (`.\cargo.ps1 test --workspace`) e faça o commit (`git commit -am "chore: versão 0.2.2"`).
+3. Rode os testes (`.\cargo.ps1 test --workspace`) e faça o commit (`git commit -am "chore: versão 0.2.3"`).
 4. **Crie a tag e envie:**
 
    ```powershell
@@ -69,6 +69,21 @@ app compilado. Antes da tag, no Windows e no Linux (no GNOME, uma vez no Wayland
    (Mover à esquerda/direita) mudam a ativa de lugar.
 6. **Atalho do menu de aplicativos (Linux):** `DataBox --criar-atalho` a partir do AppImage novo; o DataBox aparece
    no menu com o ícone e abre o AppImage certo.
+7. **Menu da célula:** nos Dados, no CSV, no Excel e no resultado da Consulta SQL, o clique direito numa célula e num
+   intervalo abre o menu junto do ponteiro (fora do intervalo, a célula vira a ativa); o Shift+F10, com o foco na
+   grade, abre junto da célula ativa, com o foco no primeiro item (setas, Enter, Esc devolve o foco à grade). A tecla
+   Menu do teclado não chega ao egui 0.36: confira só que ela não faz nada estranho (se abrir o menu, ótimo, conte).
+8. **Copiar como:** de um intervalo com 3 colunas, copie como CSV, JSON, Markdown, `INSERT`, `IN (…)` (com uma coluna
+   só) e pandas e cole num editor de texto (Bloco de Notas, gedit): os acentos, as aspas e o NULL chegam certos. O
+   Copiar e o Copiar com cabeçalho colados no Excel ou no LibreOffice Calc caem uma célula por valor.
+9. **Colar e Ctrl+Z nos Dados:** copie um intervalo do Excel ou do Calc e cole numa tabela (Ctrl+V): o aviso diz
+   "Gravado em … (N células)"; um Ctrl+Z desfaz tudo de uma vez. Acima de 100 células, ele pergunta antes. Limpar
+   (Delete) e Definir como NULL também se desfazem de uma vez. No CSV, o Colar é um passo só no desfazer.
+10. **Ctrl+F nos arquivos:** num CSV, numa planilha do Excel e num texto/JSON (também num grande, só leitura), busque
+    um valor que fica fora da tela: a célula (ou o trecho) achada aparece; Enter e Shift+Enter andam, a contagem diz
+    "3 de 41" e o Esc volta para onde estava.
+11. **Abrir no programa padrão** no menu Arquivo, com um CSV, uma planilha, um texto e a ficha de um `.xls`: abre no
+    programa do sistema (no Linux, pelo `xdg-open`); com um banco ou sem arquivo à vista, fica desligado.
 
 A tag precisa bater com a versão do `Cargo.toml` (`v0.1.0` ↔ `0.1.0`); se não bater, o workflow para antes de
 publicar. Se algo der errado depois de criada, apague a versão na página de Releases e a tag

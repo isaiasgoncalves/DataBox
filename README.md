@@ -35,7 +35,7 @@
 **DataBox** is a free, open-source data toolbox for data scientists, data engineers and developers. It is a Windows
 desktop app (with a Linux AppImage) that opens, shows and edits everyday data files: **SQLite** databases, whole folders
 with their data files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). The UI is drawn straight
-on the GPU with [egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.2**.
+on the GPU with [egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.3**.
 
 > The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now (the full guide is
 > [README.pt-BR.md](README.pt-BR.md)). An English UI is on the roadmap; contributions are welcome.
@@ -72,6 +72,10 @@ on the GPU with [egui](https://github.com/emilk/egui), in Rust. Current version:
   <tr>
     <td width="50%" valign="top"><a href="docs/imagens/json-estrutura-claro.png"><img src="docs/imagens/json-estrutura-claro.png" alt="JSON validated, with colors, a Format button and the document outline"></a><br><sub><b>JSON</b> validated, with colors, a Format button and the document outline</sub></td>
     <td width="50%" valign="top"><a href="docs/imagens/excel-planilha-claro.png"><img src="docs/imagens/excel-planilha-claro.png" alt="Excel (read-only): sheet tabs, frozen panes, filter and cell details"></a><br><sub><b>Excel</b> (read-only): sheet tabs, frozen panes, filter and cell details</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/dados-menu-da-celula-escuro.png"><img src="docs/imagens/dados-menu-da-celula-escuro.png" alt="Right-click on a range of the clientes table: copy, paste, clear, filter and mark, with the footer summing the selection"></a><br><sub><b>Right-click</b> a range: copy, paste, clear, filter and mark, with the footer summing the selection</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/csv-copiar-como-claro.png"><img src="docs/imagens/csv-copiar-como-claro.png" alt="Copy as CSV, JSON, Markdown, INSERT, an IN list or pandas, in a CSV with its format in the footer"></a><br><sub><b>Copy as</b> CSV, JSON, Markdown, <code>INSERT</code>, an <code>IN (…)</code> list or pandas</sub></td>
   </tr>
 </table>
 
@@ -113,8 +117,10 @@ The labels below are translated; the app shows them in Portuguese (the main ones
    NULL and generated columns.
 4. Drag from one cell to another (or Shift with the arrows) to **select a range**; Ctrl+C copies it like Excel does,
    ready to paste into a spreadsheet. **Right-click** it (or Shift+F10) for the selection menu: copy with the header
-   (Ctrl+Shift+C) or as CSV, JSON, Markdown, `INSERT`, an `IN (…)` list or pandas, filter by the cell's value, mark
-   the rows and open the row form. With more than one cell, the footer shows the count, sum, average, min and max.
+   (Ctrl+Shift+C) or **Copy as** (*Copiar como*) CSV, JSON, Markdown, `INSERT`, an `IN (…)` list or pandas, filter by
+   the cell's value, mark the rows and open the row form. It also has **Paste** (Ctrl+V, from the active cell),
+   **Clear** (Delete), **Set to NULL** and **Delete rows**: Paste and Clear write in a single transaction, and one
+   Ctrl+Z undoes all of it. With more than one cell, the footer shows the count, sum, average, min and max.
 5. **Properties** shows how the table is built: **Summary**, **Columns**, **Indexes** and **SQL** (Alt+1 to Alt+4);
    the chosen column lights up in the grid. Altering a column or creating an index always shows the SQL that will run
    first.
@@ -122,8 +128,9 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 ### Clean a CSV and join it with a spreadsheet
 
 1. Open the CSV (Ctrl+O). The whole file shows up at once, with each column's detected type in the header.
-2. **Filter** rows with conditions and **sort** by the header arrow. Fix cells with double-click, F2 or Enter; delete
-   rows and columns; Ctrl+Z undoes.
+2. **Filter** rows with conditions and **sort** by the header arrow; **Ctrl+F** finds a value in the whole file. Fix
+   cells with double-click, F2 or Enter, or paste a range from Excel over them (Ctrl+V); delete rows and columns;
+   Ctrl+Z undoes.
 3. Open the Excel workbook too. Right-click its column header and choose **Bring columns from this sheet** (*Trazer
    colunas desta planilha*), or use **Bring columns** (*Trazer colunas*) in the CSV, which also accepts another CSV,
    the clipboard or a file on disk.
@@ -162,13 +169,14 @@ The labels below are translated; the app shows them in Portuguese (the main ones
   (or use *Destacar em janela*, "Pop out"). Each panel's place and width are remembered.
 - **Select a range of cells** in Data, CSV, Excel and SQL results: drag, Shift+click or Shift with the arrows;
   Ctrl+C copies it tab-separated, ready for a spreadsheet.
-- **Right-click the selection** (or Shift+F10): copy with the header or as CSV, JSON, Markdown, `INSERT`, an `IN (…)`
-  list or pandas; filter by that value or leave it out; mark the rows; open the row form. The footer sums the
-  selection like Excel's status bar (count, sum, average, min and max).
+- **Right-click the selection** (or Shift+F10): copy with the header or **Copy as** CSV, JSON, Markdown, `INSERT`, an
+  `IN (…)` list or pandas; filter by that value or leave it out; mark the rows; open the row form. In Data and CSV,
+  also **Paste**, **Clear**, **Set to NULL** (Data only) and **Delete rows**, undone in one step with Ctrl+Z. The
+  footer sums the selection like Excel's status bar (count, sum, average, min and max).
 - Frosted glass on menus, lists and dialogs; Light, Dark or Follow Windows theme.
 - Preferences (Ctrl+,): theme, code colors and font, export options; changes preview live and persist on **Save**.
 - **Search** (Ctrl+F) in every document, CSV, Excel and text included: the whole file, ignoring case and accents;
-  Enter and Shift+Enter go to the next and previous match, the strip shows "3 de 41" ("3 of 41"), Esc goes back.
+  Enter and Shift+Enter go to the next and previous match, the count shows "3 de 41" ("3 of 41"), Esc goes back.
 - Drag and drop a folder, database or data file onto the window to open it.
 - Asks before closing a tab, folder or the app with unsaved changes.
 
@@ -197,6 +205,8 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 - Copy and paste columns, paste matching by key (Ctrl+Shift+V), and **Bring columns** from another file (CSV,
   Excel sheet, clipboard) by a common key, with preview and a single undo step.
 - **Save** keeps the file's encoding, delimiter and line endings and does not touch unchanged lines.
+- The footer sums up the format (delimiter, encoding, line endings) next to the row count; Properties has the
+  details and the active column's stats, counted in one pass over the file.
 
 **JSON and text**
 - Line numbers; for JSON, syntax colors, valid/invalid indicator with line, column and reason, **Format** (keeps key

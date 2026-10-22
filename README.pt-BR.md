@@ -36,7 +36,7 @@ O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto
 dados e desenvolvedores. É um programa de mesa para Windows (e Linux, em AppImage) que abre, mostra e edita os arquivos
 do dia a dia: bancos **SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e
 **planilhas do Excel** (só leitura). A interface é desenhada direto na placa de vídeo com
-[egui](https://github.com/emilk/egui), em Rust. Versão atual: **0.2.2**.
+[egui](https://github.com/emilk/egui), em Rust. Versão atual: **0.2.3**.
 
 **Sumário:** [Por que o DataBox](#por-que-o-databox) · [Galeria](#galeria) · [Baixar](#baixar) ·
 [Guias rápidos](#guias-rápidos) · [Recursos](#recursos) · [Primeiro uso](#primeiro-uso) ·
@@ -79,6 +79,10 @@ do dia a dia: bancos **SQLite**, pastas inteiras com os arquivos de dados delas,
     <td width="50%" valign="top"><a href="docs/imagens/json-estrutura-claro.png"><img src="docs/imagens/json-estrutura-claro.png" alt="JSON validado, com cores, botão Formatar e a estrutura do documento"></a><br><sub><b>JSON</b> validado, com cores, botão Formatar e a estrutura do documento</sub></td>
     <td width="50%" valign="top"><a href="docs/imagens/excel-planilha-claro.png"><img src="docs/imagens/excel-planilha-claro.png" alt="Excel (só leitura): abas de planilha, congelados, filtro e detalhes da célula"></a><br><sub><b>Excel</b> (só leitura): abas de planilha, congelados, filtro e detalhes da célula</sub></td>
   </tr>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/imagens/dados-menu-da-celula-escuro.png"><img src="docs/imagens/dados-menu-da-celula-escuro.png" alt="Clique direito num intervalo da tabela clientes: copiar, colar, limpar, filtrar e marcar, e o rodapé somando a seleção"></a><br><sub><b>Clique direito</b> num intervalo: copiar, colar, limpar, filtrar e marcar, e o rodapé somando a seleção</sub></td>
+    <td width="50%" valign="top"><a href="docs/imagens/csv-copiar-como-claro.png"><img src="docs/imagens/csv-copiar-como-claro.png" alt="Copiar como CSV, JSON, Markdown, INSERT, lista para IN ou pandas, num CSV com o formato no rodapé"></a><br><sub><b>Copiar como</b> CSV, JSON, Markdown, <code>INSERT</code>, lista para <code>IN (…)</code> ou pandas</sub></td>
+  </tr>
 </table>
 
 ---
@@ -117,8 +121,10 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
    BLOB, NULL e colunas geradas.
 4. Arraste de uma célula a outra (ou Shift com as setas) para **selecionar um intervalo**; Ctrl+C copia como o Excel,
    pronto para colar numa planilha. O **clique direito** (ou Shift+F10) abre o menu da seleção: copiar com o cabeçalho
-   (Ctrl+Shift+C) ou como CSV, JSON, Markdown, `INSERT`, lista para `IN (…)` ou pandas, filtrar pelo valor da célula,
-   marcar as linhas e abrir a ficha. Com mais de uma célula, o rodapé mostra a contagem, a soma, a média, o mínimo e o
+   (Ctrl+Shift+C) ou **Copiar como** CSV, JSON, Markdown, `INSERT`, lista para `IN (…)` ou pandas, filtrar pelo valor
+   da célula, marcar as linhas e abrir a ficha. Dele saem também **Colar** (Ctrl+V, a partir da célula ativa),
+   **Limpar** (Delete), **Definir como NULL** e **Excluir as linhas**: o Colar e o Limpar gravam numa transação só, e
+   um Ctrl+Z desfaz tudo de uma vez. Com mais de uma célula, o rodapé mostra a contagem, a soma, a média, o mínimo e o
    máximo.
 5. As **Propriedades** mostram como a tabela é feita: **Resumo**, **Colunas**, **Índices** e **SQL** (Alt+1 a Alt+4);
    a coluna escolhida acende na grade. Alterar uma coluna ou criar um índice sempre mostra antes o SQL que vai rodar.
@@ -126,8 +132,9 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 ### Limpar e cruzar um CSV com uma planilha
 
 1. Abra o CSV (Ctrl+O). O arquivo inteiro aparece na hora, com o tipo detectado de cada coluna no cabeçalho.
-2. **Filtre** as linhas com condições e **ordene** pela seta do cabeçalho. Corrija células com duplo clique, F2 ou
-   Enter; exclua linhas e colunas; Ctrl+Z desfaz.
+2. **Filtre** as linhas com condições e **ordene** pela seta do cabeçalho; **Ctrl+F** acha um valor no arquivo
+   inteiro. Corrija células com duplo clique, F2 ou Enter, ou cole um intervalo do Excel por cima (Ctrl+V); exclua
+   linhas e colunas; Ctrl+Z desfaz.
 3. Abra também a planilha do Excel. Clique direito no cabeçalho da coluna dela e escolha **Trazer colunas desta
    planilha** (ou use **Trazer colunas** no CSV, que também aceita outro CSV, a área de transferência ou um arquivo
    do disco).
@@ -173,9 +180,11 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   (Alt+1 a Alt+4), e a coluna escolhida acende na grade.
 - **Selecionar um intervalo de células** nos Dados, no CSV, no Excel e no resultado da Consulta SQL: arraste,
   Shift+clique ou Shift com as setas; Ctrl+C copia com tabulações, para colar numa planilha.
-- **Clique direito na seleção** (ou Shift+F10): copiar com o cabeçalho ou como CSV, JSON, Markdown, `INSERT`, lista
-  para `IN (…)` e pandas; filtrar por aquele valor ou tirá-lo do filtro; marcar as linhas; abrir a ficha. O rodapé
-  soma a seleção como a barra de status do Excel (contagem, soma, média, mínimo e máximo).
+- **Clique direito na seleção** (ou Shift+F10): copiar com o cabeçalho ou **Copiar como** CSV, JSON, Markdown,
+  `INSERT`, lista para `IN (…)` e pandas; filtrar por aquele valor ou tirá-lo do filtro; marcar as linhas; abrir a
+  ficha. Nos Dados e no CSV, também **Colar**, **Limpar**, **Definir como NULL** (nos Dados) e **Excluir as linhas**,
+  desfeitos de uma vez com o Ctrl+Z. O rodapé soma a seleção como a barra de status do Excel (contagem, soma, média,
+  mínimo e máximo).
 - **Painéis redimensionáveis:** arraste a divisória entre o painel e o documento; duplo clique volta à largura padrão.
   A largura fica guardada para a próxima vez.
 - **Vidro fosco** nos menus, nas listas e nas janelas, que ficam por cima do resto.
@@ -184,7 +193,7 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   recentes e o histórico de SQL. As mudanças aparecem na hora; só ficam gravadas no **Salvar**.
 - **Busca da barra** (Ctrl+F) em todo documento: nos Dados, na Visão geral, na Estrutura e na Consulta SQL, e no CSV,
   na planilha do Excel e no texto/JSON, no arquivo inteiro, sem diferenciar maiúsculas nem acentos. Enter e Shift+Enter
-  vão ao próximo e ao anterior, a faixa diz "3 de 41" e Esc volta para onde você estava. A lista completa de atalhos
+  vão ao próximo e ao anterior, a contagem diz "3 de 41" e Esc volta para onde você estava. A lista completa de atalhos
   está em Ajuda › Atalhos do teclado.
 - **Arrastar para a janela:** solte uma pasta, um banco ou um arquivo de dados na janela para abrir.
 - **Ao fechar** uma aba, a pasta ou o programa com alterações não salvas, ele pergunta "Salvar as alterações em
@@ -204,7 +213,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 
 - **Visão geral** do banco, com os contadores de tabelas, visões, índices e gatilhos.
 - **Dados:** grade com busca, filtros, ordenação, edição no lugar (a última edição tem **Desfazer**), linhas
-  marcadas, a ficha da linha (com BLOB, NULL e colunas geradas), Nova linha, Duplicar e Excluir.
+  marcadas, a ficha da linha (com BLOB, NULL e colunas geradas), Nova linha, Duplicar e Excluir. Colar e Limpar um
+  intervalo gravam numa transação só (perguntam antes acima de 100 células) e se desfazem de uma vez.
 - **Colunas**, **Índices e gatilhos** e **SQL** de cada tabela nas Propriedades; Nova tabela, Nova coluna, Novo
   índice e Alterar a coluna, sempre mostrando antes o SQL que vai rodar.
 - Menus **Banco** (manutenções, cópia de segurança, exportar, fechar) e **Tabela** (vistas, Abrir na Consulta SQL,
@@ -230,7 +240,9 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   numa alteração só (desfaz de uma vez).
 - O **Salvar** grava no mesmo formato do arquivo (codificação, separador, fim de linha) sem tocar no que não mudou.
   Se outro programa mudou o arquivo depois que ele abriu, nada é gravado e o aviso oferece **Ler de novo**.
-- As Propriedades mostram o formato (e deixam trocar como o arquivo é lido) e as contas da coluna da célula ativa.
+- O rodapé resume o formato (separador, codificação e fim de linha) ao lado da contagem de linhas; as Propriedades
+  mostram o detalhe (e deixam trocar como o arquivo é lido) e as contas da coluna da célula ativa, numa passada pelo
+  arquivo, sem levar a coluna para a memória.
 
 ### JSON e texto
 
@@ -269,6 +281,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 | Alt+← / Alt+→ | Voltar / Avançar |
 | Ctrl+Shift+PageUp / PageDown | Mover a aba ativa para a esquerda / a direita |
 | Ctrl+C | Copiar a célula ou o intervalo selecionado |
+| Ctrl+V | Colar a partir da célula ativa (Dados e CSV) |
+| Delete | Limpar o intervalo, sem linhas marcadas (Dados e CSV) |
 | Ctrl+Shift+C | Copiar o intervalo com o cabeçalho (na grade; no Explorador, Copiar caminho) |
 | Shift+F10 | Menu da célula ou da seleção (na grade) |
 
