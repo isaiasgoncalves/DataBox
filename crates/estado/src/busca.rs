@@ -273,12 +273,15 @@ pub fn rotulo_na_faixa(ui: &mut Ui, rotulo: &str, cor: Color32) {
 mod testes {
     use super::*;
 
+    /// Dá passos até a tarefa terminar e devolve o alvo que um deles entregou: o passo vai ao primeiro achado uma vez
+    /// só, e ele pode chegar antes do fim (a tarefa já entregou, mas a promessa ainda não foi tomada).
     fn esperar<P: Ord + Copy + Send + 'static>(b: &mut BuscaEmFundo<P>, egui: &egui::Context) -> Option<P> {
         let inicio = Instant::now();
+        let mut alvo = None;
         loop {
-            let alvo = b.passo(egui);
+            alvo = alvo.or(b.passo(egui));
             if b.terminou() {
-                return alvo.or_else(|| b.passo(egui));
+                return alvo;
             }
             assert!(inicio.elapsed() < Duration::from_secs(10), "a busca não terminou");
             std::thread::sleep(Duration::from_millis(5));
@@ -334,6 +337,20 @@ mod testes {
         let mut b = BuscaEmFundo::nova(&egui, Some(0), false, com(vec![30, 10, 20]));
         assert_eq!(esperar(&mut b, &egui), Some(10));
         assert_eq!(b.seguinte(true), Some(20));
+    }
+
+    #[test]
+    fn o_alvo_que_chega_antes_do_fim_nao_se_perde() {
+        // a tarefa entrega o achado e demora a terminar: o passo vai a ele uma vez só, antes do fim
+        let egui = egui::Context::default();
+        let mut b = BuscaEmFundo::nova(&egui, Some(25), true, |c| {
+            c.achou(30);
+            c.entregar();
+            std::thread::sleep(Duration::from_millis(100));
+            Ok(())
+        });
+        assert_eq!(esperar(&mut b, &egui), Some(30));
+        assert_eq!(b.atual(), Some(30));
     }
 
     #[test]
