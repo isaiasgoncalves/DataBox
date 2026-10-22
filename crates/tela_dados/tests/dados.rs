@@ -1977,7 +1977,10 @@ fn excluir_as_linhas_do_intervalo() {
     escolher_no_menu(&mut h, "Excluir as linhas", false);
     assert_eq!(retrato(&h).confirmacao.as_deref(), Some("Excluir 2 linhas de clientes? Isso não pode ser desfeito."));
     clicar_botao(&mut h, "Excluir");
+    // a exclusão volta e a página é relida: só então o Desfazer sabe que ela não se desfaz
+    esperar(&mut h, |h| contar(h, "SELECT count(*) FROM clientes") == N_CLIENTES as u64 - 2);
     esperar_que(&mut h, |r| r.confirmacao.is_none() && !r.carregando && r.linhas > 0);
+    assentar(&mut h);
     assert_eq!(contar(&h, "SELECT count(*) FROM clientes"), N_CLIENTES as u64 - 2);
     assert_eq!(ofertas(&h).dica(Verbo::Desfazer), tela_dados::DICA_EXCLUIR);
 }
