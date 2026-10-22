@@ -9,9 +9,10 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use banco::TabelaInfo;
+use banco::{CelulaDesfeita, TabelaInfo};
 use comum::{Celula, Chave};
 use egui::Id;
+use interface::formato::plural;
 
 use crate::regras::titulo_linha;
 
@@ -47,10 +48,25 @@ pub(crate) struct UltimaEdicao {
     pub gravado: Celula,
 }
 
+/// O último Colar, Limpar ou Definir como NULL do menu da célula (0.2.3, A.4): várias células, desfeitas de uma vez.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct UltimoLote {
+    pub serial: u64,
+    pub banco_id: String,
+    pub tabela: String,
+    pub estrutura: u64,
+    pub transacao: bool,
+    /// "Colar", "Limpar", "Definir como NULL" (a dica do Desfazer: "Desfazer Colar em 9 células (Ctrl+Z)").
+    pub acao: &'static str,
+    /// Cada célula com a chave da linha depois da gravação, o valor de antes e o relido.
+    pub celulas: Vec<CelulaDesfeita>,
+}
+
 /// O que o Desfazer da aba Dados tem à mão.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Desfazivel {
     Edicao(UltimaEdicao),
+    Lote(UltimoLote),
     /// A última mudança não se desfaz (excluir, incluir): o Desfazer fica desligado com esta dica.
     Bloqueado {
         banco_id: String,
@@ -122,6 +138,28 @@ pub fn frase_desfeito(tabela: &str, chave: &Chave, coluna: &str) -> String {
     format!("Edição desfeita em {tabela} ({}, {coluna})", linha_na_frase(chave))
 }
 
+/// "9 células" (e "1 célula").
+fn celulas_na_frase(n: usize) -> String {
+    plural(n, "célula", "células")
+}
+
+/// O toast de um Colar, Limpar ou Definir como NULL: "Gravado em clientes (9 células)"; de uma célula só, como a
+/// edição dela ("Gravado em clientes (linha 3, email)").
+pub fn frase_gravado_lote(tabela: &str, celulas: &[CelulaDesfeita]) -> String {
+    match celulas {
+        [c] => frase_gravado(tabela, &c.chave, &c.coluna),
+        _ => format!("Gravado em {tabela} ({})", celulas_na_frase(celulas.len())),
+    }
+}
+
+/// O toast do Desfazer deles: "Edição desfeita em clientes (9 células)".
+pub fn frase_desfeito_lote(tabela: &str, celulas: &[CelulaDesfeita]) -> String {
+    match celulas {
+        [c] => frase_desfeito(tabela, &c.chave, &c.coluna),
+        _ => format!("Edição desfeita em {tabela} ({})", celulas_na_frase(celulas.len())),
+    }
+}
+
 /// O que a aba diz do Desfazer.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Situacao {
@@ -153,6 +191,15 @@ pub(crate) fn situacao(
                 Situacao::Desligado(DICA_TRANSACAO)
             } else {
                 Situacao::Ligado(format!("Desfazer {} da {} (Ctrl+Z)", u.coluna, linha_na_frase(&u.chave)))
+            }
+        }
+        Some(Desfazivel::Lote(u)) if u.banco_id == banco_id && u.tabela == tabela => {
+            if u.estrutura != estrutura {
+                Situacao::Desligado(DICA_ESTRUTURA)
+            } else if u.transacao != transacao_aberta {
+                Situacao::Desligado(DICA_TRANSACAO)
+            } else {
+                Situacao::Ligado(format!("Desfazer {} em {} (Ctrl+Z)", u.acao, celulas_na_frase(u.celulas.len())))
             }
         }
         _ => Situacao::Nada,
@@ -190,6 +237,36 @@ mod testes {
             frase_desfeito("itens_pedido", &composta, "qtd"),
             "Edição desfeita em itens_pedido (linha de pedido_id 7 · produto P003, qtd)"
         );
+    }
+
+    #[test]
+    fn lote_desfaz_de_uma_vez() {
+        let celula = |i| CelulaDesfeita {
+            chave: Chave::Rowid(i),
+            coluna: "cidade".into(),
+            gravado: Celula::Texto("Natal".into()),
+            antigo: Celula::Nulo,
+        };
+        let lote = |n: i64| UltimoLote {
+            serial: 8,
+            banco_id: "b1".into(),
+            tabela: "clientes".into(),
+            estrutura: 42,
+            transacao: false,
+            acao: "Colar",
+            celulas: (1..=n).map(celula).collect(),
+        };
+        assert_eq!(frase_gravado_lote("clientes", &lote(9).celulas), "Gravado em clientes (9 células)");
+        assert_eq!(frase_gravado_lote("clientes", &lote(1).celulas), "Gravado em clientes (linha 1, cidade)");
+        assert_eq!(frase_desfeito_lote("clientes", &lote(2).celulas), "Edição desfeita em clientes (2 células)");
+        let d = Desfazivel::Lote(lote(9));
+        assert_eq!(
+            situacao(Some(&d), "b1", "clientes", 42, false),
+            Situacao::Ligado("Desfazer Colar em 9 células (Ctrl+Z)".into())
+        );
+        assert_eq!(situacao(Some(&d), "b1", "clientes", 43, false), Situacao::Desligado(DICA_ESTRUTURA));
+        assert_eq!(situacao(Some(&d), "b1", "clientes", 42, true), Situacao::Desligado(DICA_TRANSACAO));
+        assert_eq!(situacao(Some(&d), "b1", "pedidos", 42, false), Situacao::Nada);
     }
 
     #[test]

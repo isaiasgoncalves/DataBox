@@ -44,7 +44,7 @@
 //!   linha da célula ativa: lê a linha inteira e abre a "Nova linha" preenchida; com várias marcadas, desligado, "Duplicar
 //!   (marque uma linha só)"); Excluir (as marcadas ou a linha da célula ativa, com a confirmação "Excluir N linhas de
 //!   X? Isso não pode ser desfeito."); Filtrar (o popover numa condição nova; `.ib.on` com condição, "Filtrar (1
-//!   condição)"). Visão ou banco só leitura: só Filtrar e Buscar. A tecla Delete continua só com marcadas.
+//!   condição)"). Visão ou banco só leitura: só Filtrar e Buscar. A tecla Delete exclui as marcadas (com a pergunta); sem marcadas, limpa o intervalo.
 //! - Propriedades: "Coluna" da célula ativa (Tipo com a pastilha, Regras em pills, Padrão, Valor) e "Abrir na Consulta
 //!   SQL" (`estado::secao_abrir_na_consulta`), depois da "Tabela" que a tela de tabela desenha.
 //! - Busca: a da barra de ferramentas da casca ("Buscar em clientes", `ParteTabela::busca`; o Ctrl+F é da casca):
@@ -56,7 +56,7 @@
 //!   (`Entrada::compacta`, de 26px, o texto selecionado na cor do texto: duplo clique/Enter/F2 ou uma tecla de
 //!   texto começam; Enter grava, Esc
 //!   desiste, Tab grava e anda, perder o foco grava; pisca o `pintar_salvo`; BLOB, texto cortado, texto com
-//!   quebra e coluna gerada abrem a janela), Delete com marcadas pergunta, espaço marca, setas/PageUp/PageDown/
+//!   quebra e coluna gerada abrem a janela), Delete com marcadas pergunta (sem marcadas, limpa), espaço marca, setas/PageUp/PageDown/
 //!   Home/End movem. Começar a editar uma célula fora da vista rola a grade até ela; o campo só grava depois de
 //!   ter aparecido com o foco (o que se digita enquanto a grade rola vai para ele). As colunas ficam com a
 //!   largura do conteúdo (até 320px) e a sobra do documento é repartida entre as de dados na proporção do
@@ -80,8 +80,18 @@
 //! - Menu da célula (0.2.3, `menu.rs`): o clique direito numa célula ou num intervalo e o Shift+F10: Copiar, Copiar
 //!   com cabeçalho (também o Ctrl+Shift+C) e Copiar como (o `INSERT` com o nome da tabela), Filtrar por este valor e
 //!   Excluir este valor do filtro (o NULL vira "é nulo", o texto vazio "vazio"; o BLOB e o texto cortado desligam),
-//!   Marcar as linhas, Abrir a ficha da linha; Colar, Limpar, Definir como NULL e Excluir as linhas desligados até a
-//!   próxima etapa. Com mais de uma célula, as contas da seleção vão no rodapé, antes das páginas.
+//!   Marcar as linhas, Abrir a ficha da linha; Colar (também o Ctrl+V: o TSV a partir da célula de cima à esquerda do
+//!   intervalo, por cima das células; um valor só preenche o intervalo; o que passa da última linha da página ou da
+//!   última coluna fica de fora e o aviso diz quantas), Limpar (também o Delete sem linhas marcadas: o texto vazio nas
+//!   colunas de texto, o NULL nas outras, o DEFAULT na `NOT NULL` que tem um), Definir como NULL e Excluir as linhas
+//!   (a pergunta e o caminho do Excluir da barra). O Colar, o Limpar e o Definir como NULL gravam numa transação só
+//!   (`Servico::atualizar_intervalo`, tudo ou nada), perguntam acima de 100 células ("Colar 120 células em
+//!   clientes?"), avisam "Gravado em clientes (9 células)" com o "Desfazer · Ctrl+Z", e o Desfazer volta todas de uma
+//!   vez (`Servico::desfazer_intervalo`; se uma mudou depois, nenhuma volta e o aviso diz qual), com as regras do
+//!   Desfazer de uma célula. A coluna gerada, a chave do rowid, a `NOT NULL` (no NULL; no Limpar, só sem DEFAULT), a
+//!   linha sem chave, o texto cortado e o BLOB (o Desfazer não os grava de volta), o banco só leitura e uma gravação a
+//!   caminho desligam o item, com o motivo na dica (o Ctrl+V e o Delete dizem o motivo no toast). Com mais de uma
+//!   célula, as contas da seleção vão no rodapé, antes das páginas.
 //! - Rodapé (34px): "Linhas a–b de N" e "· N marcadas" · "N por página" (50/100/250/500, mais o da rota, 26px) · ‹
 //!   "Página X de Y" › (`.ib.pq`); a dica de página lenta numa linha de informação acima dele (o ícone Informação e
 //!   "Criar índice").
@@ -138,7 +148,7 @@ use banco::{Pagina, PedidoPagina};
 pub use aba::{AbaDados, Retrato};
 pub use desfazer::{
     DICA_ESTRUTURA, DICA_EXCLUIR, DICA_INCLUIR, DICA_TRANSACAO, PRAZO_TOAST, PREFIXO_ACAO_TOAST, ROTULO_ACAO,
-    frase_desfeito, frase_gravado,
+    frase_desfeito, frase_desfeito_lote, frase_gravado, frase_gravado_lote,
 };
 
 /// Gancho de teste sobre cada página lida (e o pedido dela).

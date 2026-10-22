@@ -90,6 +90,8 @@ pub(crate) enum PedidoCola {
     Sobre { coluna: usize },
     /// Com correspondência: o Trazer colunas com a área de transferência como origem.
     Correspondencia,
+    /// Por cima das células, a partir da ativa (o Colar do menu da célula e o Ctrl+V com o foco no corpo da grade).
+    Celulas,
 }
 
 /// O aviso compacto de topo da cola (prancheta 16 c).
@@ -434,7 +436,7 @@ impl TelaCsv {
     // ------------------------------------------------------------------ colar
 
     /// O Colar do menu: o texto vem no `Event::Paste` do quadro seguinte (o `RequestPaste` é o Ctrl+V do sistema).
-    fn pedir_cola(&mut self, ectx: &egui::Context, pedido: PedidoCola) {
+    pub(crate) fn pedir_cola(&mut self, ectx: &egui::Context, pedido: PedidoCola) {
         self.cola_pedida = Some(pedido);
         ectx.send_viewport_cmd(ViewportCommand::RequestPaste);
     }
@@ -463,13 +465,21 @@ impl TelaCsv {
                 .any(|e| matches!(e, Event::Key { key: Key::V, pressed: true, modifiers, .. } if modifiers.shift))
         });
         let focado = ectx.memory(|m| m.focused());
+        let corpo = self.grade.as_ref().map(|g| g.nucleo.id_corpo());
         let pedido = match self.cola_pedida.take() {
             Some(p) => p,
+            // no corpo da grade, sem coluna escolhida, o Ctrl+V cola por cima das células (0.2.3); num cabeçalho ou com
+            // colunas escolhidas, como nova coluna
+            None if focado.is_some() && focado == corpo && self.colunas_selecionadas.is_empty() => PedidoCola::Celulas,
             None if focado.is_some_and(|f| focos.contains(&f)) => self.cola_do_teclado(),
             None => return,
         };
         if com_shift || pedido == PedidoCola::Correspondencia {
             self.trazer_pedido = Some(Some(texto));
+            return;
+        }
+        if pedido == PedidoCola::Celulas {
+            self.colar_celulas(ectx, &texto);
             return;
         }
         if !self.por_posicao_permitida() {
@@ -548,7 +558,7 @@ impl TelaCsv {
                 // as colunas mais curtas que a mais longa ficam vazias nas linhas acrescentadas
                 self.mutar(Mutacao::ColarColunas { posicao, colunas: Arc::new(lista), acrescentar });
             }
-            PedidoCola::Correspondencia => {}
+            PedidoCola::Correspondencia | PedidoCola::Celulas => {}
             PedidoCola::Sobre { coluna } => {
                 let Some((_, p)) = posicionadas.next() else { return };
                 let (Some(tabela), valores) = (self.tabela.clone(), Arc::new(p.valores)) else { return };

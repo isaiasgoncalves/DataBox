@@ -277,9 +277,11 @@
 //!     [`grade::tsv_do_intervalo_com_cabecalho`], [`grade::texto_do_intervalo_como`] (`FormatoCopia`, os nomes, cada
 //!     célula como `tabular::colunas::ValorCopia`, `OpcoesCopia { separador, tabela }`) e [`grade::valor_de_copia`]
 //!     (`Celula` → NULL, número, texto). A [`grade::GradeSomenteLeitura`] copia o Ctrl+Shift+C sozinha e tem
-//!     `texto_copiado_com_cabecalho`, `texto_copiado_como(formato, &opcoes)` e `nucleo_mut` (para o menu). Os itens de
-//!     escrita que ainda não chegaram: `OfertasCelula::com_escrita_por_vir(&[acoes])` (desligados com o
-//!     [`grade::MOTIVO_PROXIMA_ETAPA`]). O `grade` reexporta `FormatoCopia`, `OpcoesCopia` e `ValorCopia` do `tabular`.
+//!     `texto_copiado_com_cabecalho`, `texto_copiado_como(formato, &opcoes)` e `nucleo_mut` (para o menu). Para colar
+//!     (nos Dados e no CSV): [`grade::colagem`]`(texto, intervalo, linhas, colunas)` (onde cada valor do TSV cai, a
+//!     partir da célula de cima à esquerda; um valor só preenche o intervalo; o que passa da última linha ou coluna é
+//!     contado em `de_fora`), [`grade::texto_colado`]`(ctx, &nucleo)` (o `Event::Paste` com o foco no corpo) e
+//!     [`grade::frase_de_fora`]. O `grade` reexporta `FormatoCopia`, `OpcoesCopia` e `ValorCopia` do `tabular`.
 //!   - o rodapé da seleção (0.2.3): [`grade::ResumoSelecao`] (`contagem`, `numeros`, `soma`, `minimo`, `maximo`,
 //!     `casas`; `somar_celula(&Celula, numerica)`, `somar_do_csv(texto, numerica, decimal)`, `somar_numero(valor,
 //!     casas)`, `somar_texto`, `juntar`, `partes`, `texto` = "Contagem 33 · Soma 98.231,40 · Média 8.930,13 · Mín.

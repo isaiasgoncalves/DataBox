@@ -7,17 +7,19 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use banco::{
-    Contagem, Direcao, LinhaCompleta, LinhaGravada, Operador, Pagina, PedidoPagina, TabelaInfo, TipoChave, TipoObjeto,
+    CelulaDesfeita, Contagem, Direcao, LinhaCompleta, LinhaGravada, Operador, Pagina, PedidoPagina, TabelaInfo,
+    TipoChave, TipoObjeto,
 };
 use comum::{Celula, Chave, Codigo, Entrada};
-use egui::{Align, Id, Layout, Margin, Pos2, Rect, Sense, Ui, UiBuilder, pos2, vec2};
+use egui::{Align, Id, Layout, Margin, Pos2, Rect, Sense, Ui, UiBuilder, ViewportCommand, pos2, vec2};
 use estado::{
     Acao, Anatomia, ConsultaDados, Contexto, FiltroDigitado, FormatoArquivo, LIMIAR_TABELA_GRANDE, MSG_SO_NA_TRANSACAO,
     Oferta, Ofertas, Promessa, Reacao, TabelaAberta, Verbo,
 };
 use interface::formato::{formatar_numero, formatar_segundos, nome_do_caminho, plural};
 use interface::grade::{
-    AcaoCelula, Intervalo, ResumoSelecao, menu_da_celula, rodape_da_selecao, texto_celula, texto_exibicao,
+    AcaoCelula, Intervalo, OfertaCelula, ResumoSelecao, colagem, frase_de_fora, menu_da_celula, rodape_da_selecao,
+    texto_celula, texto_colado, texto_exibicao,
 };
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::avisos::{aviso_texto, carregando, vazio};
@@ -31,19 +33,23 @@ use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::rotulos::pill;
 use interface::pecas::texto::texto as texto_simples;
 use interface::pecas::toast::{
-    AcaoToast, acao_do_toast, devolver_acao_do_toast, toast, toast_concluido, toast_concluido_com_acao_por, toast_erro,
+    AcaoToast, acao_do_toast, devolver_acao_do_toast, toast, toast_atencao, toast_concluido,
+    toast_concluido_com_acao_por, toast_erro,
 };
 use interface::tema::paleta;
 use servico::{BlobSalvo, Gravado};
 
 use crate::Ganchos;
 use crate::desfazer::{
-    self, DICA_EXCLUIR, DICA_INCLUIR, Desfazivel, PRAZO_TOAST, ROTULO_ACAO, Situacao, UltimaEdicao, frase_desfeito,
-    frase_gravado,
+    self, DICA_EXCLUIR, DICA_INCLUIR, Desfazivel, PRAZO_TOAST, ROTULO_ACAO, Situacao, UltimaEdicao, UltimoLote,
+    frase_desfeito_lote, frase_gravado, frase_gravado_lote,
 };
 use crate::grade::{GradeDados, Pendente, Pintor, Piscada, preparar_edicao};
 use crate::janela::{AcaoJanela, AvisoJanela, JanelaLinha, ModoJanela};
-use crate::menu::{self, FonteCopia};
+use crate::menu::{
+    self, Escrita, EscritaDoIntervalo, FonteCopia, LIMITE_SEM_PERGUNTA, Lote, MOTIVO_OCUPADO, MOTIVO_SO_LEITURA,
+    NADA_MUDOU, TipoLote, montar_lote,
+};
 use crate::modelo::{
     AvisarAoSair, ChavesDaFila, Dados, Edicao, FimEdicao, Marcadas, Sinal, chave_na_fila, coluna_que_abre,
     trocar_na_fila,
@@ -95,10 +101,16 @@ struct GravacaoCelula {
     promessa: Promessa<Gravado<LinhaGravada>>,
 }
 
-/// O Desfazer da última edição, a caminho do banco.
-struct Desfazendo {
-    edicao: UltimaEdicao,
-    promessa: Promessa<Gravado<LinhaGravada>>,
+/// O Desfazer da última edição (ou do último lote), a caminho do banco.
+enum Desfazendo {
+    Edicao { edicao: UltimaEdicao, promessa: Promessa<Gravado<LinhaGravada>> },
+    Lote { lote: UltimoLote, promessa: Promessa<Gravado<Vec<LinhaGravada>>> },
+}
+
+/// O Colar, o Limpar ou o Definir como NULL a caminho do banco (numa transação só).
+struct LoteGravando {
+    lote: Lote,
+    promessa: Promessa<Gravado<Vec<LinhaGravada>>>,
 }
 
 /// A linha sendo lida para a janela, ou para a ficha "Nova linha" já preenchida (o Duplicar
@@ -125,7 +137,11 @@ enum TarefaJanela {
 /// A pergunta aberta (a janela de confirmação).
 enum Pergunta {
     ExcluirMarcadas(Vec<Chave>),
-    ExcluirLinha { serial: u64 },
+    /// O lote acima de [`LIMITE_SEM_PERGUNTA`] células.
+    Lote(Lote),
+    ExcluirLinha {
+        serial: u64,
+    },
 }
 
 /// O pedido de foco que atravessa a recarga da tela depois de incluir ou excluir.
@@ -248,6 +264,7 @@ pub struct AbaDados {
     /// O registro do Desfazer como estava no começo do quadro (as ofertas o leem sem o contexto do egui).
     desfazivel: Option<Desfazivel>,
     desfazendo: Option<Desfazendo>,
+    lote: Option<LoteGravando>,
     /// A aba está à vista neste quadro (fora dela, o toast da gravação vai sem a ação: um clique nele não acharia
     /// a aba).
     em_vista: bool,
@@ -352,6 +369,7 @@ impl AbaDados {
             estrutura: desfazer::estrutura_de(info),
             desfazivel: None,
             desfazendo: None,
+            lote: None,
             em_vista: false,
             ganchos: Ganchos::default(),
             substituidas: 0,
@@ -576,6 +594,7 @@ impl AbaDados {
         self.receber_janela(ectx, ctx, tabela, agora);
         self.receber_exclusao(ectx, ctx, tabela);
         self.receber_desfazer(ectx, ctx, agora);
+        self.receber_lote(ectx, ctx, agora);
     }
 
     fn receber_pagina(&mut self, ectx: &egui::Context, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
@@ -934,7 +953,14 @@ impl AbaDados {
         );
         ui_grade.set_clip_rect(rect_grade.intersect(ui.clip_rect()));
         ui_grade.spacing_mut().item_spacing.y = 0.0;
-        self.desenhar_grade_dentro(&mut ui_grade, agora, tabela.info(), &mut acoes);
+        let impedimento = if somente_leitura {
+            Some(MOTIVO_SO_LEITURA)
+        } else if self.ocupada_para_escrever() {
+            Some(MOTIVO_OCUPADO)
+        } else {
+            None
+        };
+        self.desenhar_grade_dentro(&mut ui_grade, agora, tabela.info(), impedimento, &mut acoes);
         if let Some(s) = &sugestao {
             let rect = Rect::from_min_max(pos2(area.left(), rect_grade.bottom()), area.max);
             linha_da_dica_lenta(ui, rect, s, &mut acoes);
@@ -1017,7 +1043,14 @@ fn linha_da_dica_lenta(ui: &mut Ui, rect: Rect, s: &Sugestao, acoes: &mut AcoesQ
 }
 
 impl AbaDados {
-    fn desenhar_grade_dentro(&mut self, ui: &mut Ui, agora: f64, info: &TabelaInfo, acoes: &mut AcoesQuadro) {
+    fn desenhar_grade_dentro(
+        &mut self,
+        ui: &mut Ui,
+        agora: f64,
+        info: &TabelaInfo,
+        impedimento: Option<&'static str>,
+        acoes: &mut AcoesQuadro,
+    ) {
         if let Some(erro) = &self.erro {
             let erro = erro.clone();
             linha_de_aviso(ui, |ui| {
@@ -1105,7 +1138,9 @@ impl AbaDados {
         {
             acoes.digitado = Some((l, c, t));
         }
-        acoes.excluir = r.excluir;
+        // o Delete exclui as marcadas (com a pergunta); sem marcadas, é o Limpar do intervalo
+        acoes.excluir = r.excluir && !self.marcadas.is_empty();
+        let limpar_pela_tecla = r.excluir && self.marcadas.is_empty();
         acoes.espaco = r.espaco;
         // o Ctrl+C e o Ctrl+Shift+C: a célula ativa, ou o intervalo como o Excel copia; a célula gravando agora vai
         // com o texto digitado
@@ -1120,14 +1155,68 @@ impl AbaDados {
         // o menu da célula (o clique direito, o Shift+F10): chamado todo quadro, para abrir e fechar
         let ativa = grade.nucleo.selecao().and_then(|(l, c)| Some((l, c.checked_sub(primeira)?)));
         let celula_ativa = ativa.and_then(|(l, c)| dados.celula(l, c));
+        // num banco só leitura a tabela não grava, mas os itens de escrita aparecem desligados, com o porquê
+        let gravaria = self.editavel
+            || (impedimento == Some(MOTIVO_SO_LEITURA)
+                && !self.e_visao
+                && info.tipo == TipoObjeto::Table
+                && info.chave.is_some());
+        let escrita = |iv: Intervalo| match impedimento {
+            _ if !gravaria => Escrita::Nao,
+            Some(motivo) => Escrita::AgoraNao(motivo),
+            None => Escrita::Sim(EscritaDoIntervalo::de(iv, primeira, dados, info)),
+        };
         let ofertas = grade
             .nucleo
             .intervalo()
-            .map(|iv| menu::ofertas(iv, celula_ativa, self.editavel, grade.tem_marca))
+            .map(|iv| menu::ofertas(iv, celula_ativa, &escrita(iv), grade.tem_marca))
             .unwrap_or_default();
         let escolha = menu_da_celula(ui, &mut grade.nucleo, &ofertas);
+        // o Ctrl+V com o foco na grade, e o Colar do menu (o texto chega no Paste do quadro seguinte)
+        let colado = texto_colado(ui.ctx(), &grade.nucleo).filter(|_| gravaria && self.edicao.is_none());
+        let pedido = match (colado, limpar_pela_tecla && gravaria) {
+            (Some(texto), _) => Some((TipoLote::Colar, Some(texto))),
+            (None, true) => Some((TipoLote::Limpar, None)),
+            _ => None,
+        };
+        let pedido = pedido.or(match escolha {
+            Some(AcaoCelula::Limpar) => Some((TipoLote::Limpar, None)),
+            Some(AcaoCelula::DefinirNulo) => Some((TipoLote::Nulo, None)),
+            _ => None,
+        });
+        if let (Some((tipo, texto)), Some(iv)) = (pedido, grade.nucleo.intervalo()) {
+            let acao = match tipo {
+                TipoLote::Colar => AcaoCelula::Colar,
+                TipoLote::Limpar => AcaoCelula::Limpar,
+                TipoLote::Nulo => AcaoCelula::DefinirNulo,
+            };
+            acoes.lote = match ofertas.get(acao) {
+                OfertaCelula::Ligada => {
+                    let colunas = primeira..primeira + dados.colunas.len();
+                    let dado = |(l, c, t): (usize, usize, Option<String>)| Some((l, c.checked_sub(primeira)?, t));
+                    let (alvos, de_fora): (Vec<_>, u64) = match texto {
+                        Some(texto) => {
+                            let cola = colagem(&texto, iv, dados.n_linhas(), colunas);
+                            let alvos = cola.celulas.into_iter().filter_map(|(l, c, t)| dado((l, c, Some(t))));
+                            (alvos.collect(), cola.de_fora)
+                        }
+                        None => {
+                            let alvos = iv.linhas().flat_map(|l| iv.colunas().map(move |c| (l, c, None)));
+                            (alvos.filter_map(dado).collect(), 0)
+                        }
+                    };
+                    Some(montar_lote(tipo, alvos, de_fora, dados, info))
+                }
+                OfertaCelula::Desligada(motivo) => Some(Err(motivo.to_string())),
+                OfertaCelula::Oculta => None,
+            };
+        }
         if let (Some(acao), Some(iv)) = (escolha, grade.nucleo.intervalo()) {
             match acao {
+                AcaoCelula::Colar => ui.ctx().send_viewport_cmd(ViewportCommand::RequestPaste),
+                AcaoCelula::ExcluirLinhas => {
+                    acoes.excluir_linhas = Some(iv.linhas().filter_map(|l| dados.chave(l).cloned()).collect());
+                }
                 AcaoCelula::Copiar | AcaoCelula::CopiarComCabecalho | AcaoCelula::CopiarComo(_) => {
                     fonte.copiar(ui.ctx(), acao, iv);
                 }
@@ -1280,6 +1369,14 @@ impl AbaDados {
         }
         if a.excluir && !self.marcadas.is_empty() {
             self.excluir_marcadas();
+        }
+        if let Some(chaves) = a.excluir_linhas {
+            self.perguntar_excluir(chaves);
+        }
+        match a.lote {
+            Some(Ok(lote)) => self.pedir_lote(&ectx, ctx, lote),
+            Some(Err(motivo)) => toast_atencao(&ectx, motivo),
+            None => {}
         }
         if a.espaco
             && self.editavel
@@ -1620,11 +1717,11 @@ impl AbaDados {
         }
     }
 
-    /// Desfaz a última edição de célula: grava o valor de antes com um UPDATE, se a célula ainda tem o que a
-    /// edição gravou. Só com o Desfazer ligado (nesta tabela, sem gravação na fila) e, vindo do toast, só a edição
+    /// Desfaz a última edição de célula (ou o último lote): grava o valor de antes com um UPDATE, se a célula ainda tem o
+    /// que a edição gravou. Só com o Desfazer ligado (nesta tabela, sem gravação na fila) e, vindo do toast, só a edição
     /// que ele anunciou. Não há Refazer: o registro sai.
     fn desfazer(&mut self, ectx: &egui::Context, ctx: &Contexto, serial: Option<u64>) {
-        if self.desfazendo.is_some() || !self.gravacoes.is_empty() || !self.grava(ctx.estado) {
+        if self.ocupada_para_escrever() || !self.grava(ctx.estado) {
             return;
         }
         let registro = desfazer::ler(ectx);
@@ -1638,35 +1735,182 @@ impl AbaDados {
             ),
             Situacao::Ligado(_)
         );
-        let Some(Desfazivel::Edicao(u)) = registro.filter(|_| ligado) else { return };
-        if serial.is_some_and(|s| s != u.serial) {
+        let Some(registro) = registro.filter(|_| ligado) else { return };
+        let serial_do_registro = match &registro {
+            Desfazivel::Edicao(u) => u.serial,
+            Desfazivel::Lote(u) => u.serial,
+            Desfazivel::Bloqueado { .. } => return,
+        };
+        if serial.is_some_and(|s| s != serial_do_registro) {
             return;
         }
         desfazer::guardar(ectx, None);
         self.desfazivel = None;
-        let e = u.clone();
-        let promessa =
-            ctx.tarefa(ectx, move |s, id| s.desfazer_celula(id, &e.tabela, &e.chave, &e.coluna, &e.gravado, &e.antigo));
-        self.desfazendo = Some(Desfazendo { edicao: u, promessa });
+        self.desfazendo = match registro {
+            Desfazivel::Edicao(u) => {
+                let e = u.clone();
+                let promessa = ctx.tarefa(ectx, move |s, id| {
+                    s.desfazer_celula(id, &e.tabela, &e.chave, &e.coluna, &e.gravado, &e.antigo)
+                });
+                Some(Desfazendo::Edicao { edicao: u, promessa })
+            }
+            Desfazivel::Lote(u) => {
+                let (tabela, celulas) = (u.tabela.clone(), u.celulas.clone());
+                let promessa = ctx.tarefa(ectx, move |s, id| s.desfazer_intervalo(id, &tabela, &celulas));
+                Some(Desfazendo::Lote { lote: u, promessa })
+            }
+            Desfazivel::Bloqueado { .. } => None,
+        };
         ectx.request_repaint();
     }
 
     fn receber_desfazer(&mut self, ectx: &egui::Context, ctx: &mut Contexto, agora: f64) {
-        let Some(r) = self.desfazendo.as_mut().and_then(|d| d.promessa.tomar()) else { return };
-        let Some(Desfazendo { edicao: u, .. }) = self.desfazendo.take() else { return };
+        let pronto = match self.desfazendo.as_mut() {
+            Some(Desfazendo::Edicao { promessa, .. }) => promessa
+                .tomar()
+                .map(|r| r.map(|g| Gravado { resultado: vec![g.resultado], transacao_aberta: g.transacao_aberta })),
+            Some(Desfazendo::Lote { promessa, .. }) => promessa.tomar(),
+            None => None,
+        };
+        let Some(r) = pronto else { return };
+        let Some(desfazendo) = self.desfazendo.take() else { return };
+        let (tabela, celulas) = match desfazendo {
+            Desfazendo::Edicao { edicao: u, .. } => {
+                let celula = CelulaDesfeita { chave: u.chave, coluna: u.coluna, gravado: u.gravado, antigo: u.antigo };
+                (u.tabela, vec![celula])
+            }
+            Desfazendo::Lote { lote: u, .. } => (u.tabela, u.celulas),
+        };
         match r {
             Ok(g) => {
-                let frase = frase_desfeito(&u.tabela, &u.chave, &u.coluna);
+                let frase = frase_desfeito_lote(&tabela, &celulas);
                 let frase = ctx.aviso_de_gravacao(g.transacao_aberta, &frase);
                 toast_concluido(ectx, frase);
-                // a célula na página volta e pisca, se a linha está nela
-                let lugar = self.dados.as_ref().and_then(|d| {
-                    let l = d.linha_da_chave(&chave_texto(&u.chave))?;
-                    let c = d.colunas.iter().position(|c| c.nome == u.coluna)?;
-                    Some((l, c))
+                // as células na página voltam e piscam, se as linhas estão nela (a chave é a de antes do Desfazer)
+                let lugares: Vec<Option<(usize, usize)>> = celulas
+                    .iter()
+                    .map(|c| {
+                        let d = self.dados.as_ref()?;
+                        let l = d.linha_da_chave(&chave_texto(&c.chave))?;
+                        Some((l, d.colunas.iter().position(|col| col.nome == c.coluna)?))
+                    })
+                    .collect();
+                self.aplicar_por_linha(lugares.into_iter().zip(g.resultado), agora);
+            }
+            Err(e) => {
+                if ctx.reagir(&e) == Reacao::Mostrar {
+                    toast_erro(ectx, e.mensagem);
+                }
+            }
+        }
+    }
+
+    /// Aplica as respostas de várias células, uma vez por linha (as da mesma linha trazem a mesma linha relida), e pisca
+    /// as células gravadas.
+    fn aplicar_por_linha(
+        &mut self,
+        respostas: impl IntoIterator<Item = (Option<(usize, usize)>, LinhaGravada)>,
+        agora: f64,
+    ) {
+        let mut por_linha: Vec<(usize, Vec<usize>, LinhaGravada)> = Vec::new();
+        for (lugar, r) in respostas {
+            let Some((l, c)) = lugar else { continue };
+            match por_linha.iter_mut().find(|(pl, _, _)| *pl == l) {
+                Some((_, cols, ultima)) => {
+                    cols.push(c);
+                    *ultima = r;
+                }
+                None => por_linha.push((l, vec![c], r)),
+            }
+        }
+        for (l, cols, r) in por_linha {
+            self.aplicar_gravacao(l, r, &cols, agora);
+        }
+    }
+
+    // ------------------------------------------------------------------ o Colar, o Limpar e o Definir como NULL
+
+    /// Uma gravação (ou um Desfazer, uma exclusão, um lote) está a caminho do banco: os itens de escrita e o Desfazer
+    /// esperam (a chave de uma linha pode estar mudando).
+    fn ocupada_para_escrever(&self) -> bool {
+        !self.gravacoes.is_empty() || self.lote.is_some() || self.desfazendo.is_some() || self.exclusao.is_some()
+    }
+
+    /// O lote do menu (ou do Ctrl+V, do Delete): sem nada que mude, só o aviso; acima de [`LIMITE_SEM_PERGUNTA`]
+    /// células, a pergunta antes ("Colar 120 células em clientes?").
+    fn pedir_lote(&mut self, ectx: &egui::Context, ctx: &Contexto, lote: Lote) {
+        if lote.celulas.is_empty() {
+            let aviso = if lote.de_fora > 0 { frase_de_fora(lote.de_fora) } else { NADA_MUDOU.to_string() };
+            toast(ectx, aviso);
+            return;
+        }
+        if lote.celulas.len() > LIMITE_SEM_PERGUNTA {
+            let frase = lote.tipo.pergunta(lote.celulas.len(), &self.nome);
+            let acao = lote.tipo.acao();
+            self.confirmacao = Some(Confirmacao::new(frase).titulo(acao).rotulo(acao));
+            self.pergunta = Some(Pergunta::Lote(lote));
+            return;
+        }
+        self.gravar_lote(ectx, ctx, lote);
+    }
+
+    /// Grava o lote numa transação só (`Servico::atualizar_intervalo`, tudo ou nada).
+    fn gravar_lote(&mut self, ectx: &egui::Context, ctx: &Contexto, lote: Lote) {
+        if self.ocupada_para_escrever() || self.dados.as_ref().is_none_or(|d| d.geracao != lote.geracao) {
+            return;
+        }
+        let nome = self.nome.clone();
+        let pedido = lote.pedido();
+        let promessa = ctx.tarefa(ectx, move |s, id| s.atualizar_intervalo(id, &nome, &pedido));
+        self.lote = Some(LoteGravando { lote, promessa });
+        ectx.request_repaint();
+    }
+
+    /// O lote voltou: as células na página (as linhas relidas), o registro do Desfazer e o toast "Gravado em clientes
+    /// (9 células)" com o Desfazer; o que a cola deixou de fora vai junto.
+    fn receber_lote(&mut self, ectx: &egui::Context, ctx: &mut Contexto, agora: f64) {
+        let Some(r) = self.lote.as_mut().and_then(|l| l.promessa.tomar()) else { return };
+        let Some(LoteGravando { lote, .. }) = self.lote.take() else { return };
+        match r {
+            Ok(gravado) => {
+                let registro = lote.para_desfazer(&gravado.resultado).map(|celulas| UltimoLote {
+                    serial: desfazer::proximo_serial(),
+                    banco_id: ctx.banco_id(),
+                    tabela: self.nome.clone(),
+                    estrutura: self.estrutura,
+                    transacao: gravado.transacao_aberta,
+                    acao: lote.tipo.acao(),
+                    celulas,
                 });
-                if let Some((l, c)) = lugar {
-                    self.aplicar_gravacao(l, g.resultado, &[c], agora);
+                let celulas: Vec<CelulaDesfeita> = match &registro {
+                    Some(u) => u.celulas.clone(),
+                    None => lote
+                        .celulas
+                        .iter()
+                        .map(|c| CelulaDesfeita {
+                            chave: c.chave.clone(),
+                            coluna: c.nome.clone(),
+                            gravado: Celula::Nulo,
+                            antigo: c.antigo.clone(),
+                        })
+                        .collect(),
+                };
+                let mut frase = frase_gravado_lote(&self.nome, &celulas);
+                if lote.de_fora > 0 {
+                    frase = format!("{frase}; {}", frase_de_fora(lote.de_fora));
+                }
+                let frase = ctx.aviso_de_gravacao(gravado.transacao_aberta, &frase);
+                match &registro {
+                    Some(u) if self.em_vista => {
+                        let acao = AcaoToast { rotulo: ROTULO_ACAO.to_string(), carga: desfazer::carga(u.serial) };
+                        toast_concluido_com_acao_por(ectx, frase, acao, PRAZO_TOAST);
+                    }
+                    _ => toast_concluido(ectx, frase),
+                }
+                desfazer::guardar(ectx, registro.map(Desfazivel::Lote));
+                if self.dados.as_ref().is_some_and(|d| d.geracao == lote.geracao) {
+                    let lugares = lote.celulas.iter().map(|c| Some((c.linha, c.coluna)));
+                    self.aplicar_por_linha(lugares.zip(gravado.resultado), agora);
                 }
             }
             Err(e) => {
@@ -1845,6 +2089,7 @@ impl AbaDados {
                         self.exclusao = Some(ctx.tarefa(ectx, move |s, id| s.excluir(id, &nome, &chaves)));
                     }
                     Some(Pergunta::ExcluirLinha { serial }) => self.excluir_linha_da_janela(ectx, ctx, serial),
+                    Some(Pergunta::Lote(lote)) => self.gravar_lote(ectx, ctx, lote),
                     None => {}
                 }
             }
@@ -2069,7 +2314,7 @@ impl AbaDados {
                 }
             }),
             confirmacao: self.confirmacao.as_ref().map(|c| c.frase.clone()),
-            gravacoes_pendentes: self.gravacoes.len(),
+            gravacoes_pendentes: self.gravacoes.len() + usize::from(self.lote.is_some()),
             substituidas: self.substituidas,
             filtros: self.filtros.len(),
             condicao_aberta: self.condicao.is_some(),
@@ -2225,6 +2470,10 @@ struct AcoesQuadro {
     digitado: Option<(usize, usize, String)>,
     excluir: bool,
     espaco: bool,
+    /// O Colar, o Limpar ou o Definir como NULL (o lote, ou por que ele não vale agora).
+    lote: Option<Result<Lote, String>>,
+    /// O "Excluir as linhas" do menu: as chaves das linhas do intervalo.
+    excluir_linhas: Option<Vec<Chave>>,
 }
 
 /// A nota da ficha só leitura de um banco aberto só para leitura (prancheta 15).
@@ -2372,7 +2621,7 @@ impl estado::ParteTabela for AbaDados {
         if !self.grava(estado) {
             return o;
         }
-        let ocupado = self.desfazendo.is_some() || !self.gravacoes.is_empty();
+        let ocupado = self.ocupada_para_escrever();
         let desfazer = match self.situacao_desfazer(estado) {
             Situacao::Ligado(dica) => Oferta::ligada().ligada_se(!ocupado).com_dica(dica),
             Situacao::Desligado(dica) => Oferta::default().com_dica(dica),

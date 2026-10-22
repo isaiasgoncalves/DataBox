@@ -53,10 +53,24 @@ pub(crate) enum Mutacao {
         valores: Arc<Vec<String>>,
         acrescentar: u64,
     },
+    /// O Colar e o Limpar do menu da célula (0.2.3): os textos nas células (posição na tabela, coluna), num passo só.
+    /// `de_fora`: quantas a cola deixou de fora (passavam da última linha ou coluna), para o aviso.
+    Celulas {
+        acao: AcaoCelulas,
+        celulas: Arc<Vec<(u64, usize, String)>>,
+        de_fora: u64,
+    },
     /// O Trazer colunas (passo 13): as colunas da origem casadas pela chave, num passo só.
     Trazer(crate::janela_trazer::PlanoTrazer),
     Desfazer,
     Refazer,
+}
+
+/// O Colar ou o Limpar das células.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AcaoCelulas {
+    Colar,
+    Limpar,
 }
 
 impl Mutacao {
@@ -74,6 +88,13 @@ impl Mutacao {
             Mutacao::ColarColunas { colunas, .. } if colunas.len() == 1 => "Colar a coluna".to_string(),
             Mutacao::ColarColunas { colunas, .. } => format!("Colar {} colunas", colunas.len()),
             Mutacao::ColarSobre { .. } => "Colar sobre a coluna".to_string(),
+            Mutacao::Celulas { acao, celulas, .. } => {
+                let verbo = match acao {
+                    AcaoCelulas::Colar => "Colar",
+                    AcaoCelulas::Limpar => "Limpar",
+                };
+                format!("{verbo} {}", plural(celulas.len() as u64, "célula", "células"))
+            }
             Mutacao::Trazer(plano) => crate::trazer::rotulo_trazer(plano.colunas.len()),
             Mutacao::Desfazer | Mutacao::Refazer => return None,
         })
@@ -85,9 +106,11 @@ impl Mutacao {
     /// acrescenta no fim (as linhas da cola, as colunas do Trazer) não mexem.
     pub(crate) fn muda_posicoes(&self) -> bool {
         match self {
-            Mutacao::Celula { .. } | Mutacao::Renomear { .. } | Mutacao::ColarSobre { .. } | Mutacao::Trazer(_) => {
-                false
-            }
+            Mutacao::Celula { .. }
+            | Mutacao::Celulas { .. }
+            | Mutacao::Renomear { .. }
+            | Mutacao::ColarSobre { .. }
+            | Mutacao::Trazer(_) => false,
             Mutacao::NovaLinha { .. }
             | Mutacao::Duplicar { .. }
             | Mutacao::Excluir { .. }
@@ -192,6 +215,13 @@ fn aplicar_sem_conferir(t: &mut Tabela, m: Mutacao) -> Resultado<bool> {
             })?;
             Ok(true)
         }
+        Mutacao::Celulas { celulas, .. } => t.em_um_passo(|t| {
+            let mut mudou = false;
+            for (linha, coluna, texto) in celulas.iter() {
+                mudou |= t.editar_celula(*linha, *coluna, texto)?;
+            }
+            Ok(mudou)
+        }),
         Mutacao::Trazer(plano) => crate::trazer::aplicar_plano(t, &plano),
         Mutacao::Desfazer => Ok(t.desfazer()),
         Mutacao::Refazer => Ok(t.refazer()),
@@ -203,6 +233,7 @@ fn aplicar_sem_conferir(t: &mut Tabela, m: Mutacao) -> Resultado<bool> {
 pub(crate) fn ajustar_marcas(marcas: &BTreeSet<u64>, m: &Mutacao) -> BTreeSet<u64> {
     match m {
         Mutacao::Celula { .. }
+        | Mutacao::Celulas { .. }
         | Mutacao::NovaColuna { .. }
         | Mutacao::Renomear { .. }
         | Mutacao::ExcluirColunas { .. }
@@ -269,6 +300,26 @@ mod testes {
         assert!(aplicar(&mut t, Mutacao::Desfazer).expect("desfazer"));
         assert!(!aplicar(&mut t, Mutacao::Desfazer).expect("nada a desfazer"));
         assert!(aplicar(&mut t, Mutacao::Refazer).expect("refazer"));
+        let _ = std::fs::remove_dir_all(&pasta);
+    }
+
+    #[test]
+    fn colar_celulas_e_um_passo_so() {
+        let pasta = std::env::temp_dir().join(format!("tela_csv-edicao-celulas-{}", std::process::id()));
+        std::fs::create_dir_all(&pasta).expect("pasta");
+        let caminho = pasta.join("t.csv");
+        std::fs::write(&caminho, "a;b\n1;x\n2;y\n").expect("gravar");
+        let mut t = Tabela::abrir(&caminho, &tabular::csv::OpcoesAbertura::default()).expect("abrir");
+        let celulas = Arc::new(vec![(0, 0, "9".to_string()), (1, 1, "Y".to_string()), (1, 0, "2".to_string())]);
+        let m = Mutacao::Celulas { acao: AcaoCelulas::Colar, celulas, de_fora: 0 };
+        assert_eq!(m.rotulo().as_deref(), Some("Colar 3 células"));
+        assert!(!m.muda_posicoes());
+        assert!(aplicar(&mut t, m.clone()).expect("colar"));
+        assert_eq!(t.alteracoes(), 1, "um passo só");
+        assert_eq!(t.pagina(0, 2).expect("ler"), [vec!["9".to_string(), "x".into()], vec!["2".into(), "Y".into()]]);
+        assert!(!aplicar(&mut t, m).expect("de novo"), "os mesmos valores não deixam passo");
+        assert!(aplicar(&mut t, Mutacao::Desfazer).expect("desfazer"));
+        assert_eq!(t.pagina(0, 1).expect("ler"), [vec!["1".to_string(), "x".into()]]);
         let _ = std::fs::remove_dir_all(&pasta);
     }
 

@@ -142,8 +142,8 @@ fn colar_por_posicao_desligado_com_filtro_ou_ordem() {
     assert!(item.accesskit_node().is_disabled(), "o Colar por posição desligado");
     assert!(!item_do_menu(&h, "Colar com correspondência").accesskit_node().is_disabled(), "com correspondência vale");
     tecla(&mut h, Key::Escape, Modifiers::NONE);
-    // o Ctrl+V explica
-    clicar_celula(&mut h, 0, 1);
+    // o Ctrl+V com a coluna escolhida explica
+    clicar_cabecalho(&mut h, 1, Modifiers::NONE);
     colar(&mut h, "a\nb\n");
     assert_eq!(
         toast_atual(&h.ctx).as_deref(),

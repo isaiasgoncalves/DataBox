@@ -247,6 +247,8 @@ pub(crate) enum Efeito {
 
 /// Quantas células uma cópia leva, no máximo.
 pub(crate) const LIMITE_DA_COPIA: u64 = 5_000_000;
+/// O máximo de células que o Colar e o Limpar do menu da célula mudam de uma vez (cada uma vira uma alteração em mãos).
+pub(crate) const LIMITE_DA_ESCRITA: u64 = 1_000_000;
 
 /// A resposta de uma tarefa: o retrato e a página relidos (nada, quando o arquivo mudou no disco) e o efeito.
 #[derive(Debug, Clone)]

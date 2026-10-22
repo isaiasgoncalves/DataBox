@@ -227,6 +227,13 @@ impl Banco {
     // o Desfazer da grade: grava `antigo` só se a célula ainda tem `gravado` (senão 409 MSG_CELULA_MUDOU)
     pub fn desfazer_celula(&self, nome: &str, chave: &Chave, coluna: &str, gravado: &Celula, antigo: &Celula)
         -> Resultado<LinhaGravada>;
+    // o Colar, o Limpar e o Definir como NULL da grade (0.2.3): um SAVEPOINT (dentro da transação aberta da Consulta,
+    // se houver), tudo ou nada; as células da mesma linha num UPDATE só; uma resposta por célula; Entrada::Padrao grava
+    // o DEFAULT avaliado; o erro diz a linha
+    pub fn atualizar_intervalo(&self, nome: &str, celulas: &[(Chave, String, Entrada)]) -> Resultado<Vec<LinhaGravada>>;
+    // o Desfazer deles, irmão do desfazer_celula: todas voltam só se todas ainda têm o `gravado` (senão 409 "A célula
+    // cidade da linha 3 mudou depois; nada foi desfeito.")
+    pub fn desfazer_intervalo(&self, nome: &str, celulas: &[CelulaDesfeita]) -> Resultado<Vec<LinhaGravada>>;
     pub fn excluir(&self, nome: &str, chaves: &[Chave]) -> Resultado<usize>;
     pub fn ler_blob(&self, nome: &str, chave: &Chave, coluna: &str) -> Resultado<Option<Vec<u8>>>;
     pub fn consultar(&self, sql: &str, limite: usize) -> Resultado<ResultadoConsulta>;
@@ -485,13 +492,20 @@ item sem oferta não aparece, o desligado mostra o motivo na dica) e cumpre a `A
 na grade é o "Copiar com cabeçalho" (`RespostaNucleo::copiar_com_cabecalho`), não o "Copiar caminho" do Explorador.
 A tecla Menu do teclado não chega ao egui 0.36 (o egui-winit não traduz o `NamedKey::ContextMenu`).
 
-Nas telas (0.2.3, só os itens de leitura): os Dados (`tela_dados::menu`), o CSV (`tela_csv::selecao`), a planilha
+Nas telas (0.2.3): os Dados (`tela_dados::menu`), o CSV (`tela_csv::selecao`), a planilha
 (`tela_planilha::selecao`) e a Consulta (`tela_consulta::resultados`) chamam o menu todo quadro depois da grade e
 cumprem o Copiar, o Copiar com cabeçalho e o Copiar como (o CSV, com as linhas fora da página, pela fila de tarefas:
 `Trabalho::LerIntervalo` leva o `ComoCopiar`), o Filtrar e o Excluir do filtro (uma condição na barra de sempre: o
 `banco::Operador` nos Dados, o `OperadorCsv` no CSV; a planilha ainda não tem a barra de filtros e os mostra
-desligados), o Marcar as linhas e a ficha. Os itens de escrita aparecem desligados com
-`OfertasCelula::com_escrita_por_vir` (o `MOTIVO_PROXIMA_ETAPA`). Com colunas escolhidas no CSV e na planilha, o
+desligados), o Marcar as linhas e a ficha. Os de escrita, nos Dados e no CSV: o Colar (Ctrl+V; `interface::grade::colagem` diz
+onde cada valor do TSV cai, a partir da célula de cima à esquerda do intervalo, um valor só preenchendo o intervalo,
+sem criar linhas nem colunas, e conta o que ficou de fora), o Limpar (Delete, sem linhas marcadas), o Definir como
+NULL (só nos Dados) e o Excluir as linhas (o caminho do Excluir da barra). Nos Dados, o lote (`tela_dados::menu::Lote`)
+vai ao `Servico::atualizar_intervalo` numa transação só, com a pergunta acima de 100 células, e o Desfazer o volta de
+uma vez (`Desfazivel::Lote` → `Servico::desfazer_intervalo`); a coluna gerada, a chave do rowid, a `NOT NULL` (no NULL;
+no Limpar só sem DEFAULT), o texto cortado e o BLOB (que o Desfazer não grava de volta) e o banco só leitura desligam o
+item com o motivo. No CSV, o lote é a `Mutacao::Celulas`, um passo no `Tabela::em_um_passo`; com uma coluna escolhida
+(ou o foco num cabeçalho), o Ctrl+V continua o colar como nova coluna. Com colunas escolhidas no CSV e na planilha, o
 Shift+F10 continua o menu do cabeçalho.
 
 O **rodapé da seleção** (`interface::grade::ResumoSelecao` e `rodape_da_selecao(ui, &resumo)`): com mais de uma célula,

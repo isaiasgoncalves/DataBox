@@ -1,5 +1,5 @@
 //! O menu da célula na grade do CSV e o rodapé da seleção (0.2.3, `design/planos-0.2.3.md`, A.1 a A.3): o clique
-//! direito dentro e fora do intervalo, o Shift+F10 e o Esc, os itens de escrita desligados com a dica, o Copiar como
+//! direito dentro e fora do intervalo, o Shift+F10 e o Esc, os itens de escrita (Colar, Limpar, Excluir as linhas), o Copiar como
 //! lido de volta da área de transferência, o Filtrar criando a condição, o Marcar as linhas e as contas do rodapé (na
 //! hora e, além da página, com o "Somando…").
 
@@ -17,7 +17,9 @@ use egui::accesskit::Role;
 use egui::{Event, Key, Modifiers};
 use egui_kittest::kittest::{NodeT, Queryable};
 use estado::apoio_testes::Ambiente;
-use interface::grade::{MOTIVO_PROXIMA_ETAPA, ResumoSelecao};
+use estado::{Documento, Verbo};
+use interface::grade::ResumoSelecao;
+use interface::pecas::toast::toast_atual;
 use interface::tema::Tema;
 use tela_csv::{Ganchos, OperadorCsv};
 
@@ -94,9 +96,7 @@ fn menu_copia_nos_formatos_filtra_e_marca() {
     clique_direito(&mut h, 1, 5);
     assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da seleção"));
     for item in ["Colar", "Limpar", "Excluir as linhas"] {
-        let n = item_do_menu(&h, item);
-        assert!(n.accesskit_node().is_disabled(), "{item} desligado");
-        assert_eq!(n.accesskit_node().description().as_deref(), Some(MOTIVO_PROXIMA_ETAPA));
+        assert!(!item_do_menu(&h, item).accesskit_node().is_disabled(), "{item} ligado");
     }
     assert!(h.query_by_label("Definir como NULL").is_none(), "o CSV não tem NULL");
     assert!(h.query_by_label("Abrir a ficha da linha").is_none());
@@ -269,4 +269,130 @@ fn rodape_divide_o_espaco_entre_o_formato_e_as_contas() {
     assert_eq!(estados.last(), Some(&(false, false)), "estreita: o formato sai para a dica");
     assert!(!estados.contains(&(false, true)), "o formato nunca sai antes das contas: {estados:?}");
     assert!(estados.windows(2).all(|w| w[0].0 >= w[1].0 && w[0].1 >= w[1].1), "o que sai não volta: {estados:?}");
+}
+
+fn ofertas(h: &H) -> estado::Ofertas {
+    doc(h).ofertas(&h.state().estado)
+}
+
+fn linha(h: &H, l: u64) -> Vec<String> {
+    doc(h).pagina().and_then(|p| p.linhas.get(l as usize).cloned()).unwrap_or_default()
+}
+
+/// O Colar por cima das células (o Ctrl+V com o foco no corpo): um passo só no desfazer; um valor só preenche o
+/// intervalo; o que passa da última linha ou coluna fica de fora e o aviso diz quantas.
+#[test]
+fn colar_nas_celulas_e_desfazer() {
+    let amb = Ambiente::vazio("csv_colar_celulas");
+    let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(5)));
+    let antes: Vec<Vec<String>> = (0..2).map(|l| linha(&h, l)).collect();
+    clicar_celula(&mut h, 0, 4);
+    colar(&mut h, "7\t1,50\r\n8\t2,50\r\n");
+    esperar_ociosa(&mut h);
+    assert_eq!(doc(&h).retrato().unwrap().colunas(), 6, "não cria colunas");
+    assert_eq!(
+        (celula(&h, 0, 4), celula(&h, 0, 5), celula(&h, 1, 4), celula(&h, 1, 5)),
+        ("7".into(), "1,50".into(), "8".into(), "2,50".into())
+    );
+    assert_eq!(toast_atual(&h.ctx).as_deref(), Some("4 células coladas."));
+    assert_eq!(doc(&h).alteracoes(), Some(1), "um passo só");
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), "Desfazer Colar 4 células");
+    h.get_by_label("Desfazer").click();
+    esperar_ociosa(&mut h);
+    assert_eq!((linha(&h, 0), linha(&h, 1)), (antes[0].clone(), antes[1].clone()));
+
+    // um valor só com um intervalo: o intervalo inteiro
+    clicar_celula(&mut h, 0, 1);
+    tecla(&mut h, Key::ArrowDown, Modifiers::SHIFT);
+    tecla(&mut h, Key::ArrowDown, Modifiers::SHIFT);
+    colar(&mut h, "Centro-Oeste");
+    esperar_ociosa(&mut h);
+    assert!((0..3).all(|l| celula(&h, l, 1) == "Centro-Oeste"));
+    assert_ne!(celula(&h, 3, 1), "Centro-Oeste");
+
+    // na última linha e na última coluna: três ficam de fora, e nenhuma linha nova
+    clicar_celula(&mut h, 4, 5);
+    colar(&mut h, "1\t2\r\n3\t4\r\n");
+    esperar_ociosa(&mut h);
+    assert_eq!(doc(&h).retrato().unwrap().linhas, 5);
+    assert_eq!(celula(&h, 4, 5), "1");
+    assert_eq!(
+        toast_atual(&h.ctx).as_deref(),
+        Some("1 célula colada; 3 células ficaram de fora: passavam da última linha ou coluna.")
+    );
+}
+
+/// O Limpar (o Delete sem marcadas, e o item do menu) e o Excluir as linhas do intervalo.
+#[test]
+fn limpar_e_excluir_as_linhas() {
+    let amb = Ambiente::vazio("csv_limpar");
+    let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(6)));
+    clicar_celula(&mut h, 1, 2);
+    tecla(&mut h, Key::ArrowRight, Modifiers::SHIFT);
+    tecla(&mut h, Key::Delete, Modifiers::NONE);
+    esperar_ociosa(&mut h);
+    assert_eq!((celula(&h, 1, 2), celula(&h, 1, 3)), (String::new(), String::new()));
+    assert_eq!(doc(&h).retrato().unwrap().linhas, 6, "o Delete sem marcadas não exclui");
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), "Desfazer Limpar 2 células");
+    // de novo: nada muda
+    tecla(&mut h, Key::Delete, Modifiers::NONE);
+    esperar_ociosa(&mut h);
+    assert_eq!(toast_atual(&h.ctx).as_deref(), Some("Nada mudou: as células já tinham esses valores."));
+
+    // pelo menu, e o Excluir as linhas de duas linhas
+    clicar_celula(&mut h, 3, 0);
+    clique_direito(&mut h, 3, 0);
+    escolher(&mut h, "Limpar", false);
+    esperar_ociosa(&mut h);
+    assert_eq!(celula(&h, 3, 0), "");
+    let terceira = linha(&h, 2);
+    clicar_celula(&mut h, 0, 0);
+    tecla(&mut h, Key::ArrowDown, Modifiers::SHIFT);
+    clique_direito(&mut h, 0, 0);
+    escolher(&mut h, "Excluir as linhas", false);
+    esperar_ociosa(&mut h);
+    assert_eq!(doc(&h).retrato().unwrap().linhas, 4);
+    assert_eq!(linha(&h, 0), terceira);
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), "Desfazer Excluir 2 linhas");
+}
+
+/// Os itens de escrita desligados, com o motivo, enquanto uma alteração que mexe nas linhas não voltou (a exclusão
+/// segurada na fila).
+#[test]
+fn itens_de_escrita_desligados_com_o_motivo() {
+    let amb = Ambiente::vazio("csv_escrita_desligada");
+    let segurar = Arc::new(AtomicBool::new(false));
+    let na_tarefa = Arc::clone(&segurar);
+    let ganchos = Ganchos {
+        trabalho: Some(Arc::new(move || {
+            let inicio = Instant::now();
+            while na_tarefa.load(Ordering::SeqCst) && inicio.elapsed() < Duration::from_secs(10) {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        })),
+        ..Ganchos::default()
+    };
+    let caminho = arquivo(&amb, "vendas_2025.csv", vendas(6));
+    let mut h = palco(&amb, caminho, Tema::Claro, TAMANHO, ganchos);
+    esperar_ociosa(&mut h);
+    segurar.store(true, Ordering::SeqCst);
+    clicar_celula(&mut h, 0, 0);
+    h.get_by_label("Excluir").click();
+    h.run_steps(3);
+    clique_direito(&mut h, 1, 1);
+    for item in ["Colar", "Limpar", "Excluir as linhas"] {
+        let n = item_do_menu(&h, item);
+        assert!(n.accesskit_node().is_disabled(), "{item}");
+        assert_eq!(
+            n.accesskit_node().description().as_deref(),
+            Some("Espere a gravação ou a alteração em andamento terminar.")
+        );
+    }
+    tecla(&mut h, Key::Escape, Modifiers::NONE);
+    // o Delete explica, e nada muda
+    tecla(&mut h, Key::Delete, Modifiers::NONE);
+    assert_eq!(toast_atual(&h.ctx).as_deref(), Some("Espere a gravação ou a alteração em andamento terminar."));
+    segurar.store(false, Ordering::SeqCst);
+    esperar_ociosa(&mut h);
+    assert_eq!(doc(&h).retrato().unwrap().linhas, 5);
 }

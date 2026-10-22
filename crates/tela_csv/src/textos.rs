@@ -114,6 +114,23 @@ pub fn grande_demais_para_copiar(celulas: u64) -> String {
     format!("A seleção é grande demais para copiar ({} células).", formatar_numero(celulas))
 }
 
+/// "A seleção é grande demais para limpar (N células)." (o Limpar e o Colar vão até [`crate::sessao::LIMITE_DA_ESCRITA`]).
+pub fn grande_demais_para_escrever(celulas: u64) -> String {
+    format!("A seleção é grande demais para limpar ou colar de uma vez ({} células).", formatar_numero(celulas))
+}
+
+/// O motivo do Colar, do Limpar e do Excluir as linhas desligados enquanto o arquivo grava, o cabeçalho está em edição
+/// ou uma alteração que mexe nas linhas ainda não voltou.
+pub const ESPERE_PARA_EDITAR: &str = "Espere a gravação ou a alteração em andamento terminar.";
+
+/// O aviso do Colar e do Limpar das células: "9 células coladas.", "1 célula limpa."; com o que a cola deixou de fora.
+pub fn celulas_alteradas(colar: bool, n: usize, de_fora: u64) -> String {
+    let (um, varios) =
+        if colar { ("célula colada", "células coladas") } else { ("célula limpa", "células limpas") };
+    let frase = interface::formato::plural(n as u64, um, varios);
+    if de_fora > 0 { format!("{frase}; {}", interface::grade::frase_de_fora(de_fora)) } else { format!("{frase}.") }
+}
+
 /// O separador em palavras (o seletor do Formato).
 pub fn rotulo_do_separador(c: char) -> String {
     match c {

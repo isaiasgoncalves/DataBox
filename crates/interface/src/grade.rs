@@ -63,12 +63,14 @@ use crate::pecas::toast::toast_concluido;
 use crate::pintura::{self, Preenchimento};
 use crate::tema::{Paleta, paleta};
 
+mod colar;
 mod menu_celula;
 mod resumo;
 
+pub use colar::{Colagem, colagem, frase_de_fora, texto_colado};
 pub use menu_celula::{
-    AcaoCelula, LARGURA_MENU_DA_CELULA, MOTIVO_LISTA_IN, MOTIVO_PROXIMA_ETAPA, OfertaCelula, OfertasCelula,
-    menu_da_celula, menu_da_celula_aberto, texto_do_intervalo_como, tsv_do_intervalo_com_cabecalho, valor_de_copia,
+    AcaoCelula, LARGURA_MENU_DA_CELULA, MOTIVO_LISTA_IN, OfertaCelula, OfertasCelula, menu_da_celula,
+    menu_da_celula_aberto, texto_do_intervalo_como, tsv_do_intervalo_com_cabecalho, valor_de_copia,
 };
 pub use resumo::{ResumoSelecao, SOMANDO, largura_minima_da_selecao, rodape_da_selecao, rodape_somando};
 

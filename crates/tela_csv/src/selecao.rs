@@ -7,7 +7,13 @@
 //! - **Filtrar por este valor / Excluir este valor do filtro:** uma condição "igual a" ou "diferente de" pela célula
 //!   ativa; a vazia vira "é vazio" e "não é vazio".
 //! - **Marcar as linhas:** as do intervalo, somando às marcadas.
-//! - Os itens de escrita (Colar, Limpar, Excluir as linhas) aparecem desligados até a próxima etapa da 0.2.3.
+//! - **Colar (Ctrl+V):** o TSV da área de transferência a partir da célula de cima à esquerda do intervalo (a ativa),
+//!   por cima das células (um valor só preenche o intervalo); não cria linhas nem colunas, e o aviso diz quantas
+//!   ficaram de fora. Com uma coluna escolhida (ou o foco num cabeçalho), o Ctrl+V continua o colar como nova coluna.
+//! - **Limpar (Delete, sem linhas marcadas):** o vazio nas células do intervalo.
+//! - **Excluir as linhas:** as do intervalo, pelo mesmo caminho do Excluir da barra.
+//! - O Colar e o Limpar são um passo só no desfazer (`Mutacao::Celulas`, no `Tabela::em_um_passo`): "Desfazer Colar
+//!   9 células".
 //! - **O rodapé da seleção:** as contas do intervalo, na hora se ele está na página; senão numa tarefa com o
 //!   [`Controle`] (cancelada quando a seleção muda), com o "Somando…" enquanto ela roda.
 
@@ -18,14 +24,17 @@ use comum::Codigo;
 use egui::Ui;
 use estado::Promessa;
 use interface::grade::{
-    AcaoCelula, Intervalo, OfertasCelula, ResumoSelecao, frase_do_intervalo_copiado, menu_da_celula,
+    AcaoCelula, Intervalo, OfertasCelula, ResumoSelecao, colagem, frase_de_fora, frase_do_intervalo_copiado,
+    menu_da_celula,
 };
-use interface::pecas::toast::{toast_atencao, toast_concluido};
+use interface::pecas::toast::{toast, toast_atencao, toast_concluido};
 use tabular::colunas::{OpcoesCopia, ValorCopia, escrever_como, escrever_tsv, escrever_tsv_com_cabecalho};
 
-use crate::colunas::ColunaDaGrade;
+use crate::colunas::{ColunaDaGrade, PedidoCola};
+use crate::edicao::{AcaoCelulas, Mutacao};
 use crate::filtro::OperadorCsv;
-use crate::sessao::{self, Controle, LIMITE_DA_COPIA, Trabalho};
+use crate::grade::PRIMEIRA_DE_DADOS;
+use crate::sessao::{self, Controle, LIMITE_DA_COPIA, LIMITE_DA_ESCRITA, Trabalho};
 use crate::tela::TelaCsv;
 use crate::textos;
 
@@ -105,27 +114,32 @@ fn nome_da_tabela(nome: &str) -> String {
 }
 
 impl TelaCsv {
-    /// A coluna da tabela de cada coluna da grade do intervalo (None: a provisória, que vai vazia).
-    fn colunas_do_intervalo(&self, iv: Intervalo) -> Vec<Option<usize>> {
-        let Some(g) = self.grade.as_ref() else { return Vec::new() };
-        iv.colunas()
-            .map(|c| match g.dado(c).map(|d| self.mapa.get(d)) {
-                Some(Some(ColunaDaGrade::Dados(t))) => Some(*t),
-                Some(None) => g.dado(c),
-                _ => None,
-            })
-            .collect()
+    /// A coluna da tabela de uma coluna da grade (None: a provisória, ou fora das de dados).
+    fn coluna_da_tabela(&self, c: usize) -> Option<usize> {
+        let g = self.grade.as_ref()?;
+        match g.dado(c).map(|d| self.mapa.get(d)) {
+            Some(Some(ColunaDaGrade::Dados(t))) => Some(*t),
+            Some(None) => g.dado(c),
+            _ => None,
+        }
     }
 
-    /// A posição na tabela de cada linha do intervalo (sem filtro nem ordem, a vista é a própria tabela).
+    /// A coluna da tabela de cada coluna da grade do intervalo (None: a provisória, que vai vazia).
+    fn colunas_do_intervalo(&self, iv: Intervalo) -> Vec<Option<usize>> {
+        iv.colunas().map(|c| self.coluna_da_tabela(c)).collect()
+    }
+
+    /// A posição na tabela de uma linha da vista (sem filtro nem ordem, a vista é a própria tabela).
+    fn posicao_da_linha(&self, l: usize) -> Option<u64> {
+        match self.janela.vista.as_ref() {
+            Some(v) => v.get(l).copied(),
+            None => Some(l as u64),
+        }
+    }
+
+    /// A posição na tabela de cada linha do intervalo.
     fn posicoes_do_intervalo(&self, iv: Intervalo) -> Vec<u64> {
-        let vista = self.janela.vista.as_ref();
-        iv.linhas()
-            .filter_map(|l| match vista {
-                Some(v) => v.get(l).copied(),
-                None => Some(l as u64),
-            })
-            .collect()
+        iv.linhas().filter_map(|l| self.posicao_da_linha(l)).collect()
     }
 
     /// O que a `acao` de copiar precisa saber das colunas do intervalo.
@@ -174,11 +188,11 @@ impl TelaCsv {
 
     /// O que o menu oferece no CSV, com o intervalo `iv` e a célula ativa (linha da vista, coluna da tabela).
     fn ofertas_da_celula(&self, iv: Intervalo) -> OfertasCelula {
-        let o = OfertasCelula::de_leitura(iv).com_escrita_por_vir(&[
-            AcaoCelula::Colar,
-            AcaoCelula::Limpar,
-            AcaoCelula::ExcluirLinhas,
-        ]);
+        let livre = self.livre_para_editar();
+        let mut o = OfertasCelula::de_leitura(iv);
+        for acao in [AcaoCelula::Colar, AcaoCelula::Limpar, AcaoCelula::ExcluirLinhas] {
+            o = o.ligar_se(acao, livre, textos::ESPERE_PARA_EDITAR);
+        }
         // a coluna provisória (o colar como nova coluna, ainda sem nome) não filtra
         let o = if self.celula_ativa().is_some() {
             o.ligar(AcaoCelula::FiltrarPorValor).ligar(AcaoCelula::ExcluirValorDoFiltro)
@@ -212,7 +226,70 @@ impl TelaCsv {
                 let posicoes = self.posicoes_do_intervalo(iv);
                 self.marcadas.extend(posicoes);
             }
+            AcaoCelula::Colar => self.pedir_cola(&ectx, PedidoCola::Celulas),
+            AcaoCelula::Limpar => self.limpar_intervalo(&ectx, iv),
+            AcaoCelula::ExcluirLinhas => self.excluir_linhas_do_intervalo(iv),
             _ => {}
+        }
+    }
+
+    /// O Colar por cima das células (o Ctrl+V com o foco no corpo da grade, o Colar do menu da célula): o TSV a partir da
+    /// célula de cima à esquerda do intervalo, um passo só no desfazer. O que passar da última linha da vista ou da
+    /// última coluna fica de fora, e o aviso diz quantas.
+    pub(crate) fn colar_celulas(&mut self, ectx: &egui::Context, texto: &str) {
+        if !self.livre_para_editar() {
+            toast_atencao(ectx, textos::ESPERE_PARA_EDITAR);
+            return;
+        }
+        let Some(g) = self.grade.as_ref() else { return };
+        let Some(iv) = g.nucleo.intervalo() else { return };
+        let linhas = usize::try_from(self.linhas_da_vista()).unwrap_or(usize::MAX);
+        let cola = colagem(texto, iv, linhas, PRIMEIRA_DE_DADOS..PRIMEIRA_DE_DADOS + g.n_dados());
+        if cola.celulas.len() as u64 > LIMITE_DA_ESCRITA {
+            toast_atencao(ectx, textos::grande_demais_para_escrever(cola.celulas.len() as u64));
+            return;
+        }
+        let mut de_fora = cola.de_fora;
+        let mut celulas = Vec::with_capacity(cola.celulas.len());
+        for (l, c, t) in cola.celulas {
+            match (self.posicao_da_linha(l), self.coluna_da_tabela(c)) {
+                (Some(p), Some(c)) => celulas.push((p, c, t)),
+                _ => de_fora += 1,
+            }
+        }
+        if celulas.is_empty() {
+            toast(ectx, if de_fora > 0 { frase_de_fora(de_fora) } else { "Não há texto para colar.".to_string() });
+            return;
+        }
+        self.mutar(Mutacao::Celulas { acao: AcaoCelulas::Colar, celulas: Arc::new(celulas), de_fora });
+    }
+
+    /// O Limpar (o item do menu, o Delete sem linhas marcadas): o vazio nas células do intervalo, um passo só.
+    pub(crate) fn limpar_intervalo(&mut self, ectx: &egui::Context, iv: Intervalo) {
+        if !self.livre_para_editar() {
+            toast_atencao(ectx, textos::ESPERE_PARA_EDITAR);
+            return;
+        }
+        if iv.celulas() > LIMITE_DA_ESCRITA {
+            toast_atencao(ectx, textos::grande_demais_para_escrever(iv.celulas()));
+            return;
+        }
+        let colunas: Vec<usize> = self.colunas_do_intervalo(iv).into_iter().flatten().collect();
+        let celulas: Vec<(u64, usize, String)> = self
+            .posicoes_do_intervalo(iv)
+            .into_iter()
+            .flat_map(|p| colunas.iter().map(move |&c| (p, c, String::new())))
+            .collect();
+        if !celulas.is_empty() {
+            self.mutar(Mutacao::Celulas { acao: AcaoCelulas::Limpar, celulas: Arc::new(celulas), de_fora: 0 });
+        }
+    }
+
+    /// O "Excluir as linhas": as do intervalo, pelo caminho do Excluir da barra (um passo no desfazer).
+    fn excluir_linhas_do_intervalo(&mut self, iv: Intervalo) {
+        let linhas = self.posicoes_do_intervalo(iv);
+        if self.livre_para_editar() && !linhas.is_empty() {
+            self.mutar(Mutacao::Excluir { linhas });
         }
     }
 
