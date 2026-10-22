@@ -106,6 +106,9 @@
 //!     linhas.", ou o aviso da alteração ("3 linhas alteradas · 0,6 ms" e o comando) ou do erro, numa caixa centrada.
 //!   - Um aviso sozinho, sem seletor: o fim da transação, "Não havia comando para executar…" e a falha da execução
 //!     (esta, na faixa de erro).
+//! - **Menu da célula** (0.2.3): o clique direito e o Shift+F10 na grade do resultado: Copiar, Copiar com cabeçalho e
+//!   Copiar como (o `INSERT` com a tabela do primeiro FROM, ou "resultado"). Com mais de uma célula, as contas da
+//!   seleção vão à direita do rodapé, pelo valor de cada célula.
 //! - **Rodapé** (34px): o que o resultado escolhido diz ("8 linhas · 0,5 ms", "mais de 1.000 linhas · … · mostrando
 //!   as primeiras 1.000", "3 linhas alteradas · 0,6 ms").
 //! - **Barra**: o Executar principal ([`DICA_EXECUTAR`]); o Exportar "Exportar o resultado do comando 1" (desligado
@@ -166,6 +169,7 @@ use estado::{Acao, Contexto, Promessa, Reacao, Rota};
 use interface::codigo::citar as citar_nome;
 use interface::fontes::{self, Peso};
 use interface::formato::{formatar_numero, formatar_segundos};
+use interface::grade::rodape_da_selecao;
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::arranjo::em_linha;
 use interface::pecas::arvore::No;
@@ -1178,6 +1182,10 @@ impl estado::Documento for TelaConsulta {
             ui.ctx().request_repaint_after(REPINTURA_EXECUTANDO);
         } else if let Some(texto_rodape) = self.cards.get(self.escolhido).and_then(Card::rodape) {
             texto(ui, &texto_rodape, 12.0, t2);
+            // com mais de uma célula selecionada, as contas da seleção à direita (A.3)
+            if let Some(resumo) = self.cards.get_mut(self.escolhido).and_then(Card::resumo_da_selecao) {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| rodape_da_selecao(ui, &resumo));
+            }
         } else if self.cards.is_empty() && self.execucao.is_none() {
             texto(ui, NADA_EXECUTADO, 12.0, paleta(ui).estudio.t3);
         }

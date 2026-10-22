@@ -69,6 +69,11 @@ pub fn pilulas_do_formato(f: &Formato) -> Vec<String> {
     ]
 }
 
+/// O formato no rodapé, depois da contagem: "· Ponto e vírgula · UTF-8 · CRLF" (as pílulas da antiga faixa).
+pub fn formato_no_rodape(f: &Formato) -> String {
+    format!("· {}", pilulas_do_formato(f).join(" · "))
+}
+
 /// "· 1 alteração não salva" / "· 3 alterações não salvas".
 pub fn alteracoes_nao_salvas(n: usize) -> String {
     if n == 1 {

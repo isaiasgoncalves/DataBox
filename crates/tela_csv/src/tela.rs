@@ -13,6 +13,7 @@ use estado::{
     Verbo,
 };
 use interface::formato::contagem_linhas;
+use interface::grade::{largura_minima_da_selecao, rodape_da_selecao, rodape_somando};
 use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando};
 use interface::pecas::botao::Botao;
 use interface::pecas::janela::{Confirmacao, confirmar};
@@ -55,6 +56,8 @@ pub struct Ganchos {
     pub trabalho: Option<Arc<dyn Fn() + Send + Sync>>,
     /// O caminho que o diálogo "Outro arquivo" do Trazer colunas devolveria.
     pub outro_arquivo: Option<PathBuf>,
+    /// Chamado na thread da conta do rodapé da seleção antes de ler o arquivo.
+    pub somar: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
 /// A tabela aberta pela tarefa de abertura.
@@ -183,6 +186,8 @@ pub struct TelaCsv {
     calculo: Option<CalculoColuna>,
     /// A conta que falhou (coluna e versão): não é pedida de novo a cada quadro.
     calculo_falhou: Option<(usize, u64)>,
+    /// As contas do rodapé da seleção (prontas, ou a tarefa que as faz).
+    pub(crate) soma: Option<crate::selecao::SomaSelecao>,
     /// O arquivo mudou por fora (a volta do foco conferiu): o aviso de topo.
     pub(crate) mudou_no_disco: bool,
     /// A janela tinha o foco no quadro anterior.
@@ -257,6 +262,7 @@ impl TelaCsv {
             estatisticas: HashMap::new(),
             calculo: None,
             calculo_falhou: None,
+            soma: None,
             mudou_no_disco: false,
             com_foco: true,
             confirmar_descartar: None,
@@ -816,6 +822,7 @@ impl TelaCsv {
         let menu_th = saida.menu_th;
         self.aplicar_grade(ui, resposta, saida);
         self.mostrar_menu(ui, &ths, menu_th);
+        self.menu_da_celula(ui);
     }
 
     /// Pede a página que cobre as linhas à vista, se a que está em mãos (ou a já pedida) não cobre.
@@ -896,24 +903,51 @@ impl TelaCsv {
     }
 
     /// O rodapé (o dos Dados, sem as páginas: a grade rola todas as linhas): "Linhas 1–24 de 1.204" (as à vista, de
-    /// quantas a vista tem) e, em `--acct`, "· 1 alteração não salva"; em `--t3`, as marcadas e as colunas
-    /// selecionadas.
+    /// quantas a vista tem), o formato em `--t3` ("· Ponto e vírgula · UTF-8 · CRLF", o que a faixa mostrava até a
+    /// 0.2.3) e, em `--acct`, "· 1 alteração não salva"; em `--t3`, as marcadas e as colunas selecionadas. Com mais de
+    /// uma célula selecionada, as contas da seleção à direita: elas encolhem primeiro (o Mín. e o Máx., depois a
+    /// Média), e o formato só sai, para a dica da contagem, quando nem a contagem e a soma caberiam.
     fn desenhar_rodape(&mut self, ui: &mut Ui) {
+        let resumo = self.resumo_da_selecao(ui.ctx());
         let Some(r) = &self.retrato else { return };
         let p = paleta(ui);
         let total = self.linhas_da_vista();
         let (a, b) = self.visiveis.filter(|_| total > 0).map_or((0, 0), |(a, b)| (a + 1, (b + 1).min(total)));
-        texto_simples(ui, &contagem_linhas(a, b, total), 12.0, p.estudio.t2);
+        let contagem = contagem_linhas(a, b, total);
+        let formato = textos::formato_no_rodape(&r.formato);
+        let mut depois: Vec<(String, egui::Color32)> = Vec::new();
         if r.alterada {
-            texto_simples(ui, &textos::alteracoes_nao_salvas(r.alteracoes.max(1)), 12.0, p.estudio.acct);
+            depois.push((textos::alteracoes_nao_salvas(r.alteracoes.max(1)), p.estudio.acct));
         }
         if !self.marcadas.is_empty() {
-            texto_simples(ui, &textos::marcadas(self.marcadas.len()), 12.0, p.estudio.t3);
+            depois.push((textos::marcadas(self.marcadas.len()), p.estudio.t3));
         }
         let selecionadas: Vec<&str> =
             self.colunas_selecionadas.iter().filter_map(|&c| r.nomes.get(c).map(String::as_str)).collect();
         if !selecionadas.is_empty() {
-            texto_simples(ui, &textos::colunas_selecionadas(&selecionadas), 12.0, p.estudio.t3);
+            depois.push((textos::colunas_selecionadas(&selecionadas), p.estudio.t3));
+        }
+        // o formato cabe com o resto da esquerda e as contas mínimas da seleção?
+        let fonte = interface::fontes::fonte(12.0, interface::fontes::Peso::Normal);
+        let largura = |t: &str| interface::pecas::texto::galley(ui, t, fonte.clone(), p.estudio.t3).size().x;
+        let gap = ui.spacing().item_spacing.x;
+        let esquerda: f32 = largura(&contagem) + depois.iter().map(|(t, _)| gap + largura(t)).sum::<f32>();
+        let contas = resumo.as_ref().map_or(0.0, |r| gap + largura_minima_da_selecao(ui, r.as_ref()));
+        let com_formato = esquerda + gap + largura(&formato) + contas <= ui.available_width() + 0.5;
+        let r_contagem = texto_simples(ui, &contagem, 12.0, p.estudio.t2);
+        if com_formato {
+            texto_simples(ui, &formato, 12.0, p.estudio.t3);
+        } else {
+            r_contagem.on_hover_text(formato.trim_start_matches("· "));
+        }
+        for (t, cor) in &depois {
+            texto_simples(ui, t, 12.0, *cor);
+        }
+        if let Some(resumo) = resumo {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| match resumo {
+                Some(r) => rodape_da_selecao(ui, &r),
+                None => rodape_somando(ui),
+            });
         }
     }
 
@@ -985,11 +1019,8 @@ impl TelaCsv {
 
 impl Documento for TelaCsv {
     fn anatomia(&self) -> Anatomia {
-        Anatomia::default().com_faixa().com_rodape().rolagem_propria()
-    }
-
-    fn faixa(&mut self, ui: &mut Ui, _ctx: &mut Contexto) {
-        self.desenhar_faixa(ui);
+        // sem a faixa (0.2.3, item F): o nome está na aba e nas Propriedades, e o formato vai no rodapé
+        Anatomia::default().com_rodape().rolagem_propria()
     }
 
     fn avisos(&mut self, doc: &mut interface::pecas::documento::Documento, ui: &mut Ui, _ctx: &mut Contexto) {

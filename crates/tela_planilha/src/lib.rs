@@ -9,7 +9,8 @@
 //! TelaPlanilha::nome() · caminho() · icone() (a folha XLSX) · modo() -> Modo { Inicial, Abrindo, Pronta, Falhou }
 //! TelaPlanilha::tomar_pedido() -> Option<PedidoDeArquivo>   "Abrir no programa padrão" / "Mostrar na pasta"
 //! impl estado::Documento for TelaPlanilha
-//!   anatomia (faixa, rodapé, rolagem própria) · avisos (o arquivo mudou) · faixa · conteudo · rodape · ofertas/executar
+//!   anatomia (rodapé, rolagem própria; a faixa só na ficha do arquivo que não abriu) · avisos (o arquivo mudou) ·
+//!   faixa (a ficha) · conteudo · rodape · ofertas/executar
 //!   (o Atualizar e o Buscar) · busca/evento_busca ("Buscar em Plan1") · propriedades · status_do_arquivo · ocupada · em_segundo_plano · alterado() sempre falso
 //! ```
 //!
@@ -29,9 +30,19 @@
 //! - **Buscar** (Ctrl+F, "Buscar em Plan1"; o módulo `busca`): na planilha inteira, numa tarefa
 //!   (`Planilha::achar_todos`, em fluxo), pelo texto como a grade o mostra, sem diferenciar maiúsculas nem acentos e
 //!   fora das colunas ocultas. A célula achada vira a ativa e a grade rola até ela; Enter e Shift+Enter andam (com
-//!   volta); a faixa diz "3 de 41" ("41+" enquanto conta); Esc limpa e volta à célula de antes.
+//!   volta); a ponta direita do rodapé diz "3 de 41" ("41+" enquanto conta); Esc limpa e volta à célula de antes.
+//! - **Sem a faixa** (0.2.3, item F): a planilha aberta não tem faixa de contexto. O rodapé mostra "Vendas › B7" (a
+//!   planilha e a célula ativa; a mesclada diz o intervalo), o chip "Somente leitura", "· 1.204 linhas · 8 colunas",
+//!   "· A1:H1204", as mescladas e a seleção em palavras; à direita, a barra do índice, a contagem da busca e as contas
+//!   da seleção. Falta espaço: as contas encolhem primeiro, e a migalha sai por último (o que sai vai na dica dela). O
+//!   "Abrir no programa padrão" está no menu Arquivo da casca. A ficha do arquivo que não abriu mantém a faixa com o
+//!   nome e o caminho.
 //! - **Sem planilha à vista**: a tela abre sem grade, com a frase e a faixa vazia; as Propriedades têm a caixa
 //!   "Mostrar planilhas ocultas".
+//! - **Menu da célula** (0.2.3, `selecao`): o clique direito numa célula ou num intervalo e o Shift+F10 (com colunas
+//!   escolhidas, o do cabeçalho): Copiar, Copiar com cabeçalho (a letra da coluna; também o Ctrl+Shift+C) e Copiar como
+//!   (o `INSERT` com o nome da planilha), das linhas que já chegaram; o filtro aparece desligado ([`MSG_SEM_FILTRO`]).
+//!   Com mais de uma célula, o rodapé soma a seleção pelos números do Excel (além dos blocos guardados, numa tarefa).
 //!
 //! # Testes
 //!
@@ -47,6 +58,7 @@ mod fonte;
 mod grade;
 mod menu;
 mod propriedades;
+mod selecao;
 mod sessao;
 
 use std::path::{Path, PathBuf};
@@ -60,7 +72,9 @@ use estado::{
 };
 use interface::fontes::{self, Peso};
 use interface::formato::formatar_numero;
-use interface::grade::RespostaNucleo;
+use interface::grade::{
+    AcaoCelula, RespostaNucleo, largura_minima_da_selecao, menu_da_celula, rodape_da_selecao, rodape_somando,
+};
 use interface::icones::{self, EstadoIcone, Icone, TipoArquivo};
 use interface::pecas::arranjo::em_linha;
 use interface::pecas::avisos::{TomAviso, aviso_tom, carregando};
@@ -84,6 +98,7 @@ pub use crate::grade::{
 };
 pub use crate::menu::{COPIAR_COLUNA, MSG_ABRA_UM_CSV, TRAZER_DESTA_PLANILHA, rotulo_de_copiar};
 pub use crate::propriedades::{COPIAR_A_FORMULA, MSG_FILTRO, MSG_FORMULAS, MSG_MACROS};
+pub use crate::selecao::MSG_SEM_FILTRO;
 pub use crate::sessao::{
     BLOCOS_GUARDADOS, ESPERA_DA_BARRA, Mudancas, ResumoDoIndice, SessaoDaFolha, bloco_de, frase_da_folha,
 };
@@ -238,6 +253,8 @@ pub struct TelaPlanilha {
     fonte: Option<(ChaveDaFonte, Arc<dyn FonteDeColunas>)>,
     /// A busca da barra (Ctrl+F) na planilha inteira.
     busca: busca::BuscaPlanilha,
+    /// As contas do rodapé da seleção (prontas, ou a tarefa que as faz).
+    soma: Option<selecao::SomaSelecao>,
 }
 
 /// O que a origem de colunas descreve: a aba, as colunas à vista e a última linha conhecida.
@@ -271,6 +288,7 @@ impl TelaPlanilha {
             visto_no_disco: None,
             fonte: None,
             busca: busca::BuscaPlanilha::default(),
+            soma: None,
         }
     }
 
@@ -606,6 +624,7 @@ impl TelaPlanilha {
     fn instalar(&mut self, aberta: Aberta, egui: &Context) {
         self.info = aberta.info;
         self.mudou_no_disco = false;
+        self.soma = None;
         match aberta.pasta {
             Err(e) => self.corpo = Corpo::Falhou(e),
             Ok((pasta, inicial)) => {
@@ -698,7 +717,13 @@ impl TelaPlanilha {
                 }
                 Some(aba) => {
                     let foco = ui_grade.memory(|m| m.has_focus(aba.grade.nucleo.id_corpo()));
+                    // com colunas escolhidas, o Shift+F10 é o menu do cabeçalho: o núcleo (o menu da célula) não o vê
+                    let menu_th_teclado =
+                        foco && !aba.grade.colunas_selecionadas.is_empty() && menu::tomar_shift_f10(&ui_grade);
                     let (resposta, visiveis) = aba.grade.mostrar(&mut ui_grade, &aba.sessao, rect_grade.height());
+                    if menu_th_teclado {
+                        menu::devolver_shift_f10(&ui_grade);
+                    }
                     let visiveis = visiveis.unwrap_or(1..=LINHAS_POR_BLOCO);
                     let congeladas = aba.grade.nucleo.congelado_efetivo().linhas as u32;
                     aba.sessao.pedir(&egui, visiveis, congeladas);
@@ -719,6 +744,18 @@ impl TelaPlanilha {
                         Some(menu::PedidoDoMenu::Copiar) => copiar = true,
                         Some(menu::PedidoDoMenu::Trazer) => trazer = true,
                         None => {}
+                    }
+                    // o Ctrl+Shift+C e o menu da célula (o clique direito, o Shift+F10)
+                    if resposta.copiar_com_cabecalho
+                        && let Some(iv) = aba.grade.nucleo.intervalo()
+                    {
+                        selecao::copiar(&egui, AcaoCelula::CopiarComCabecalho, iv, &aba.grade, &aba.sessao);
+                    }
+                    let ofertas = aba.grade.nucleo.intervalo().map(selecao::ofertas).unwrap_or_default();
+                    if let Some(acao) = menu_da_celula(&ui_grade, &mut aba.grade.nucleo, &ofertas)
+                        && let Some(iv) = aba.grade.nucleo.intervalo()
+                    {
+                        selecao::copiar(&egui, acao, iv, &aba.grade, &aba.sessao);
                     }
                 }
             }
@@ -753,53 +790,29 @@ impl TelaPlanilha {
 
     // ---------------------------------------------------------------------------------------- faixa e rodapé
 
-    fn faixa_do_arquivo(&mut self, ui: &mut Ui) {
+    /// A faixa da ficha de um arquivo que não abriu: o ícone, o nome e o caminho em `--t3`. A planilha aberta não tem
+    /// faixa (0.2.3, item F): a planilha e a célula ativa vão no rodapé, e o "Abrir no programa padrão" no menu Arquivo.
+    fn faixa_da_ficha(&mut self, ui: &mut Ui) {
         let e = &paleta(ui).estudio;
         let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
         icones::pintar(ui.painter(), r, self.icone(), e.t2);
-        if matches!(self.corpo, Corpo::Falhou(_)) {
-            // a ficha: o nome e o caminho em `--t3`
-            nome_forte(ui, &self.nome, 13.0);
-            let caminho = self.caminho.display().to_string();
-            let g = galley_caminho(ui, &caminho, fontes::fonte(12.0, Peso::Leve), e.t3, ui.available_width());
-            let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
-            ui.painter().galley(rect.min, g, e.t3);
-            resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &caminho));
-            return;
-        }
-        let folha = self.nome_da_folha().map(str::to_owned);
-        let celula = self.pronta().and_then(|p| p.aba.as_ref()).and_then(|a| a.grade.referencia_ativa(&a.sessao.meta));
-        ui.scope(|ui| {
-            ui.spacing_mut().item_spacing.x = 4.0;
-            nome_forte(ui, &self.nome, 12.0);
-            if let Some(f) = &folha {
-                seta_da_migalha(ui);
-                texto(ui, f, 12.0, e.t2);
-            }
-            // a célula ativa (a mesclada diz o intervalo: `A1:F1`)
-            if let Some(c) = &celula {
-                seta_da_migalha(ui);
-                nome_forte(ui, c, 12.0);
-            }
-        });
-        let mut abrir = false;
-        let busca = self.busca.rotulo();
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            abrir = ui.add(Botao::ghost(ABRIR_NO_PADRAO).pequeno()).clicked();
-            chip_somente_leitura(ui);
-            // a contagem da busca da barra ("3 de 41")
-            if let Some(rotulo) = &busca {
-                estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
-            }
-        });
-        if abrir {
-            self.pedido = Some(PedidoDeArquivo::AbrirNoPadrao(self.caminho.clone()));
-        }
+        nome_forte(ui, &self.nome, 13.0);
+        let caminho = self.caminho.display().to_string();
+        let g = galley_caminho(ui, &caminho, fontes::fonte(12.0, Peso::Leve), e.t3, ui.available_width());
+        let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
+        ui.painter().galley(rect.min, g, e.t3);
+        resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &caminho));
     }
 
+    /// O rodapé da planilha (0.2.3, item F: o que a faixa mostrava veio para cá). À esquerda, "Vendas › B7" (a planilha
+    /// e a célula ativa; a mesclada diz o intervalo, `A1:F1`), o chip "Somente leitura", "· 1.204 linhas · 8 colunas",
+    /// "· A1:H1204", "· 1 mesclada" e a seleção em palavras; à direita, a barra do índice com o Cancelar, a contagem da
+    /// busca da barra ("3 de 41") e, com mais de uma célula selecionada, as contas da seleção. Quando falta espaço, as
+    /// contas encolhem primeiro (até a contagem e a soma); depois saem, para a dica da migalha, as mescladas, a
+    /// dimensão, o chip, a seleção em palavras, a contagem de linhas e colunas e, por último, a planilha e a célula.
     fn rodape_da_planilha(&mut self, ui: &mut Ui) {
-        let e = &paleta(ui).estudio;
-        let Some(p) = self.pronta() else { return };
+        let e = paleta(ui).estudio;
+        let Corpo::Pronta(p) = &self.corpo else { return };
         let Some(aba) = &p.aba else {
             let c = Contagem::de(&p.pasta);
             let frase = if c.planilhas == 0 {
@@ -808,39 +821,106 @@ impl TelaPlanilha {
                 format!("{} · todas ocultas", plural(c.planilhas, "planilha", "planilhas"))
             };
             texto(ui, &frase, 12.0, e.t2);
+            chip_somente_leitura(ui);
             return;
         };
         let s = &aba.sessao;
+        let linha = ui.available_rect_before_wrap();
+        let espaco = ui.spacing().item_spacing;
+        // a direita fixa: a barra do índice e a contagem da busca
+        let mut direita = ui.new_child(
+            UiBuilder::new()
+                .id_salt((self.sal, "rodape_direita"))
+                .max_rect(linha)
+                .layout(Layout::right_to_left(Align::Center)),
+        );
+        direita.spacing_mut().item_spacing = espaco;
+        let mut cancelar = false;
+        if let Some(f) = s.fracao_da_barra() {
+            cancelar = direita.add(Botao::ghost(CANCELAR).pequeno()).clicked();
+            let (r, _) = direita.allocate_exact_size(vec2(LARGURA_BARRA, 8.0), Sense::hover());
+            let mut barra = direita.new_child(UiBuilder::new().max_rect(r));
+            barra_progresso(&mut barra, Some(f))
+                .widget_info(|| WidgetInfo::labeled(WidgetType::ProgressIndicator, true, LENDO_A_PLANILHA));
+            let pct = (f * 100.0).floor() as u32;
+            texto(&mut direita, &format!("{LENDO_A_PLANILHA}… {pct}%"), 12.0, e.t2);
+        }
+        if let Some(rotulo) = self.busca.rotulo() {
+            estado::busca::rotulo_na_faixa(&mut direita, &rotulo, e.t2);
+        }
+        let fim_direita = direita.available_rect_before_wrap().right();
+
+        // com mais de uma célula selecionada, as contas da seleção (A.3)
+        let resumo = selecao::resumo(&mut self.soma, ui.ctx(), &aba.grade, s);
+        let contas = resumo.as_ref().map_or(0.0, |r| espaco.x + largura_minima_da_selecao(ui, r.as_ref()));
+
+        // a esquerda, do que fica mais ao que sai primeiro
         let (linhas, colunas) = s.tamanho();
-        let mut contagem = format!(
-            "{} · {}",
+        let mut itens: Vec<ItemDoRodape> = Vec::new();
+        let celula = aba.grade.referencia_ativa(&s.meta);
+        itens.push(ItemDoRodape::Migalha { folha: s.nome.clone(), celula, fica: 6 });
+        itens.push(ItemDoRodape::Chip { fica: 3 });
+        let contagem = format!(
+            "· {} · {}",
             plural(linhas as usize, "linha", "linhas"),
             plural(colunas as usize, "coluna", "colunas")
         );
+        itens.push(ItemDoRodape::Texto { texto: contagem, cor: e.t2, fica: 5 });
         if linhas > 0 && colunas > 0 {
-            contagem.push_str(&format!(" · A1:{}", referencia_a1(linhas, colunas - 1)));
-        }
-        texto(ui, &contagem, 12.0, e.t2);
-        let mescladas = s.meta.mescladas.len();
-        if mescladas > 0 {
-            texto(ui, &format!("· {}", plural(mescladas, "mesclada", "mescladas")), 12.0, e.t3);
-        }
-        if let Some(frase) = selecao_em_palavras(&aba.grade) {
-            texto(ui, &format!("· {frase}"), 12.0, e.t3);
-        }
-        let fracao = s.fracao_da_barra();
-        let mut cancelar = false;
-        if let Some(f) = fracao {
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                cancelar = ui.add(Botao::ghost(CANCELAR).pequeno()).clicked();
-                let (r, _) = ui.allocate_exact_size(vec2(LARGURA_BARRA, 8.0), Sense::hover());
-                let mut barra = ui.new_child(UiBuilder::new().max_rect(r));
-                barra_progresso(&mut barra, Some(f))
-                    .widget_info(|| WidgetInfo::labeled(WidgetType::ProgressIndicator, true, LENDO_A_PLANILHA));
-                let pct = (f * 100.0).floor() as u32;
-                texto(ui, &format!("{LENDO_A_PLANILHA}… {pct}%"), 12.0, e.t2);
+            itens.push(ItemDoRodape::Texto {
+                texto: format!("· A1:{}", referencia_a1(linhas, colunas - 1)),
+                cor: e.t2,
+                fica: 2,
             });
         }
+        let mescladas = s.meta.mescladas.len();
+        if mescladas > 0 {
+            let texto = format!("· {}", plural(mescladas, "mesclada", "mescladas"));
+            itens.push(ItemDoRodape::Texto { texto, cor: e.t3, fica: 1 });
+        }
+        if let Some(frase) = selecao_em_palavras(&aba.grade) {
+            itens.push(ItemDoRodape::Texto { texto: format!("· {frase}"), cor: e.t3, fica: 4 });
+        }
+        let cabe = (fim_direita - linha.left() - contas).max(0.0);
+        let largura = |itens: &[ItemDoRodape]| {
+            itens.iter().map(|i| i.largura(ui)).sum::<f32>() + espaco.x * itens.len().saturating_sub(1) as f32
+        };
+        let mut fora: Vec<ItemDoRodape> = Vec::new();
+        while itens.len() > 1 && largura(&itens) > cabe + 0.5 {
+            let Some(k) = itens.iter().enumerate().min_by_key(|(_, i)| i.fica()).map(|(k, _)| k) else { break };
+            fora.push(itens.remove(k));
+        }
+        let mut esquerda = ui.new_child(
+            UiBuilder::new()
+                .id_salt((self.sal, "rodape_esquerda"))
+                .max_rect(linha)
+                .layout(Layout::left_to_right(Align::Center)),
+        );
+        esquerda.spacing_mut().item_spacing = espaco;
+        // o que saiu vai na dica do primeiro item (a migalha, ou o que sobrou dela)
+        let dica: Vec<String> = fora.iter().filter_map(ItemDoRodape::texto).collect();
+        for (k, item) in itens.iter().enumerate() {
+            let r = item.desenhar(&mut esquerda);
+            if k == 0 && !dica.is_empty() {
+                r.on_hover_text(dica.join("\n"));
+            }
+        }
+        if let Some(resumo) = resumo {
+            let inicio = (esquerda.min_rect().right() + espaco.x).min(fim_direita);
+            let r = Rect::from_min_max(egui::pos2(inicio, linha.top()), egui::pos2(fim_direita, linha.bottom()));
+            let mut ui_contas = ui.new_child(
+                UiBuilder::new()
+                    .id_salt((self.sal, "rodape_contas"))
+                    .max_rect(r)
+                    .layout(Layout::right_to_left(Align::Center)),
+            );
+            ui_contas.set_clip_rect(r.intersect(ui.clip_rect()));
+            match resumo {
+                Some(r) => rodape_da_selecao(&mut ui_contas, &r),
+                None => rodape_somando(&mut ui_contas),
+            };
+        }
+        ui.advance_cursor_after_rect(linha);
         if cancelar {
             self.cancelar_indice(true);
         }
@@ -984,6 +1064,82 @@ fn nome_forte(ui: &mut Ui, nome: &str, tamanho: f32) {
     resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, nome));
 }
 
+/// Um item da esquerda do rodapé da planilha, com o quanto ele fica (o de menor `fica` sai primeiro quando falta
+/// espaço).
+enum ItemDoRodape {
+    /// "Vendas › B7": a planilha e a célula ativa (ou o intervalo da mescla).
+    Migalha {
+        folha: String,
+        celula: Option<String>,
+        fica: u8,
+    },
+    /// O chip "Somente leitura".
+    Chip {
+        fica: u8,
+    },
+    Texto {
+        texto: String,
+        cor: egui::Color32,
+        fica: u8,
+    },
+}
+
+impl ItemDoRodape {
+    fn fica(&self) -> u8 {
+        match self {
+            ItemDoRodape::Migalha { fica, .. } | ItemDoRodape::Chip { fica } | ItemDoRodape::Texto { fica, .. } => {
+                *fica
+            }
+        }
+    }
+
+    /// O texto que vai para a dica quando o item sai.
+    fn texto(&self) -> Option<String> {
+        match self {
+            ItemDoRodape::Migalha { folha, celula: Some(c), .. } => Some(format!("{folha} › {c}")),
+            ItemDoRodape::Migalha { folha, celula: None, .. } => Some(folha.clone()),
+            ItemDoRodape::Chip { .. } => Some(Situacao::SoLeitura.rotulo().to_owned()),
+            ItemDoRodape::Texto { texto, .. } => Some(texto.trim_start_matches("· ").to_owned()),
+        }
+    }
+
+    fn largura(&self, ui: &Ui) -> f32 {
+        let e = &paleta(ui).estudio;
+        let medir = |t: &str, peso| galley(ui, t, fontes::fonte(12.0, peso), e.t2).size().x;
+        match self {
+            ItemDoRodape::Migalha { folha, celula, .. } => {
+                medir(folha, Peso::Normal)
+                    + celula.as_ref().map_or(0.0, |c| 2.0 * ESPACO_MIGALHA + 11.0 + medir(c, Peso::Medio))
+            }
+            ItemDoRodape::Chip { .. } => largura_do_chip(ui),
+            ItemDoRodape::Texto { texto, .. } => medir(texto, Peso::Normal),
+        }
+    }
+
+    fn desenhar(&self, ui: &mut Ui) -> egui::Response {
+        let e = paleta(ui).estudio;
+        match self {
+            ItemDoRodape::Migalha { folha, celula, .. } => {
+                ui.scope(|ui| {
+                    ui.spacing_mut().item_spacing.x = ESPACO_MIGALHA;
+                    let r = texto(ui, folha, 12.0, e.t2);
+                    if let Some(c) = celula {
+                        seta_da_migalha(ui);
+                        nome_forte(ui, c, 12.0);
+                    }
+                    r
+                })
+                .inner
+            }
+            ItemDoRodape::Chip { .. } => chip_somente_leitura(ui),
+            ItemDoRodape::Texto { texto: t, cor, .. } => texto(ui, t, 12.0, *cor),
+        }
+    }
+}
+
+/// O espaço entre as partes da migalha (`.migalha{gap:4px}`).
+const ESPACO_MIGALHA: f32 = 4.0;
+
 /// O chevron da migalha (`.migalha .ic`: 11px em `--t3`).
 fn seta_da_migalha(ui: &mut Ui) {
     let e = &paleta(ui).estudio;
@@ -993,12 +1149,11 @@ fn seta_da_migalha(ui: &mut Ui) {
 
 /// O chip "Somente leitura" (`.so-leit`: 22px em pílula, `padding:0 10px 0 6px`, fundo `--h`, borda `--vidrob`, o
 /// cadeado de 14 e o texto 11px / 600 em `--t2`).
-fn chip_somente_leitura(ui: &mut Ui) {
+fn chip_somente_leitura(ui: &mut Ui) -> egui::Response {
     let e = &paleta(ui).estudio;
     let rotulo = Situacao::SoLeitura.rotulo();
     let g = galley(ui, rotulo, fontes::fonte(11.0, Peso::Medio), e.t2);
-    let largura = 1.0 + 6.0 + 14.0 + 6.0 + g.size().x + 10.0 + 1.0;
-    let (rect, resp) = ui.allocate_exact_size(vec2(largura.ceil(), 22.0), Sense::hover());
+    let (rect, resp) = ui.allocate_exact_size(vec2(largura_do_chip(ui), 22.0), Sense::hover());
     let pintor = ui.painter();
     pintor.rect_filled(rect, rect.height() / 2.0, e.h);
     pintor.rect_stroke(rect, rect.height() / 2.0, egui::Stroke::new(1.0, e.vidrob), egui::StrokeKind::Inside);
@@ -1006,6 +1161,13 @@ fn chip_somente_leitura(ui: &mut Ui) {
     icones::pintar(pintor, cadeado, Icone::Estado(EstadoIcone::Bloqueado), e.t2);
     pintor.galley(egui::pos2(cadeado.right() + 6.0, rect.center().y - g.size().y / 2.0), g, e.t2);
     resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, rotulo));
+    resp
+}
+
+/// A largura do chip "Somente leitura" (`padding:0 10px 0 6px`, a borda, o cadeado de 14 e o texto).
+fn largura_do_chip(ui: &Ui) -> f32 {
+    let g = galley(ui, Situacao::SoLeitura.rotulo(), fontes::fonte(11.0, Peso::Medio), paleta(ui).estudio.t2);
+    (1.0 + 6.0 + 14.0 + 6.0 + g.size().x + 10.0 + 1.0).ceil()
 }
 
 /// Os dois botões da ficha numa linha centrada (a largura dela vem do quadro anterior). Devolve (abrir, mostrar).
@@ -1032,8 +1194,11 @@ fn botoes_da_ficha(ui: &mut Ui, sal: Id, ligados: bool) -> (bool, bool) {
 impl estado::Documento for TelaPlanilha {
     fn anatomia(&self) -> Anatomia {
         match self.corpo {
-            Corpo::Pronta(_) => Anatomia::default().com_faixa().com_rodape().rolagem_propria(),
-            Corpo::Inicial | Corpo::Abrindo(_) | Corpo::Falhou(_) => Anatomia::default().com_faixa(),
+            // sem a faixa (0.2.3, item F): a planilha e a célula no rodapé, o "Abrir no programa padrão" no Arquivo
+            Corpo::Pronta(_) => Anatomia::default().com_rodape().rolagem_propria(),
+            Corpo::Inicial | Corpo::Abrindo(_) => Anatomia::default(),
+            // a ficha do arquivo que não abriu fica com a faixa: o nome e o caminho
+            Corpo::Falhou(_) => Anatomia::default().com_faixa(),
         }
     }
 
@@ -1065,9 +1230,9 @@ impl estado::Documento for TelaPlanilha {
     }
 
     fn faixa(&mut self, ui: &mut Ui, _ctx: &mut Contexto) {
-        let egui = ui.ctx().clone();
-        self.sincronizar(&egui);
-        self.faixa_do_arquivo(ui);
+        if matches!(self.corpo, Corpo::Falhou(_)) {
+            self.faixa_da_ficha(ui);
+        }
     }
 
     fn conteudo(&mut self, ui: &mut Ui, ctx: &mut Contexto) {

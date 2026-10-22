@@ -1671,3 +1671,161 @@ fn ctrl_c_copia_a_celula_ativa_e_o_intervalo() {
     assert_eq!(copiado_agora(&h).as_deref(), Some("2026-09-01T00:00:00\tlogin\r\n2026-09-02T01:01:13\tconsulta\r\n"));
     assert_eq!(interface::pecas::toast::toast_atual(&h.ctx).as_deref(), Some("2 linhas × 2 colunas copiadas."));
 }
+
+// ---- o menu da célula (0.2.3) ------------------------------------------------------------------------------
+
+/// O clique direito (mover, apertar e soltar o botão secundário) e alguns quadros.
+fn clique_direito(h: &mut H, linha: usize, coluna: usize) {
+    let pos = centro_celula(h, linha, coluna);
+    h.input_mut().events.push(Event::PointerMoved(pos));
+    h.step();
+    for pressed in [true, false] {
+        h.input_mut().events.push(Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Secondary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+    }
+    h.run_steps(3);
+}
+
+fn menu_aberto(h: &H) -> Option<String> {
+    h.query_by_role(Role::Menu).and_then(|m| m.accesskit_node().label())
+}
+
+/// Escolhe um item do menu aberto (no submenu "Copiar como", passa por ele antes). Devolve o que foi para a área de
+/// transferência nos quadros seguintes.
+fn escolher_no_menu(h: &mut H, item: &str, submenu: bool) -> Option<String> {
+    if submenu {
+        h.get_by_label("Copiar como").hover();
+        h.run_steps(3);
+    }
+    h.get_by_label(item).click();
+    let mut copiado = None;
+    for _ in 0..3 {
+        h.step();
+        copiado = copiado.or_else(|| copiado_agora(h));
+    }
+    copiado
+}
+
+/// As contas do rodapé da seleção (o texto inteiro, que o leitor de tela ouve; num rótulo, o AccessKit o guarda em
+/// value).
+fn rodape_da_selecao(h: &H) -> Option<String> {
+    h.query_by_label_contains("Contagem ").and_then(|n| n.accesskit_node().value())
+}
+
+#[test]
+fn menu_da_celula_copia_filtra_marca_e_abre_a_ficha() {
+    let amb = Ambiente::exemplo("dados_menu_da_celula");
+    let mut h = abrir(&amb, "clientes");
+    // três linhas da coluna nome
+    clicar_celula(&mut h, 0, 1);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    assert_eq!(rodape_da_selecao(&h).as_deref(), Some("Contagem 3"), "nome é texto: só a contagem");
+
+    // o clique direito dentro do intervalo age nele
+    clique_direito(&mut h, 1, 1);
+    assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da seleção"));
+    for item in ["Colar", "Limpar", "Definir como NULL", "Excluir as linhas"] {
+        let n = h.get_by_label(item);
+        assert!(desabilitado(&n), "{item} desligado");
+        assert_eq!(
+            n.accesskit_node().description().as_deref(),
+            Some(interface::grade::MOTIVO_PROXIMA_ETAPA),
+            "{item} com a dica"
+        );
+    }
+    let copiado = escolher_no_menu(&mut h, "JSON", true);
+    let nomes = ler(&h, "SELECT nome FROM clientes ORDER BY id LIMIT 3");
+    let esperado = format!(
+        "[\n{}\n]\n",
+        nomes.iter().map(|l| format!("  {{\"nome\": \"{}\"}}", texto(&l[0]))).collect::<Vec<_>>().join(",\n")
+    );
+    assert_eq!(copiado.as_deref(), Some(esperado.as_str()), "Copiar como › JSON");
+    assert!(menu_aberto(&h).is_none() && grade_com_foco(&h), "escolher fecha e devolve o foco");
+
+    // Copiar com cabeçalho, pelo menu e pelo Ctrl+Shift+C
+    let primeiro = texto(&nomes[0][0]);
+    clique_direito(&mut h, 1, 1);
+    let copiado = escolher_no_menu(&mut h, "Copiar com cabeçalho", false);
+    assert!(copiado.is_some_and(|t| t.starts_with(&format!("nome\r\n{primeiro}\r\n"))));
+    h.input_mut().events.push(Event::Key {
+        key: Key::C,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: CTRL | SHIFT,
+    });
+    h.step();
+    assert!(copiado_agora(&h).is_some_and(|t| t.starts_with("nome\r\n")), "o Ctrl+Shift+C");
+
+    // as contas de uma coluna numérica
+    clicar_celula(&mut h, 0, 4);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    let limites = ler(&h, "SELECT limite FROM clientes ORDER BY id LIMIT 2");
+    let mut resumo = interface::grade::ResumoSelecao::default();
+    for l in &limites {
+        resumo.somar_celula(&l[0], true);
+    }
+    assert_eq!(rodape_da_selecao(&h), Some(resumo.texto()));
+    assert!(resumo.texto().contains("Soma "), "{}", resumo.texto());
+
+    // fora do intervalo, a célula vira a ativa; o Filtrar cria a condição na faixa
+    clique_direito(&mut h, 4, 3);
+    assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da célula"));
+    assert_eq!(retrato(&h).ativa, Some((4, 3)));
+    let cidade = celula(&h, 4, 3);
+    escolher_no_menu(&mut h, "Filtrar por este valor", false);
+    esperar_que(&mut h, |r| r.filtros == 1 && !r.carregando);
+    let filtro = ultima_rota(&h).and_then(|r| r.filtros.first().cloned()).expect("a condição");
+    assert_eq!(
+        (filtro.coluna.as_str(), filtro.op, filtro.valor.as_str()),
+        ("cidade", Operador::Igual, cidade.as_str())
+    );
+    let rotulo = format!("Editar o filtro cidade igual a {cidade}");
+    assert!(h.query_by_role_and_label(Role::Button, &rotulo).is_some(), "o chip da condição");
+    assert!((0..retrato(&h).linhas).all(|l| celula(&h, l, 3) == cidade));
+
+    // Excluir este valor do filtro: "diferente de"
+    clique_direito(&mut h, 0, 1);
+    let nome = celula(&h, 0, 1);
+    escolher_no_menu(&mut h, "Excluir este valor do filtro", false);
+    esperar_que(&mut h, |r| r.filtros == 2 && !r.carregando);
+    let filtro = ultima_rota(&h).and_then(|r| r.filtros.get(1).cloned()).expect("a segunda condição");
+    assert_eq!((filtro.op, filtro.valor.as_str()), (Operador::Diferente, nome.as_str()));
+
+    // Marcar as linhas: as do intervalo, somando às marcadas
+    clicar_celula(&mut h, 0, 1);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    clique_direito(&mut h, 0, 1);
+    escolher_no_menu(&mut h, "Marcar as linhas", false);
+    assert_eq!(retrato(&h).marcadas, 2);
+
+    // o Shift+F10 abre na ativa, com o foco no primeiro item; Abrir a ficha da linha
+    clicar_celula(&mut h, 1, 2);
+    tecla_com(&mut h, SHIFT, Key::F10);
+    assert!(menu_aberto(&h).is_some(), "o Shift+F10 abre o menu");
+    assert!(h.get_by_label("Copiar").accesskit_node().is_focused());
+    tecla(&mut h, Key::Escape);
+    assert!(menu_aberto(&h).is_none() && grade_com_foco(&h), "o Esc fecha e devolve o foco");
+    tecla_com(&mut h, SHIFT, Key::F10);
+    escolher_no_menu(&mut h, "Abrir a ficha da linha", false);
+    esperar_que(&mut h, |r| r.janela.is_some());
+}
+
+#[test]
+fn menu_da_celula_filtra_o_null() {
+    let amb = Ambiente::exemplo("dados_menu_null");
+    executar(&amb, "UPDATE clientes SET cidade = NULL WHERE id = 1");
+    let mut h = abrir(&amb, "clientes");
+    // o NULL vira "é nulo"
+    clique_direito(&mut h, 0, 3);
+    escolher_no_menu(&mut h, "Filtrar por este valor", false);
+    esperar_que(&mut h, |r| r.filtros == 1 && !r.carregando);
+    let filtro = ultima_rota(&h).and_then(|r| r.filtros.first().cloned()).expect("a condição");
+    assert_eq!(filtro.op, Operador::Nulo);
+    assert_eq!(retrato(&h).linhas, 1);
+}

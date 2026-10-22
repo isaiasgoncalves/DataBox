@@ -211,7 +211,8 @@ fn celula_ativa_e_migalha_acompanham() {
     let mut t = abrir_relatorio("migalha");
     tela_mut(&mut t).grade_mut().expect("a grade").nucleo.selecionar(Some((5, 5)));
     t.run_steps(3);
-    let na_faixa = |t: &Teste, rotulo: &str| t.query_all_by_label(rotulo).any(|n| n.rect().top() < 120.0);
+    // a migalha "Vendas › E6" no rodapé (a planilha não tem mais a faixa: 0.2.3, item F)
+    let na_faixa = |t: &Teste, rotulo: &str| t.query_all_by_label(rotulo).any(|n| n.rect().top() > TAMANHO.y - 40.0);
     assert!(na_faixa(&t, "E6"), "a migalha diz a célula");
     // na mescla, o intervalo dela
     tela_mut(&mut t).grade_mut().expect("a grade").nucleo.selecionar(Some((0, 1)));
@@ -405,7 +406,8 @@ fn propriedades_arquivo_planilha_pasta_e_celula() {
 #[test]
 fn rodape_conta_e_mostra_a_barra_depois_de_400_ms() {
     let t = abrir_relatorio("rodape");
-    assert!(t.query_by_label("60 linhas · 6 colunas · A1:F60").is_some());
+    assert!(t.query_by_label("· 60 linhas · 6 colunas").is_some());
+    assert!(t.query_by_label("· A1:F60").is_some());
     assert!(t.query_by_label("· 1 mesclada").is_some());
     drop(t);
     // uma planilha grande: a barra não aparece antes de 400 ms

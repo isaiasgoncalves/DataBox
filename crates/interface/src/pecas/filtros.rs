@@ -1,9 +1,10 @@
-//! Os filtros das grades, iguais na aba Dados (a faixa de contexto, prancheta 2) e no CSV (a `.barra-filtros` debaixo
-//! da faixa do formato, prancheta 7; revisão de UI de 19/10/2026):
+//! Os filtros das grades, iguais na aba Dados (a faixa de contexto, prancheta 2) e no CSV (a `.barra-filtros` no alto
+//! do documento, prancheta 7; revisão de UI de 19/10/2026; o CSV não tem faixa desde a 0.2.3):
 //!
 //! - [`filtros`]: "Filtros" (o `.tit` em `--t3`), uma etiqueta por condição ([`chip_filtro`]: o clique abre a condição
 //!   no popover, o × a tira), "+ Condição" e, à direita, a contagem ([`ContagemFiltros`]: "41 de 60 linhas",
 //!   "contando…", "linhas não contadas" com o motivo na dica) e "Limpar filtros" (só com condição);
+//!   [`filtros_com_direita`] põe mais alguma coisa na ponta direita (a contagem da busca do CSV, "3 de 41");
 //! - [`barra_filtros`]: a `.barra-filtros` de 38px ([`ALTURA_BARRA_FILTROS`], `padding:0 10px 0 14px`, `gap:8px` e o
 //!   fio `--b` embaixo), para quem não põe os filtros na faixa de contexto;
 //! - [`popover_condicao`]: o popover de vidro da condição (sem prancheta): Coluna, Operador, Valor (fora nos
@@ -79,6 +80,17 @@ pub struct RespostaFiltros {
 /// "Filtros", as etiquetas, "+ Condição" e, à direita, a contagem e "Limpar filtros" (só com etiqueta), num `Ui` em
 /// linha (a faixa de contexto ou a [`barra_filtros`]).
 pub fn filtros(ui: &mut Ui, etiquetas: &[EtiquetaFiltro<'_>], contagem: &ContagemFiltros) -> RespostaFiltros {
+    filtros_com_direita(ui, etiquetas, contagem, |_| {})
+}
+
+/// Os [`filtros`] com mais alguma coisa na ponta direita, depois do "Limpar filtros" (a contagem da busca da barra do
+/// CSV, "3 de 41", que não tem faixa de contexto): `direita` desenha num `Ui` da direita para a esquerda.
+pub fn filtros_com_direita(
+    ui: &mut Ui,
+    etiquetas: &[EtiquetaFiltro<'_>],
+    contagem: &ContagemFiltros,
+    direita: impl FnOnce(&mut Ui),
+) -> RespostaFiltros {
     let p = paleta(ui);
     let t3 = p.estudio.t3;
     let g = galley_tit(ui, "Filtros", t3);
@@ -111,6 +123,7 @@ pub fn filtros(ui: &mut Ui, etiquetas: &[EtiquetaFiltro<'_>], contagem: &Contage
     }
     let mut limpar = false;
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        direita(ui);
         if !etiquetas.is_empty() && ui.add(Botao::ghost("Limpar filtros").pequeno()).clicked() {
             limpar = true;
         }

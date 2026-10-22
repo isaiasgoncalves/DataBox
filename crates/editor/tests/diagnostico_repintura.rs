@@ -909,7 +909,7 @@ fn planilha_parada_nao_repinta() {
     esperar(&mut h, "o índice terminar", |h| {
         let lendo = h.query_all_by(|n| n.label().is_some_and(|l| l.starts_with("Lendo a planilha"))).next().is_some();
         let contado = h
-            .query_all_by(|n| n.label().or(n.value()).is_some_and(|l| l.starts_with("20.001 linhas")))
+            .query_all_by(|n| n.label().or(n.value()).is_some_and(|l| l.starts_with("· 20.001 linhas")))
             .next()
             .is_some();
         !h.state().ocupado() && !lendo && contado

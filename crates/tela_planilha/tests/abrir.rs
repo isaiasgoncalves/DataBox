@@ -9,6 +9,7 @@ mod apoio;
 use apoio::*;
 use egui::accesskit::Role;
 use egui_kittest::kittest::{NodeT, Queryable};
+use estado::Documento;
 use interface::tema::Tema;
 use tela_planilha::{ABRIR_NO_PADRAO, EM_MEMORIA, MSG_SEM_PLANILHA_A_VISTA, MSG_SEM_PLANILHAS, Modo, PedidoDeArquivo};
 
@@ -45,9 +46,12 @@ fn abre_o_xlsx_e_mostra_a_primeira_planilha_visivel() {
     assert_eq!(nomes, ["Resumo", "Vendas"]);
     let vendas = t.get_by_role_and_label(Role::Tab, "Vendas, planilha 2 de 2");
     assert_eq!(vendas.accesskit_node().is_selected(), Some(true));
-    // a faixa de contexto: o nome, a planilha e o "Somente leitura"
-    assert!(t.query_by_label("relatorio_q3.xlsx").is_some());
-    assert!(t.query_by_label("Somente leitura").is_some());
+    // sem a faixa de contexto (0.2.3, item F): a planilha e o "Somente leitura" no rodapé; o nome está na aba
+    assert!(!tela.anatomia().faixa);
+    assert!(t.query_by_label("relatorio_q3.xlsx").is_none(), "o nome não se repete no documento");
+    let no_rodape = |rotulo: &str| t.query_all_by_label(rotulo).any(|n| n.rect().top() > TAMANHO.y - 40.0);
+    assert!(no_rodape("Vendas"), "a planilha no rodapé");
+    assert!(no_rodape("Somente leitura"), "o chip no rodapé");
 }
 
 #[test]
@@ -316,6 +320,9 @@ fn senha_mostra_a_frase() {
     let frase = tela(&t).falha().expect("a frase");
     assert!(frase.starts_with("A planilha está protegida por senha"), "{frase}");
     assert!(t.query_by_label_contains("protegida por senha").is_some());
+    // a ficha do arquivo que não abriu fica com a faixa: o nome e o caminho
+    assert!(tela(&t).anatomia().faixa);
+    assert!(t.query_by_label("folha_pagamento.xlsx").is_some());
     assert!(!t.get_by_label(ABRIR_NO_PADRAO).accesskit_node().is_disabled());
 }
 

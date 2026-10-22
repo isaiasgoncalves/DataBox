@@ -95,7 +95,8 @@
 //!   [`pintura::RAIO_PADRAO`] (o raio único de 10 das superfícies e dos campos),
 //!   [`pintura::pintar_fundo`] (o fundo liso da janela) e as peças de antes com as cores do Estúdio
 //!   ([`pintura::anel_aqua`], [`pintura::anel_rebaixado`], [`pintura::brilho_topo`]).
-//! - [`formato`]: [`formato::formatar_numero`] ("5.000", "1,5"), [`formato::formatar_bytes`]
+//! - [`formato`]: [`formato::formatar_numero`] ("5.000", "1,5"), [`formato::formatar_numero_com_casas`]`(n, min, max)`
+//!   ("98.231,40"), [`formato::formatar_bytes`]
 //!   / [`formato::partes_bytes`] ("1,2 MB"), [`formato::formatar_bytes_em`], [`formato::formatar_data`]
 //!   ("22/09/2026 10:31"), [`formato::formatar_ms`] ("320 ms", o `tempo()` da Consulta SQL),
 //!   [`formato::formatar_segundos`] ("4,6 s", o `segundos()` da aba Dados), [`formato::plural`]
@@ -212,7 +213,8 @@
 //!   - [`pecas::filtros`]: os filtros das grades, iguais nos Dados e no CSV (revisão de UI de 19/10/2026) —
 //!     [`pecas::filtros::filtros`]`(ui, &[EtiquetaFiltro], &ContagemFiltros) -> RespostaFiltros { abrir, tirar,
 //!     limpar, nova_condicao }` ("Filtros", as etiquetas, "+ Condição", a contagem e "Limpar filtros"),
-//!     [`pecas::filtros::barra_filtros`] (a `.barra-filtros` de 38px do CSV) e
+//!     [`pecas::filtros::filtros_com_direita`]`(…, |ui| …)` (o mesmo, com mais alguma coisa na ponta direita: a contagem
+//!     da busca do CSV), [`pecas::filtros::barra_filtros`] (a `.barra-filtros` de 38px do CSV) e
 //!     [`pecas::filtros::popover_condicao`]`(ctx, id, &mut CondicaoEmEdicao, colunas, operadores, sem_valor) ->
 //!     Option<FimCondicao>` (Coluna, Operador, Valor, Cancelar e Aplicar).
 //!   - [`pecas::divisoria::Divisoria`] (a alça dos painéis laterais da casca; ver "Mudanças de API").
@@ -275,7 +277,16 @@
 //!     [`grade::tsv_do_intervalo_com_cabecalho`], [`grade::texto_do_intervalo_como`] (`FormatoCopia`, os nomes, cada
 //!     célula como `tabular::colunas::ValorCopia`, `OpcoesCopia { separador, tabela }`) e [`grade::valor_de_copia`]
 //!     (`Celula` → NULL, número, texto). A [`grade::GradeSomenteLeitura`] copia o Ctrl+Shift+C sozinha e tem
-//!     `texto_copiado_com_cabecalho`, `texto_copiado_como(formato, &opcoes)` e `nucleo_mut` (para o menu).
+//!     `texto_copiado_com_cabecalho`, `texto_copiado_como(formato, &opcoes)` e `nucleo_mut` (para o menu). Os itens de
+//!     escrita que ainda não chegaram: `OfertasCelula::com_escrita_por_vir(&[acoes])` (desligados com o
+//!     [`grade::MOTIVO_PROXIMA_ETAPA`]). O `grade` reexporta `FormatoCopia`, `OpcoesCopia` e `ValorCopia` do `tabular`.
+//!   - o rodapé da seleção (0.2.3): [`grade::ResumoSelecao`] (`contagem`, `numeros`, `soma`, `minimo`, `maximo`,
+//!     `casas`; `somar_celula(&Celula, numerica)`, `somar_do_csv(texto, numerica, decimal)`, `somar_numero(valor,
+//!     casas)`, `somar_texto`, `juntar`, `partes`, `texto` = "Contagem 33 · Soma 98.231,40 · Média 8.930,13 · Mín.
+//!     154,03 · Máx. 17.810,34"), [`grade::rodape_da_selecao`]`(ui, &resumo)` (12px `--t2` na largura que sobra; o que
+//!     não cabe sai, primeiro o Mín. e o Máx., depois a Média, e vai para a dica) e [`grade::rodape_somando`] (o
+//!     "Somando…" de [`grade::SOMANDO`], com o ponto pulsante) e [`grade::largura_minima_da_selecao`] (a contagem e a
+//!     soma, ou o "Somando…": o mínimo que a tela que divide o rodapé deixa para as contas).
 //!   - [`pecas::acao::Acao`] (`new(titulo, Icone).atalho("Ctrl+O").primaria(true).habilitado(..)`, `ui.add`: o `.acao`
 //!     do Início, 220×69 com o círculo de 36 e a silhueta de 20, o nome em 13/600 e o atalho no `.kbd`; o primário
 //!     usa o degradê do botão principal, o halo de 30px no hover e o texto branco).

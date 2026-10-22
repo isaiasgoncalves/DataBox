@@ -1,8 +1,8 @@
-//! A faixa do CSV e a barra dos filtros (prancheta 7, revisão de UI de 19/10/2026), como as da aba Dados: na faixa,
-//! o nome do arquivo e o formato em pílulas (separador, codificação e fim de linha; o detalhe e a troca ficam nas
-//! Propriedades); embaixo dela, a `.barra-filtros` com as peças de `interface::pecas::filtros` ("Filtros", uma
-//! etiqueta por condição, "+ Condição" e, filtrando, "236 de 1.180 linhas" ou "contando…" e "Limpar filtros") e o
-//! popover da condição. E a vista: pedida numa tarefa quando as condições, a ordem ou o documento mudam.
+//! A barra dos filtros do CSV (prancheta 7, revisão de UI de 19/10/2026), como a da aba Dados, no alto do documento (o
+//! CSV não tem mais a faixa desde a 0.2.3, item F: o formato foi para o rodapé): a `.barra-filtros` com as peças de
+//! `interface::pecas::filtros` ("Filtros", uma etiqueta por condição, "+ Condição" e, filtrando, "236 de 1.180 linhas"
+//! ou "contando…" e "Limpar filtros"; na ponta direita, a contagem da busca da barra, "3 de 41") e o popover da
+//! condição. E a vista: pedida numa tarefa quando as condições, a ordem ou o documento mudam.
 
 use std::sync::Arc;
 
@@ -10,10 +10,9 @@ use egui::Ui;
 use estado::Promessa;
 use interface::formato::{contagem_filtrada, plural};
 use interface::pecas::filtros::{
-    CondicaoEmEdicao, ContagemFiltros, EtiquetaFiltro, FimCondicao, barra_filtros, filtros, popover_condicao,
+    CondicaoEmEdicao, ContagemFiltros, EtiquetaFiltro, FimCondicao, barra_filtros, filtros_com_direita,
+    popover_condicao,
 };
-use interface::pecas::rotulos::{TipoPill, pill};
-use interface::pecas::texto::forte;
 
 use crate::filtro::{CalculoVista, ChaveVista, Condicao, OPERADORES, OperadorCsv, Ordem, calcular_vista};
 use crate::sessao::{Controle, Trabalho};
@@ -119,22 +118,6 @@ impl TelaCsv {
 
     // ------------------------------------------------------------------ a faixa, os filtros e o popover
 
-    /// A faixa: o nome do arquivo (o `strong` de 13px) e o formato em pílulas ("Ponto e vírgula", "UTF-8", "CRLF").
-    pub(crate) fn desenhar_faixa(&mut self, ui: &mut Ui) {
-        forte(ui, &self.nome);
-        let Some(r) = self.retrato.as_ref() else { return };
-        for t in crate::textos::pilulas_do_formato(&r.formato) {
-            pill(ui, &t, TipoPill::Neutra);
-        }
-        // a contagem da busca da barra ("3 de 41"), na ponta direita
-        if let Some(rotulo) = self.busca.rotulo() {
-            let cor = interface::tema::paleta(ui).estudio.t2;
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                estado::busca::rotulo_na_faixa(ui, &rotulo, cor);
-            });
-        }
-    }
-
     /// A `.barra-filtros` no alto do conteúdo: "Filtros", as etiquetas, "+ Condição" e, filtrando, a contagem e
     /// "Limpar filtros"; e o popover da condição.
     pub(crate) fn desenhar_filtros(&mut self, ui: &mut Ui) {
@@ -159,7 +142,16 @@ impl TelaCsv {
                 _ => ContagemFiltros::Nada,
             }
         };
-        let r = barra_filtros(ui, |ui| filtros(ui, &etiquetas, &contagem));
+        // a contagem da busca da barra ("3 de 41") na ponta direita: o CSV não tem mais a faixa
+        let busca = self.busca.rotulo();
+        let r = barra_filtros(ui, |ui| {
+            filtros_com_direita(ui, &etiquetas, &contagem, |ui| {
+                if let Some(rotulo) = &busca {
+                    let cor = interface::tema::paleta(ui).estudio.t2;
+                    estado::busca::rotulo_na_faixa(ui, rotulo, cor);
+                }
+            })
+        });
         let mut abrir = r.abrir;
         if std::mem::take(&mut self.abrir_condicao_pendente) {
             abrir = Some((None, r.nova_condicao));

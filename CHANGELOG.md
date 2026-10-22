@@ -5,6 +5,30 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Clique direito numa célula ou num intervalo** nos Dados, no CSV, na planilha do Excel e no resultado da Consulta
+  SQL (também com o Shift+F10, com o foco na grade): **Copiar**, **Copiar com cabeçalho** (Ctrl+Shift+C com o foco na
+  grade; no Explorador continua o Copiar caminho) e **Copiar como** CSV, JSON, Markdown, `INSERT`, lista para `IN (…)`
+  ou pandas (no CSV e no Excel, o `INSERT` leva o nome do arquivo ou da planilha); **Filtrar por este valor** e
+  **Excluir este valor do filtro** nos Dados e no CSV (o NULL vira "é nulo", o vazio do CSV vira "é vazio"); **Marcar
+  as linhas** nos Dados e no CSV; **Abrir a ficha da linha** nos Dados. Colar, Limpar, Definir como NULL e Excluir as
+  linhas aparecem desligados: chegam na próxima etapa.
+- **O rodapé soma a seleção:** com mais de uma célula selecionada, "Contagem 33 · Soma 98.231,40 · Média 8.930,13 ·
+  Mín. 154,03 · Máx. 17.810,34", como a barra de status do Excel (a contagem das células não vazias; as contas, das
+  numéricas). Onde não cabe, saem o mínimo e o máximo, depois a média, e vão para a dica. No CSV grande, a conta roda
+  em segundo plano com "Somando…".
+
+### Alterado
+
+- **O CSV não tem mais a faixa de cima:** o nome do arquivo já está na aba e nas Propriedades, e o formato (separador,
+  codificação e fim de linha) foi para o rodapé, ao lado da contagem de linhas. A barra dos filtros sobe para o alto
+  do documento, como nos Dados, e a contagem da busca ("3 de 41") fica na ponta direita dela. A grade ganha uma linha.
+- **A planilha do Excel também não tem mais a faixa de cima:** a planilha e a célula ativa ("Vendas › B7") e o
+  "Somente leitura" vão para o rodapé, antes da contagem de linhas e colunas, e a contagem da busca fica na ponta
+  direita dele. **Abrir no programa padrão** passa para o menu Arquivo, ligado com o Excel, o CSV, o texto/JSON e a
+  ficha de um arquivo. O texto e o JSON continuam com a faixa (o Formatar, o sinal de válido e o caminho do JSON).
+
 ### Corrigido
 
 - **As contas da coluna do CSV não leem mais a coluna inteira para a memória:** a seção Coluna das Propriedades

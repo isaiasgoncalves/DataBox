@@ -116,7 +116,10 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
    célula edita, e grava na hora; o aviso diz onde gravou e oferece **Desfazer** (ou Ctrl+Z). A ficha da linha mostra
    BLOB, NULL e colunas geradas.
 4. Arraste de uma célula a outra (ou Shift com as setas) para **selecionar um intervalo**; Ctrl+C copia como o Excel,
-   pronto para colar numa planilha.
+   pronto para colar numa planilha. O **clique direito** (ou Shift+F10) abre o menu da seleção: copiar com o cabeçalho
+   (Ctrl+Shift+C) ou como CSV, JSON, Markdown, `INSERT`, lista para `IN (…)` ou pandas, filtrar pelo valor da célula,
+   marcar as linhas e abrir a ficha. Com mais de uma célula, o rodapé mostra a contagem, a soma, a média, o mínimo e o
+   máximo.
 5. As **Propriedades** mostram como a tabela é feita: **Resumo**, **Colunas**, **Índices** e **SQL** (Alt+1 a Alt+4);
    a coluna escolhida acende na grade. Alterar uma coluna ou criar um índice sempre mostra antes o SQL que vai rodar.
 
@@ -170,6 +173,9 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   (Alt+1 a Alt+4), e a coluna escolhida acende na grade.
 - **Selecionar um intervalo de células** nos Dados, no CSV, no Excel e no resultado da Consulta SQL: arraste,
   Shift+clique ou Shift com as setas; Ctrl+C copia com tabulações, para colar numa planilha.
+- **Clique direito na seleção** (ou Shift+F10): copiar com o cabeçalho ou como CSV, JSON, Markdown, `INSERT`, lista
+  para `IN (…)` e pandas; filtrar por aquele valor ou tirá-lo do filtro; marcar as linhas; abrir a ficha. O rodapé
+  soma a seleção como a barra de status do Excel (contagem, soma, média, mínimo e máximo).
 - **Painéis redimensionáveis:** arraste a divisória entre o painel e o documento; duplo clique volta à largura padrão.
   A largura fica guardada para a próxima vez.
 - **Vidro fosco** nos menus, nas listas e nas janelas, que ficam por cima do resto.
@@ -243,7 +249,9 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 - **Buscar** (Ctrl+F) na planilha inteira, pelo texto como ele aparece na grade (as colunas ocultas ficam de fora).
 - Ctrl+C copia a célula ou a coluna; o clique direito no cabeçalho oferece **Trazer colunas desta planilha** para o
   CSV aberto. Ctrl+PageUp e Ctrl+PageDown trocam de planilha.
-- Arquivo com senha ou no formato antigo (`.xls`) diz o que fazer e oferece **Abrir no programa padrão**.
+- O rodapé mostra a planilha e a célula ativa ("Vendas › B7"), o tamanho e as contas da seleção.
+- Arquivo com senha ou no formato antigo (`.xls`) diz o que fazer e oferece **Abrir no programa padrão** (que também
+  fica no menu Arquivo, para qualquer arquivo aberto).
 
 ### Atalhos principais
 
@@ -261,6 +269,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 | Alt+← / Alt+→ | Voltar / Avançar |
 | Ctrl+Shift+PageUp / PageDown | Mover a aba ativa para a esquerda / a direita |
 | Ctrl+C | Copiar a célula ou o intervalo selecionado |
+| Ctrl+Shift+C | Copiar o intervalo com o cabeçalho (na grade; no Explorador, Copiar caminho) |
+| Shift+F10 | Menu da célula ou da seleção (na grade) |
 
 ---
 

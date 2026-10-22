@@ -485,6 +485,23 @@ item sem oferta não aparece, o desligado mostra o motivo na dica) e cumpre a `A
 na grade é o "Copiar com cabeçalho" (`RespostaNucleo::copiar_com_cabecalho`), não o "Copiar caminho" do Explorador.
 A tecla Menu do teclado não chega ao egui 0.36 (o egui-winit não traduz o `NamedKey::ContextMenu`).
 
+Nas telas (0.2.3, só os itens de leitura): os Dados (`tela_dados::menu`), o CSV (`tela_csv::selecao`), a planilha
+(`tela_planilha::selecao`) e a Consulta (`tela_consulta::resultados`) chamam o menu todo quadro depois da grade e
+cumprem o Copiar, o Copiar com cabeçalho e o Copiar como (o CSV, com as linhas fora da página, pela fila de tarefas:
+`Trabalho::LerIntervalo` leva o `ComoCopiar`), o Filtrar e o Excluir do filtro (uma condição na barra de sempre: o
+`banco::Operador` nos Dados, o `OperadorCsv` no CSV; a planilha ainda não tem a barra de filtros e os mostra
+desligados), o Marcar as linhas e a ficha. Os itens de escrita aparecem desligados com
+`OfertasCelula::com_escrita_por_vir` (o `MOTIVO_PROXIMA_ETAPA`). Com colunas escolhidas no CSV e na planilha, o
+Shift+F10 continua o menu do cabeçalho.
+
+O **rodapé da seleção** (`interface::grade::ResumoSelecao` e `rodape_da_selecao(ui, &resumo)`): com mais de uma célula,
+as telas somam o intervalo célula a célula (`somar_celula(&Celula, numerica)` nos Dados, pelo tipo da coluna, e na
+Consulta, pelo valor; `somar_do_csv(texto, numerica, decimal)` no CSV, pelo tipo detectado; `somar_numero` na planilha,
+pelos números do Excel) e o desenham à direita do rodapé ("Contagem · Soma · Média · Mín. · Máx.", pt-BR pelo
+`formato::formatar_numero_com_casas`); onde não cabe, saem o Mín. e o Máx., depois a Média, que vão para a dica. Com o
+intervalo fora da página (o CSV, a planilha além dos blocos guardados), a conta roda numa `Promessa` cancelável e o
+rodapé mostra `rodape_somando` ("Somando…").
+
 **Ícones:** `icones::Icone` (as silhuetas da barra de ferramentas e dos botões, os sólidos do
 trilho, do menu Arquivo, do banco, dos objetos e das partes, os `-grande` de 48 da dock, `Tipo(TipoColuna)` — a
 pastilha pelo tipo declarado, `TipoColuna::do_declarado(tipo, pk, fk)` —, `Folha(TipoArquivo)` e
@@ -649,9 +666,9 @@ O que cada tela diz (a anatomia, a busca da barra e as Propriedades; os textos e
 | Índices e gatilhos | faixa, página | desligada | Tabela, Índice (o selecionado) |
 | Definição SQL | faixa, própria | desligada | Tabela, Abrir na Consulta SQL |
 | Consulta SQL | faixa, rodapé, própria | "Buscar no editor" | Execução, Tabelas (com o Inserir) |
-| CSV (`tela_csv`) | rodapé, própria (a faixa "Filtros" só com condição) | "Buscar em vendas.csv" | Formato, Arquivo, Coluna {nome} |
+| CSV (`tela_csv`) | rodapé (com o formato), própria; sem faixa (0.2.3), a barra dos filtros no alto | "Buscar em vendas.csv" | Formato, Arquivo, Coluna {nome} |
 | Texto e JSON (`tela_texto`) | faixa, rodapé, própria | "Buscar em notas.txt" | Estrutura do documento (JSON) ou Texto, Arquivo |
-| Planilha (`tela_planilha`) | faixa, rodapé, própria (a faixa das planilhas entre a grade e o rodapé) | "Buscar em Plan1" | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
+| Planilha (`tela_planilha`) | rodapé (com a planilha, a célula ativa e o "Somente leitura"), própria (a faixa das planilhas entre a grade e o rodapé); sem faixa de contexto desde a 0.2.3, salvo na ficha do arquivo que não abriu | "Buscar em Plan1" | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
 
 **A busca nos arquivos (0.2.3).** No CSV, na planilha e no texto, a busca da barra procura no arquivo inteiro, numa
 tarefa, pelo `estado::busca::BuscaEmFundo<P>`: `nova(egui, origem, em_ordem, |&mut Coletor<P>| …)` roda a passada,

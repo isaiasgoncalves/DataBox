@@ -11,12 +11,16 @@ use egui::{Color32, Id, Rect, ScrollArea, Sense, Ui, UiBuilder, vec2};
 use estado::{OrigemJanelaExportar, PedidoJanelaExportar};
 use interface::fontes;
 use interface::formato::{formatar_ms, formatar_numero, plural};
-use interface::grade::{ColunaGrade, GradeSomenteLeitura, pastilha_pelos_valores};
+use interface::grade::{
+    AcaoCelula, ColunaGrade, GradeSomenteLeitura, Intervalo, OfertasCelula, OpcoesCopia, ResumoSelecao,
+    frase_do_intervalo_copiado, menu_da_celula, pastilha_pelos_valores,
+};
 use interface::pecas::avisos::{Aviso, TomAviso, vazio};
 use interface::pecas::documento::RECUO_PAGINA;
 use interface::pecas::texto::{
     Paragrafo, Trecho, formato, mostrar_paragrafo_selecionavel, paragrafo_de_job, texto_rico,
 };
+use interface::pecas::toast::toast_concluido;
 use interface::tema::paleta;
 
 use crate::Chave;
@@ -29,6 +33,8 @@ pub const MSG_SEM_COMANDO: &str = "Não havia comando para executar: o texto só
 pub const MSG_SEM_LINHAS: &str = "A consulta não devolveu linhas.";
 pub const MSG_PAROU: &str = "A execução parou neste comando; os anteriores já foram executados.";
 const MSG_ERRO_PADRAO: &str = "O comando não pôde ser executado.";
+/// A tabela do "Copiar como › INSERT" quando o comando não cita uma.
+const TABELA_DO_INSERT: &str = "resultado";
 
 /// Um resultado: um comando executado (um item do seletor) ou um aviso só.
 pub(crate) enum Card {
@@ -42,6 +48,10 @@ pub(crate) enum Card {
         /// None com zero linhas.
         grade: Option<Box<GradeSomenteLeitura>>,
         pedido: PedidoJanelaExportar,
+        /// A tabela do "Copiar como › INSERT": a do primeiro FROM do comando, ou "resultado".
+        tabela: String,
+        /// As contas do rodapé da seleção, guardadas para o intervalo em que foram feitas.
+        resumo: Option<Box<(Intervalo, ResumoSelecao)>>,
     },
     /// "12 linhas alteradas · 4 ms" (ou "Comando executado") e o comando.
     Alteracao { numero: usize, texto: String, tempo: String, comando: BlocoComando },
@@ -104,6 +114,28 @@ impl Card {
             Card::Alteracao { texto, tempo, .. } => Some(format!("{texto} · {tempo}")),
             Card::Erro { .. } | Card::Mais { .. } | Card::Aviso { .. } => None,
         }
+    }
+
+    /// As contas do rodapé da seleção (A.3): com mais de uma célula selecionada na grade, a contagem e as contas pelo
+    /// valor de cada célula; refeitas só quando o intervalo muda.
+    pub(crate) fn resumo_da_selecao(&mut self) -> Option<ResumoSelecao> {
+        let Card::Linhas { grade: Some(g), resumo, .. } = self else { return None };
+        let iv = g.nucleo().intervalo().filter(Intervalo::varias)?;
+        if let Some(guardado) = resumo
+            && guardado.0 == iv
+        {
+            return Some(guardado.1);
+        }
+        let mut r = ResumoSelecao::default();
+        for l in iv.linhas() {
+            for c in iv.colunas() {
+                if let Some(celula) = g.linhas().get(l).and_then(|linha| linha.get(c)) {
+                    r.somar_celula(celula, true);
+                }
+            }
+        }
+        *resumo = Some(Box::new((iv, r)));
+        Some(r)
     }
 
     /// O pedido da janela Exportar (só num resultado com linhas).
@@ -244,10 +276,10 @@ fn card_linhas(
     if truncado {
         hint.push_str(&format!(" · mostrando as primeiras {}", formatar_numero(n)));
     }
-    let pedido = PedidoJanelaExportar {
-        origem: OrigemJanelaExportar::Consulta { sql: comando.clone() },
-        nome_sugerido: nome_para_exportar(&comando),
-    };
+    let nome_sugerido = nome_para_exportar(&comando);
+    let tabela = nome_sugerido.strip_prefix("consulta_").unwrap_or(TABELA_DO_INSERT).to_string();
+    let pedido =
+        PedidoJanelaExportar { origem: OrigemJanelaExportar::Consulta { sql: comando.clone() }, nome_sugerido };
     let grade = (!linhas.is_empty()).then(|| {
         // a pastilha de tipo no cabeçalho: pelo que os valores de cada coluna são (a Consulta não sabe o tipo
         // declarado da coluna de origem); `Aa` quando não dá para saber
@@ -261,7 +293,7 @@ fn card_linhas(
             .collect();
         Box::new(GradeSomenteLeitura::new((grade, execucao, numero), colunas, linhas))
     });
-    Card::Linhas { numero, contagem, hint, grade, pedido }
+    Card::Linhas { numero, contagem, hint, grade, pedido, tabela, resumo: None }
 }
 
 /// Desenha o resultado escolhido no espaço que sobra (`id`: o da tela, da execução e do item): a grade de ponta a
@@ -270,8 +302,9 @@ fn card_linhas(
 pub(crate) fn desenhar(ui: &mut Ui, card: &mut Card, id: Id) {
     let altura = ui.available_height();
     match card {
-        Card::Linhas { grade: Some(g), .. } => {
+        Card::Linhas { grade: Some(g), tabela, .. } => {
             g.mostrar(ui, altura);
+            menu_da_grade(ui, g, tabela);
         }
         Card::Linhas { grade: None, .. } => {
             vazio(ui, MSG_SEM_LINHAS, false);
@@ -284,6 +317,23 @@ pub(crate) fn desenhar(ui: &mut Ui, card: &mut Card, id: Id) {
                 aviso_do_resultado(ui, outro, id);
             });
         }
+    }
+}
+
+/// O menu da célula da grade (A.1): só os itens de copiar, que valem no resultado de uma consulta.
+fn menu_da_grade(ui: &Ui, g: &mut GradeSomenteLeitura, tabela: &str) {
+    let Some(iv) = g.nucleo().intervalo() else { return };
+    let ofertas = OfertasCelula::de_leitura(iv);
+    let Some(acao) = menu_da_celula(ui, g.nucleo_mut(), &ofertas) else { return };
+    let texto = match acao {
+        AcaoCelula::Copiar => g.texto_copiado(),
+        AcaoCelula::CopiarComCabecalho => g.texto_copiado_com_cabecalho(),
+        AcaoCelula::CopiarComo(formato) => g.texto_copiado_como(formato, &OpcoesCopia { separador: ',', tabela }),
+        _ => None,
+    };
+    if let Some(t) = texto {
+        ui.ctx().copy_text(t);
+        toast_concluido(ui.ctx(), frase_do_intervalo_copiado(iv));
     }
 }
 

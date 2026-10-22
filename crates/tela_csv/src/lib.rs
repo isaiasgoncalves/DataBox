@@ -6,7 +6,7 @@
 //!
 //! ```text
 //! TelaCsv::nova(caminho) -> TelaCsv          o arquivo é lido numa tarefa no primeiro quadro (nada de disco aqui)
-//! impl estado::Documento for TelaCsv         anatomia (faixa, rodapé, rolagem própria) · avisos · faixa · conteudo ·
+//! impl estado::Documento for TelaCsv         anatomia (rodapé, rolagem própria; sem faixa) · avisos · conteudo ·
 //!                                            rodape ·
 //!                                            ofertas/executar · tem_propriedades/propriedades · status ·
 //!                                            status_do_arquivo · ocupada · em_segundo_plano · alterado · alteracoes ·
@@ -49,11 +49,12 @@
 //!   "número inteiro (detectado)"), o `th.nova-col` com o "+" no fim. Números à direita, vazias em branco, alteradas
 //!   com o `td.alt`. A rolagem é de todas as linhas: só a página à vista (240 linhas) fica em mãos, e a que falta é
 //!   pedida quando a grade rola.
-//! - **Faixa e rodapé** (revisão de UI de 19/10/2026, como os Dados): na faixa, o nome do arquivo e o formato em
-//!   pílulas ("Ponto e vírgula", "UTF-8", "CRLF"); embaixo dela, sempre, a barra dos filtros; a seta da ordem é a
+//! - **Barra dos filtros e rodapé** (revisão de UI de 19/10/2026, como os Dados; sem a faixa desde a 0.2.3, item F: o
+//!   nome está na aba e nas Propriedades): a barra dos filtros, sempre, no alto do documento; a seta da ordem é a
 //!   `.seta-ord` desenhada (`interface::grade::pintar_seta_ordem`). Rodapé: "Linhas 1–26 de 1.204" (as linhas à vista
-//!   de quantas a vista tem, o `interface::formato::contagem_linhas` dos Dados) e, em `--acct`, "· 1 alteração não
-//!   salva".
+//!   de quantas a vista tem, o `interface::formato::contagem_linhas` dos Dados), o formato "· Ponto e vírgula · UTF-8 ·
+//!   CRLF" em `--t3` (`textos::formato_no_rodape`) e, em `--acct`, "· 1 alteração não salva"; com a seleção, as contas
+//!   à direita, que encolhem antes de o formato sair para a dica da contagem.
 //! - **Propriedades:** Formato (os quatro seletores e a caixa do cabeçalho; mudar um relê o arquivo com ele fixo;
 //!   desligados com alteração pendente, com a dica), Arquivo (`estado::secao_arquivo`) e Coluna {nome} da célula ativa
 //!   (Tipo detectado, Vazias e, nas numéricas, Mínimo, Máximo e Soma; nas de texto, Maior texto).
@@ -74,6 +75,12 @@
 //!   fora da página lidas numa tarefa), as linhas marcadas em TSV com o cabeçalho (numa tarefa) ou a célula ativa. Sem
 //!   "Primeira linha é o cabeçalho", as colunas não têm nome no arquivo: Renomear
 //!   fica desligado (com a dica) e a Nova coluna entra com o nome genérico.
+//! - **Menu da célula** (0.2.3, `selecao`): o clique direito numa célula ou num intervalo e o Shift+F10 (com colunas
+//!   escolhidas, o Shift+F10 continua o do cabeçalho): Copiar, Copiar com cabeçalho (também o Ctrl+Shift+C) e Copiar
+//!   como (o separador do arquivo no CSV, o nome dele no `INSERT`, os números pelo tipo detectado; as linhas fora da
+//!   página pela fila), Filtrar por este valor e Excluir este valor do filtro (o vazio vira "é vazio"), Marcar as
+//!   linhas; Colar, Limpar e Excluir as linhas desligados até a próxima etapa. Com mais de uma célula, o rodapé soma a
+//!   seleção à direita; além da página, numa tarefa cancelável, com "Somando…".
 //! - **Colunas** (passo 12, prancheta 16): o clique no cabeçalho seleciona a coluna (Ctrl soma ou tira, Shift
 //!   estende; o clique numa célula desfaz), "· coluna valor selecionada" no rodapé. O menu do cabeçalho (clique
 //!   direito e Shift+F10, a peça `MenuContexto`): Copiar coluna ("Copiar 3 colunas") · Colar como nova coluna ·
@@ -110,7 +117,7 @@
 //! - **Buscar** (Ctrl+F, "Buscar em vendas.csv"; o módulo `busca`): no arquivo inteiro, numa tarefa com a cópia da
 //!   tabela (`Tabela::copia_para_buscar` e `achar_todos`: pelo índice, sem montar páginas, com as alterações por cima),
 //!   sem diferenciar maiúsculas nem acentos, só nas linhas que o filtro mostra e na ordem da vista. A célula achada
-//!   vira a ativa e a grade rola até ela; Enter e Shift+Enter andam (com volta); a faixa diz "3 de 41" ("41+"
+//!   vira a ativa e a grade rola até ela; Enter e Shift+Enter andam (com volta); a ponta direita da barra dos filtros diz "3 de 41" ("41+"
 //!   enquanto conta); Esc limpa e volta à célula de antes. Cada tecla troca a busca (a de antes é cancelada), e uma
 //!   alteração, o filtro ou a ordem a refazem.
 //! - **Atualizar (F5):** relê; com alterações, pergunta "Descartar as alterações de {nome} e ler o arquivo de novo?".
@@ -135,6 +142,7 @@ mod grade;
 mod janela_trazer;
 mod pintor;
 mod propriedades;
+mod selecao;
 mod sessao;
 mod tela;
 mod textos;

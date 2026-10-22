@@ -28,7 +28,7 @@ fn coluna(h: &H, c: usize) -> Vec<String> {
 fn filtro_pela_faixa_e_o_popover() {
     let amb = Ambiente::vazio("filtro_popover");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(20)));
-    assert!(doc(&h).anatomia().faixa, "a faixa do formato, sempre (revisão de UI de 19/10/2026)");
+    assert!(!doc(&h).anatomia().faixa, "sem a faixa: a barra dos filtros fica no alto (0.2.3, item F)");
     assert!(h.query_by_label("Filtros").is_some(), "a barra dos filtros, mesmo sem filtro");
     assert!(h.query_by_label_contains(" de 20 linhas").is_none(), "sem filtro, sem contagem na barra");
     clicar_celula(&mut h, 0, 1);
@@ -50,7 +50,7 @@ fn filtro_pela_faixa_e_o_popover() {
     assert_eq!(posicoes(&h), [0, 5, 10, 15]);
     assert!(coluna(&h, 1).iter().all(|r| r == "Sul"));
     assert_eq!(doc(&h).linhas_filtradas(), Some(4));
-    assert!(h.query_by_label("4 de 20 linhas").is_some(), "a contagem da faixa");
+    assert!(h.query_by_label("4 de 20 linhas").is_some(), "a contagem na barra dos filtros");
     assert!(h.query_by_label("Linhas 1–4 de 4").is_some(), "o rodapé: as linhas da vista");
     assert_eq!(doc(&h).ofertas(&h.state().estado).dica(Verbo::Filtrar), "Filtrar (1 condição)");
     assert!(doc(&h).ofertas(&h.state().estado).get(Verbo::Filtrar).marcado);

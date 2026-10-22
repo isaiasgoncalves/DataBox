@@ -518,6 +518,26 @@ fn abrir_no_programa_padrao_chama_o_gancho() {
     assert_eq!(abertos.borrow().as_slice(), [json.clone(), json]);
 }
 
+/// O Arquivo › Abrir no programa padrão (0.2.3, item F: a planilha e o CSV perderam a faixa, que tinha o botão): ligado
+/// com um documento de arquivo à vista, pelo mesmo caminho do botão da ficha.
+#[test]
+fn abrir_no_programa_padrao_pelo_menu_arquivo() {
+    let amb = Ambiente::com_pasta("menu_abrir_no_programa", &[]);
+    let (mut h, abertos) = harness_da_ficha(&amb, "planilha.xlsx", Tema::Claro);
+    let xlsx = real(&amb.pasta_de_dados().join("planilha.xlsx"));
+    abrir_menu_arquivo(&mut h);
+    assert!(item_ligado(&h, "Abrir no programa padrão"));
+    clicar_item(&mut h, "Abrir no programa padrão");
+    assentar(&mut h);
+    assert_eq!(abertos.borrow().as_slice(), std::slice::from_ref(&xlsx));
+    // sem um documento de arquivo (o Início), desligado
+    h.state_mut().ir(Rota::Inicio);
+    h.run_steps(2);
+    assentar(&mut h);
+    abrir_menu_arquivo(&mut h);
+    assert!(!item_ligado(&h, "Abrir no programa padrão"));
+}
+
 #[test]
 fn ficha_de_arquivo_que_sumiu_desliga_os_botoes() {
     let amb = Ambiente::com_pasta("ficha_sumiu", &[]);

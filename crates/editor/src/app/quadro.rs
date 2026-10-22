@@ -131,6 +131,10 @@ impl Editor {
                 }),
                 _ => None,
             },
+            arquivo: match (pronta, &self.abas.ativa().conteudo) {
+                (true, Documento::Arquivo(t)) => Some(t.caminho()),
+                _ => None,
+            },
         };
         let mut ui_topo = raiz
             .new_child(UiBuilder::new().id_salt("barra-titulo").max_rect(topo).layout(Layout::top_down(Align::Min)));
@@ -147,6 +151,7 @@ impl Editor {
                 self.janelas.sobre.get_or_insert_with(Sobre::default);
             }
             Some(PedidoMenu::Preferencias(secao)) => self.abrir_preferencias(&ctx, secao),
+            Some(PedidoMenu::AbrirNoPrograma(caminho)) => self.abrir_no_programa(&ctx, caminho),
             None => {}
         }
 

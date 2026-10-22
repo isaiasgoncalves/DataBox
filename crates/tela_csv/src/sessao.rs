@@ -222,9 +222,10 @@ pub(crate) enum Trabalho {
     Salvar,
     /// As linhas inteiras destas posições (o Ctrl+C das linhas marcadas), com o cabeçalho na frente.
     LerLinhas(Vec<u64>),
-    /// Um intervalo da grade (o Ctrl+C de um intervalo que passa da página em mãos): destas posições, só estas
-    /// colunas da tabela, sem o cabeçalho (None: a coluna provisória, que vai vazia).
-    LerIntervalo { posicoes: Vec<u64>, colunas: Vec<Option<usize>> },
+    /// Um intervalo da grade (o Ctrl+C, o Ctrl+Shift+C e o Copiar como de um intervalo que passa da página em mãos):
+    /// destas posições, só estas colunas da tabela, sem o cabeçalho (None: a coluna provisória, que vai vazia); a
+    /// resposta vai para a área de transferência `como` a cópia pede.
+    LerIntervalo { posicoes: Vec<u64>, colunas: Vec<Option<usize>>, como: crate::selecao::ComoCopiar },
 }
 
 /// O que a tarefa fez, além de reler o retrato e a página.
@@ -305,7 +306,7 @@ pub(crate) fn executar(
             }
             Efeito::Linhas(linhas)
         }
-        Trabalho::LerIntervalo { posicoes, colunas } => {
+        Trabalho::LerIntervalo { posicoes, colunas, .. } => {
             let mut linhas = Vec::with_capacity(posicoes.len());
             for (i, &p) in posicoes.iter().enumerate() {
                 let linha = t.pagina(p, 1)?.into_iter().next().unwrap_or_default();

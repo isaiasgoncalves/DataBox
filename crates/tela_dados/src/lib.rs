@@ -77,6 +77,11 @@
 //!   da edição deixam o Desfazer desligado, com o porquê na dica ([`DICA_EXCLUIR`], [`DICA_INCLUIR`],
 //!   [`DICA_ESTRUTURA`], [`DICA_TRANSACAO`]); salvar a linha pela ficha só tira a última edição. Visão e banco só
 //!   leitura não oferecem o Desfazer; dentro de uma transação aberta, o UPDATE entra nela, como a edição.
+//! - Menu da célula (0.2.3, `menu.rs`): o clique direito numa célula ou num intervalo e o Shift+F10: Copiar, Copiar
+//!   com cabeçalho (também o Ctrl+Shift+C) e Copiar como (o `INSERT` com o nome da tabela), Filtrar por este valor e
+//!   Excluir este valor do filtro (o NULL vira "é nulo", o texto vazio "vazio"; o BLOB e o texto cortado desligam),
+//!   Marcar as linhas, Abrir a ficha da linha; Colar, Limpar, Definir como NULL e Excluir as linhas desligados até a
+//!   próxima etapa. Com mais de uma célula, as contas da seleção vão no rodapé, antes das páginas.
 //! - Rodapé (34px): "Linhas a–b de N" e "· N marcadas" · "N por página" (50/100/250/500, mais o da rota, 26px) · ‹
 //!   "Página X de Y" › (`.ib.pq`); a dica de página lenta numa linha de informação acima dele (o ícone Informação e
 //!   "Criar índice").
@@ -121,6 +126,7 @@ mod aba;
 mod desfazer;
 mod grade;
 mod janela;
+mod menu;
 mod modelo;
 mod regras;
 

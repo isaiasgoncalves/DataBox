@@ -186,6 +186,12 @@ pub fn formatar_numero(n: impl Into<Numero>) -> String {
     formatar_com_casas(n.into(), 0, 6)
 }
 
+/// Como [`formatar_numero`], com entre `min_casas` e `max_casas` casas decimais (`98231.4` com 2 e 2 →
+/// `"98.231,40"`): as contas do rodapé da seleção.
+pub fn formatar_numero_com_casas(n: impl Into<Numero>, min_casas: usize, max_casas: usize) -> String {
+    formatar_com_casas(n.into(), min_casas, max_casas.max(min_casas))
+}
+
 /// Como [`formatar_numero`], com `None` → `"—"`.
 pub fn formatar_numero_opt<N: Into<Numero>>(n: Option<N>) -> String {
     match n {

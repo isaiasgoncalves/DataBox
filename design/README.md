@@ -219,7 +219,7 @@ De cima para baixo:
   - nas grades, um rodapé com contagem e páginas.
 - **Menus:** Exibir › Tema (Seguir o Windows, Claro, Escuro) e mostrar Explorador, Propriedades e Histórico;
   Ajuda › Atalhos do teclado; Exibir › Início (Alt+Home).
-- **Formato do CSV**: resumo em pílulas na faixa do documento (separador, codificação, fim de linha); o detalhe e a troca ficam nas Propriedades: seção "Formato" (Separador,
+- **Formato do CSV**: resumo no rodapé do documento, depois da contagem de linhas (separador, codificação, fim de linha; até a 0.2.2, em pílulas numa faixa que a 0.2.3 tirou); o detalhe e a troca ficam nas Propriedades: seção "Formato" (Separador,
   Decimal, Codificação, Fim de linha, "Primeira linha é o cabeçalho") e seção "Arquivo" (caminho, tamanho,
   modificado em).
 - **Textos:**

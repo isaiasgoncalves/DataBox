@@ -681,8 +681,9 @@ impl TelaCsv {
                 toast(ectx, textos::DICA_SEM_CABECALHO);
             }
         }
-        if ectx.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::F10))
-            && let Some(c) = self.coluna_em_foco()
+        // com colunas selecionadas, o Shift+F10 é o menu do cabeçalho; com a célula ativa, o da célula (o núcleo)
+        if let Some(c) = self.colunas_selecionadas.iter().next().copied()
+            && ectx.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::F10))
         {
             self.menu_teclado = Some(c);
             ectx.memory_mut(|m| m.request_focus(id_do_th(&self.id, c)));

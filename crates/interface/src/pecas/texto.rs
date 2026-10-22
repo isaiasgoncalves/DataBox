@@ -194,7 +194,7 @@ pub fn galley_tit_em(ui: &Ui, texto: &str, tamanho: f32, cor: Color32) -> Arc<Ga
 }
 
 /// Aloca o tamanho do galley e pinta (texto não interativo). `sense` decide se é clicável.
-fn mostrar_galley(ui: &mut Ui, g: Arc<Galley>, sense: Sense) -> Response {
+pub(crate) fn mostrar_galley(ui: &mut Ui, g: Arc<Galley>, sense: Sense) -> Response {
     let (rect, resp) = ui.allocate_exact_size(g.size(), sense);
     if ui.is_rect_visible(rect) {
         ui.painter().galley(rect.min, g, Color32::PLACEHOLDER);

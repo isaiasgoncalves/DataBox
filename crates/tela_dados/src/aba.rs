@@ -16,7 +16,9 @@ use estado::{
     Oferta, Ofertas, Promessa, Reacao, TabelaAberta, Verbo,
 };
 use interface::formato::{formatar_numero, formatar_segundos, nome_do_caminho, plural};
-use interface::grade::{frase_do_intervalo_copiado, texto_celula, texto_exibicao, tsv_do_intervalo};
+use interface::grade::{
+    AcaoCelula, Intervalo, ResumoSelecao, menu_da_celula, rodape_da_selecao, texto_celula, texto_exibicao,
+};
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::avisos::{aviso_texto, carregando, vazio};
 use interface::pecas::botao::Botao;
@@ -41,6 +43,7 @@ use crate::desfazer::{
 };
 use crate::grade::{GradeDados, Pendente, Pintor, Piscada, preparar_edicao};
 use crate::janela::{AcaoJanela, AvisoJanela, JanelaLinha, ModoJanela};
+use crate::menu::{self, FonteCopia};
 use crate::modelo::{
     AvisarAoSair, ChavesDaFila, Dados, Edicao, FimEdicao, Marcadas, Sinal, chave_na_fila, coluna_que_abre,
     trocar_na_fila,
@@ -55,6 +58,8 @@ use crate::regras::{
 
 /// A altura da linha da dica de página lenta, acima do rodapé (o fio de cima e a linha do botão pequeno).
 const ALTURA_DICA_LENTA: f32 = 38.0;
+/// O espaço entre as contas da seleção e o "por página" no rodapé.
+const ESPACO_RESUMO: f32 = 12.0;
 /// A altura mínima da grade (o cabeçalho e uma linha), numa janela muito baixa.
 const ALTURA_GRADE_MIN: f32 = 58.0;
 
@@ -251,6 +256,8 @@ pub struct AbaDados {
     substituidas: usize,
     /// A coluna escolhida nas Propriedades (a vista Colunas, revisão de UI de 19/10/2026), acesa na grade.
     destacada: Option<String>,
+    /// As contas do rodapé da seleção e para que intervalo, página e gravações a caminho elas valem.
+    resumo: Option<((Intervalo, u64, usize), ResumoSelecao)>,
 }
 
 impl Drop for AbaDados {
@@ -349,6 +356,7 @@ impl AbaDados {
             ganchos: Ganchos::default(),
             substituidas: 0,
             destacada: None,
+            resumo: None,
         }
     }
 
@@ -1099,25 +1107,59 @@ impl AbaDados {
         }
         acoes.excluir = r.excluir;
         acoes.espaco = r.espaco;
-        // o Ctrl+C: a célula ativa, ou o intervalo como o Excel copia; a célula gravando agora vai com o texto digitado
-        if r.copiar
-            && let Some(iv) = grade.nucleo.intervalo()
-        {
-            let pendentes = &self.pendentes;
-            let texto_de = |l: usize, c: usize| -> Option<String> {
-                let c = c.checked_sub(primeira)?;
-                let pendente =
-                    pendentes.iter().rev().find(|g| g.geracao == dados.geracao && g.linha == l && g.coluna == c);
-                pendente.map(|g| g.texto.clone()).or_else(|| dados.celula(l, c).map(texto_celula))
-            };
-            let texto = if iv.varias() {
-                tsv_do_intervalo(iv, texto_de)
-            } else {
-                texto_de(iv.linha0, iv.coluna0).unwrap_or_default()
-            };
-            ui.ctx().copy_text(texto);
-            toast_concluido(ui.ctx(), frase_do_intervalo_copiado(iv));
+        // o Ctrl+C e o Ctrl+Shift+C: a célula ativa, ou o intervalo como o Excel copia; a célula gravando agora vai
+        // com o texto digitado
+        let fonte = FonteCopia { dados, pendentes: &self.pendentes, primeira, tabela: &self.nome };
+        if let Some(iv) = grade.nucleo.intervalo() {
+            if r.copiar {
+                fonte.copiar(ui.ctx(), AcaoCelula::Copiar, iv);
+            } else if r.copiar_com_cabecalho {
+                fonte.copiar(ui.ctx(), AcaoCelula::CopiarComCabecalho, iv);
+            }
         }
+        // o menu da célula (o clique direito, o Shift+F10): chamado todo quadro, para abrir e fechar
+        let ativa = grade.nucleo.selecao().and_then(|(l, c)| Some((l, c.checked_sub(primeira)?)));
+        let celula_ativa = ativa.and_then(|(l, c)| dados.celula(l, c));
+        let ofertas = grade
+            .nucleo
+            .intervalo()
+            .map(|iv| menu::ofertas(iv, celula_ativa, self.editavel, grade.tem_marca))
+            .unwrap_or_default();
+        let escolha = menu_da_celula(ui, &mut grade.nucleo, &ofertas);
+        if let (Some(acao), Some(iv)) = (escolha, grade.nucleo.intervalo()) {
+            match acao {
+                AcaoCelula::Copiar | AcaoCelula::CopiarComCabecalho | AcaoCelula::CopiarComo(_) => {
+                    fonte.copiar(ui.ctx(), acao, iv);
+                }
+                AcaoCelula::FiltrarPorValor | AcaoCelula::ExcluirValorDoFiltro => {
+                    let excluir = acao == AcaoCelula::ExcluirValorDoFiltro;
+                    acoes.filtrar = ativa.and_then(|(l, c)| {
+                        let (op, valor) = menu::condicao_do_valor(dados.celula(l, c)?, excluir)?;
+                        Some((dados.colunas.get(c)?.nome.clone(), op, valor))
+                    });
+                }
+                AcaoCelula::MarcarLinhas => acoes.marcar_linhas = Some(iv.linha0..iv.linha1 + 1),
+                AcaoCelula::AbrirFicha => acoes.abrir = ativa.map(|(l, _)| l).or(acoes.abrir),
+                _ => {}
+            }
+        }
+    }
+
+    /// As contas do rodapé da seleção (A.3), com mais de uma célula selecionada; refeitas só quando o intervalo, a
+    /// página ou as gravações a caminho mudam.
+    fn resumo_da_selecao(&mut self) -> Option<ResumoSelecao> {
+        let (Some(d), Some(g)) = (&self.dados, &self.grade) else { return None };
+        let iv = g.nucleo.intervalo().filter(Intervalo::varias)?;
+        let chave = (iv, d.geracao, self.pendentes.len());
+        if let Some((k, r)) = &self.resumo
+            && *k == chave
+        {
+            return Some(*r);
+        }
+        let fonte = FonteCopia { dados: d, pendentes: &self.pendentes, primeira: g.primeira(), tabela: &self.nome };
+        let r = fonte.resumo(iv);
+        self.resumo = Some((chave, r));
+        Some(r)
     }
 
     /// O rodapé do documento (34px): "Linhas 1–41 de 41" e " · 2 marcadas" em `--t3`; à direita, o "100 por página"
@@ -1141,6 +1183,7 @@ impl AbaDados {
         if n_marcadas > 0 {
             texto_simples(ui, &format!("· {}", plural(n_marcadas, "marcada", "marcadas")), 12.0, p.estudio.t3);
         }
+        let resumo = self.resumo_da_selecao();
         let opcoes: Vec<(u64, &str)> = self.opcoes_por_pagina.iter().map(|(n, t)| (*n, t.as_str())).collect();
         let mut por_pagina = self.consulta.por_pagina;
         let (mut novo_tamanho, mut ir) = (None, None);
@@ -1162,6 +1205,11 @@ impl AbaDados {
                 .changed()
             {
                 novo_tamanho = Some(por_pagina);
+            }
+            // com mais de uma célula selecionada, as contas da seleção antes das páginas (A.3)
+            if let Some(resumo) = &resumo {
+                ui.add_space(ESPACO_RESUMO);
+                rodape_da_selecao(ui, resumo);
             }
         });
         if let Some(n) = novo_tamanho {
@@ -1191,6 +1239,16 @@ impl AbaDados {
         }
         if let Some((l, sim)) = a.marcar {
             self.marcar(l, sim);
+        }
+        if let Some(linhas) = a.marcar_linhas {
+            for l in linhas {
+                self.marcar(l, true);
+            }
+        }
+        if let Some((coluna, op, valor)) = a.filtrar {
+            self.proximo_filtro += 1;
+            self.filtros.push(LinhaFiltro { id: self.proximo_filtro, coluna, op, valor });
+            self.aplicar_filtros(ctx, tabela);
         }
         if let Some(sim) = a.marcar_pagina {
             let n = self.dados.as_ref().map_or(0, Dados::n_linhas);
@@ -2154,6 +2212,10 @@ enum Feito {
 #[derive(Default)]
 struct AcoesQuadro {
     ordenar: Option<String>,
+    /// O "Filtrar por este valor" e o "Excluir este valor do filtro": a condição nova (coluna, operador, valor).
+    filtrar: Option<(String, Operador, String)>,
+    /// O "Marcar as linhas" (as da página).
+    marcar_linhas: Option<std::ops::Range<usize>>,
     criar_indice: Option<String>,
     abrir: Option<usize>,
     marcar: Option<(usize, bool)>,
