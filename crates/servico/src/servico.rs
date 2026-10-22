@@ -8,8 +8,9 @@ use std::thread;
 use std::time::Duration;
 
 use banco::{
-    AcaoManutencao, Banco, BancoInfo, Contagem, CopiaFeita, Filtro, Interrupcao, LinhaCompleta, LinhaGravada,
-    ObjetosInfo, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, ResultadoManutencao, TipoObjeto,
+    AcaoManutencao, Banco, BancoInfo, CelulaDesfeita, Contagem, CopiaFeita, Filtro, Interrupcao, LinhaCompleta,
+    LinhaGravada, ObjetosInfo, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, ResultadoManutencao,
+    TipoObjeto,
 };
 use comum::{Celula, Chave, Codigo, Entrada, ErroBanco, Resultado};
 use prefs::{ComandoSql, Mudanca, MudancaExportacao, Preferencias, PrefsInfo, ResultadoSql, Tema};
@@ -495,6 +496,33 @@ impl Servico {
     ) -> Resultado<Gravado<LinhaGravada>> {
         let banco = self.banco_aberto(banco_id)?;
         let resultado = banco.desfazer_celula(nome, chave, coluna, gravado, antigo)?;
+        Ok(Gravado { resultado, transacao_aberta: banco.transacao_aberta() })
+    }
+
+    /// O Colar, o Limpar e o Definir como NULL da grade: várias células numa transação só, tudo ou nada (ver
+    /// [`banco::Banco::atualizar_intervalo`]; uma [`LinhaGravada`] por célula). Numa transação aberta na Consulta SQL
+    /// as células entram nela.
+    pub fn atualizar_intervalo(
+        &self,
+        banco_id: &str,
+        nome: &str,
+        celulas: &[(Chave, String, Entrada)],
+    ) -> Resultado<Gravado<Vec<LinhaGravada>>> {
+        let banco = self.banco_aberto(banco_id)?;
+        let resultado = banco.atualizar_intervalo(nome, celulas)?;
+        Ok(Gravado { resultado, transacao_aberta: banco.transacao_aberta() })
+    }
+
+    /// O Desfazer de um [`Servico::atualizar_intervalo`]: as células voltam todas, só se todas ainda têm o valor gravado
+    /// (ver [`banco::Banco::desfazer_intervalo`]: 409 dizendo qual mudou, e nada volta).
+    pub fn desfazer_intervalo(
+        &self,
+        banco_id: &str,
+        nome: &str,
+        celulas: &[CelulaDesfeita],
+    ) -> Resultado<Gravado<Vec<LinhaGravada>>> {
+        let banco = self.banco_aberto(banco_id)?;
+        let resultado = banco.desfazer_intervalo(nome, celulas)?;
         Ok(Gravado { resultado, transacao_aberta: banco.transacao_aberta() })
     }
 

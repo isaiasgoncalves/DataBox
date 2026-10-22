@@ -6,7 +6,7 @@ use super::*;
 use crate::erros::MSG_SALVAR;
 use crate::gravacao::savepoint;
 use crate::meta::Meta;
-use crate::{Operador, ResultadoComando, TipoChave};
+use crate::{Banco, CelulaDesfeita, Operador, ResultadoComando, TipoChave};
 
 fn rv(c: &Celula) -> i64 {
     match c {
@@ -248,6 +248,142 @@ fn desfazer_celula_so_com_o_valor_gravado() {
     assert_eq!(erro(b.desfazer_celula("clientes", &Chave::Rowid(9999), "cidade", &ct("y"), &antes)).status, 404);
     let ro = exemplo_ro("desfazer-ro");
     assert_eq!(erro(ro.banco.desfazer_celula("clientes", &um, "cidade", &antes, &ct("x"))).status, 403);
+}
+
+fn cel(chave: i64, coluna: &str, entrada: Entrada) -> (Chave, String, Entrada) {
+    (Chave::Rowid(chave), coluna.to_string(), entrada)
+}
+
+fn cidades(b: &Banco) -> Vec<Celula> {
+    (1..=3).map(|i| b.linha("clientes", &Chave::Rowid(i)).unwrap().valor("cidade").cloned().unwrap()).collect()
+}
+
+/// O Colar e o Limpar da grade (0.2.3, A.4): numa transação só, tudo ou nada; uma resposta por célula, as da mesma
+/// linha num UPDATE só (a chave colada vale para as outras colunas dela).
+#[test]
+fn atualizar_intervalo_tudo_ou_nada() {
+    let ex = exemplo("intervalo-tudo-ou-nada");
+    let b = &ex.banco;
+    let antes = cidades(b);
+    // a terceira célula quebra o CHECK (limite >= 0): nada fica, e o erro diz a linha
+    let lote = [cel(1, "cidade", tx("Natal")), cel(2, "cidade", tx("Natal")), cel(2, "limite", tx("-5"))];
+    let e = erro(b.atualizar_intervalo("clientes", &lote));
+    assert!(e.mensagem.contains("Nada foi gravado (o erro foi na linha 2)."), "{}", e.mensagem);
+    assert_eq!(cidades(b), antes);
+
+    let lote = [
+        cel(1, "cidade", tx("Natal")),
+        cel(2, "cidade", tx("Natal")),
+        cel(1, "limite", tx("1.500,50")),
+        cel(3, "cidade", Entrada::TextoLiteral(String::new())),
+    ];
+    let r = b.atualizar_intervalo("clientes", &lote).unwrap();
+    assert_eq!(r.len(), 4, "uma resposta por célula");
+    assert_eq!(r[0], r[2], "a mesma linha, a mesma resposta");
+    assert_eq!(r[0].linha.as_ref().unwrap()[4], Celula::Real(1500.5), "o texto passa pela coerção da digitação");
+    assert_eq!(cidades(b), [ct("Natal"), ct("Natal"), ct("")]);
+    assert!(b.atualizar_intervalo("clientes", &[]).unwrap().is_empty());
+
+    // a chave primária colada: a linha sai com a chave nova, e as outras colunas dela vão junto
+    let novo = vals(&[("codigo", tx("P900")), ("descricao", tx("Provisório"))]);
+    let p900 = b.inserir("produtos", &novo).unwrap().chave.unwrap();
+    let lote = [(p900.clone(), "codigo".to_string(), tx("P903")), (p900, "estoque".to_string(), tx("7"))];
+    let r = b.atualizar_intervalo("produtos", &lote).unwrap();
+    assert_eq!(r[1].chave, Some(Chave::Pk(vec![("codigo".into(), Valor::Texto("P903".into()))])));
+
+    let ro = exemplo_ro("intervalo-ro");
+    assert_eq!(erro(ro.banco.atualizar_intervalo("clientes", &[cel(1, "cidade", tx("x"))])).status, 403);
+    assert_eq!(erro(b.atualizar_intervalo("clientes", &[cel(9999, "cidade", tx("x"))])).status, 404);
+}
+
+/// O Limpar numa coluna NOT NULL que não é de texto grava o DEFAULT dela; o NULL numa NOT NULL não grava nada.
+#[test]
+fn atualizar_intervalo_com_not_null() {
+    let ex = exemplo("intervalo-not-null");
+    let b = &ex.banco;
+    b.atualizar("clientes", &Chave::Rowid(1), &vals(&[("ativo", Entrada::Inteiro(0))])).unwrap();
+    let r = b.atualizar_intervalo("clientes", &[cel(1, "ativo", Entrada::Padrao)]).unwrap();
+    assert_eq!(r[0].linha.as_ref().unwrap()[5], ci(1), "o DEFAULT 1");
+    let r = b.atualizar_intervalo("clientes", &[cel(1, "criado_em", Entrada::Padrao)]).unwrap();
+    assert!(r[0].linha.as_ref().unwrap()[6].texto().starts_with("20"), "o CURRENT_TIMESTAMP avaliado agora");
+    let e = erro(b.atualizar_intervalo("clientes", &[cel(1, "limite", Entrada::Padrao)]));
+    assert!(e.mensagem.starts_with("A coluna limite não tem valor padrão"), "{}", e.mensagem);
+
+    let nome = b.linha("clientes", &Chave::Rowid(2)).unwrap().valor("nome").cloned().unwrap();
+    let lote = [cel(1, "cidade", Entrada::Nulo), cel(2, "nome", Entrada::Nulo)];
+    let e = erro(b.atualizar_intervalo("clientes", &lote));
+    assert!(e.mensagem.contains("linha 2"), "{}", e.mensagem);
+    assert_eq!(b.linha("clientes", &Chave::Rowid(2)).unwrap().valor("nome"), Some(&nome));
+    assert_ne!(b.linha("clientes", &Chave::Rowid(1)).unwrap().valor("cidade"), Some(&Celula::Nulo));
+}
+
+/// O Desfazer do intervalo: todas as células voltam, ou nenhuma (uma que mudou por fora diz qual).
+#[test]
+fn desfazer_intervalo_com_celula_mudada_por_fora() {
+    let ex = exemplo("desfazer-intervalo");
+    let b = &ex.banco;
+    let antes = cidades(b);
+    let lote: Vec<_> = (1..=3).map(|i| cel(i, "cidade", tx("Natal"))).collect();
+    let r = b.atualizar_intervalo("clientes", &lote).unwrap();
+    let desfazer: Vec<CelulaDesfeita> = r
+        .iter()
+        .zip(&antes)
+        .map(|(g, a)| CelulaDesfeita {
+            chave: g.chave.clone().unwrap(),
+            coluna: "cidade".into(),
+            gravado: g.linha.as_ref().unwrap()[3].clone(),
+            antigo: a.clone(),
+        })
+        .collect();
+
+    // outro comando mudou a linha 2 depois: nada volta, e o aviso diz qual
+    b.atualizar("clientes", &Chave::Rowid(2), &vals(&[("cidade", tx("Recife"))])).unwrap();
+    let e = erro(b.desfazer_intervalo("clientes", &desfazer));
+    assert_eq!(e.status, 409);
+    assert_eq!(e.mensagem, "A célula cidade da linha 2 mudou depois; nada foi desfeito.");
+    assert_eq!(cidades(b), [ct("Natal"), ct("Recife"), ct("Natal")]);
+
+    // com o valor gravado de volta na célula, todas voltam
+    b.atualizar("clientes", &Chave::Rowid(2), &vals(&[("cidade", tx("Natal"))])).unwrap();
+    let r = b.desfazer_intervalo("clientes", &desfazer).unwrap();
+    assert_eq!(r.len(), 3);
+    assert_eq!(cidades(b), antes);
+
+    let mut cortado = desfazer[0].clone();
+    cortado.antigo = Celula::TextoCortado { inicio: "x".into(), tamanho: 900 };
+    assert_eq!(erro(b.desfazer_intervalo("clientes", &[cortado])).status, 400);
+    let mut sumiu = desfazer[0].clone();
+    sumiu.chave = Chave::Rowid(9999);
+    let e = erro(b.desfazer_intervalo("clientes", &[sumiu]));
+    assert_eq!(e.status, 404);
+    assert!(e.mensagem.contains("linha 9999"), "{}", e.mensagem);
+}
+
+/// Dentro de uma transação aberta na Consulta SQL, o intervalo entra nela (um SAVEPOINT): o erro desfaz só o
+/// intervalo, a transação continua aberta, e o ROLLBACK leva tudo.
+#[test]
+fn atualizar_intervalo_dentro_de_transacao_aberta() {
+    let ex = exemplo("intervalo-transacao");
+    let b = &ex.banco;
+    let antes = cidades(b);
+    b.consultar("BEGIN", 1000).unwrap();
+    let r = b.atualizar_intervalo("clientes", &[cel(1, "cidade", tx("Natal")), cel(2, "cidade", tx("Natal"))]).unwrap();
+    assert!(b.transacao_aberta());
+    let ruim = [cel(3, "cidade", tx("Natal")), cel(3, "limite", tx("-1"))];
+    assert!(b.atualizar_intervalo("clientes", &ruim).is_err());
+    assert!(b.transacao_aberta(), "o erro não fecha a transação de quem a abriu");
+    assert_eq!(cidades(b), [ct("Natal"), ct("Natal"), antes[2].clone()]);
+    let desfazer = CelulaDesfeita {
+        chave: Chave::Rowid(1),
+        coluna: "cidade".into(),
+        gravado: r[0].linha.as_ref().unwrap()[3].clone(),
+        antigo: antes[0].clone(),
+    };
+    b.desfazer_intervalo("clientes", &[desfazer]).unwrap();
+    assert!(b.transacao_aberta());
+    assert_eq!(cidades(b)[0], antes[0]);
+    b.consultar("ROLLBACK", 1000).unwrap();
+    assert_eq!(cidades(b), antes);
 }
 
 #[test]

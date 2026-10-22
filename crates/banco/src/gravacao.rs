@@ -9,7 +9,7 @@ use crate::banco::Banco;
 use crate::dados::ler_valores;
 use crate::erros::{MSG_CELULA_MUDOU, MSG_EXPORTANDO, MSG_SALVAR, MSG_SOMENTE_LEITURA, e_trava_sqlite, traduzir};
 use crate::meta::{MODULOS_GRAVAVEIS, Meta, coluna_por_nome, expr_identidade, montar_chave, onde_chave};
-use crate::tipos::{LinhaGravada, TipoChave, TipoObjeto};
+use crate::tipos::{CelulaDesfeita, LinhaGravada, TipoChave, TipoObjeto};
 use crate::valores::{Coagido, coagir};
 
 /// Modo de `preparar_valores`: o valor padrão só vale ao inserir.
@@ -59,6 +59,63 @@ pub(crate) fn savepoint<R>(
     conn.execute_batch(&format!("RELEASE {nome}")).map_err(&erro_sqlite)?;
     desfazer.ativo = false;
     Ok(r)
+}
+
+/// O valor de antes de uma célula, para gravar de volta: texto cortado e BLOB não voltam (400), a grade não os edita.
+fn entrada_de_antes(coluna: &str, antigo: &Celula) -> Resultado<Entrada> {
+    Ok(match antigo {
+        Celula::Nulo => Entrada::Nulo,
+        Celula::Inteiro(i) => Entrada::Inteiro(*i),
+        Celula::Real(r) => Entrada::Real(*r),
+        Celula::Texto(s) => Entrada::TextoLiteral(s.clone()),
+        Celula::TextoCortado { .. } | Celula::Blob { .. } => {
+            return Err(ErroBanco::com_status(
+                format!("O valor de antes de {coluna} não cabe na grade; use a ficha da linha para mudá-lo."),
+                400,
+            ));
+        }
+    })
+}
+
+/// A linha como a grade a diz: "linha 3" (rowid), "linha P003", "linha de pedido_id 7 · produto P003".
+pub(crate) fn linha_na_frase(chave: &Chave) -> String {
+    match chave {
+        Chave::Rowid(r) => format!("linha {r}"),
+        Chave::Pk(partes) => match partes.as_slice() {
+            [(_, v)] => format!("linha {}", v.texto_exibicao()),
+            _ => {
+                let partes: Vec<String> = partes.iter().map(|(k, v)| format!("{k} {}", v.texto_exibicao())).collect();
+                format!("linha de {}", partes.join(" · "))
+            }
+        },
+    }
+}
+
+/// As células agrupadas por linha (a mesma chave), na ordem em que aparecem: cada linha vira um UPDATE só (a chave
+/// colada e as outras colunas da mesma linha saem juntas). Devolve os grupos e, de cada célula, o índice do grupo.
+fn agrupar_por_linha<'a, T>(itens: impl Iterator<Item = (&'a Chave, T)>) -> (Vec<(&'a Chave, Vec<T>)>, Vec<usize>) {
+    let mut grupos: Vec<(&Chave, Vec<T>)> = Vec::new();
+    let mut de_cada = Vec::new();
+    for (chave, item) in itens {
+        let g = match grupos.iter().position(|(k, _)| *k == chave) {
+            Some(g) => g,
+            None => {
+                grupos.push((chave, Vec::new()));
+                grupos.len() - 1
+            }
+        };
+        if let Some((_, lista)) = grupos.get_mut(g) {
+            lista.push(item);
+        }
+        de_cada.push(g);
+    }
+    (grupos, de_cada)
+}
+
+/// O erro de uma linha do intervalo, dizendo qual e que nada do intervalo ficou.
+fn na_linha(mut e: ErroBanco, chave: &Chave, consequencia: &str) -> ErroBanco {
+    e.mensagem = format!("{} {consequencia} (o erro foi na {}).", e.mensagem, linha_na_frase(chave));
+    e
 }
 
 fn chave_ambigua(n: usize, consequencia: &str) -> ErroBanco {
@@ -285,18 +342,7 @@ impl Banco {
         gravado: &Celula,
         antigo: &Celula,
     ) -> Resultado<LinhaGravada> {
-        let entrada = match antigo {
-            Celula::Nulo => Entrada::Nulo,
-            Celula::Inteiro(i) => Entrada::Inteiro(*i),
-            Celula::Real(r) => Entrada::Real(*r),
-            Celula::Texto(s) => Entrada::TextoLiteral(s.clone()),
-            Celula::TextoCortado { .. } | Celula::Blob { .. } => {
-                return Err(ErroBanco::com_status(
-                    format!("O valor de antes de {coluna} não cabe na grade; use a ficha da linha para mudá-lo."),
-                    400,
-                ));
-            }
-        };
+        let entrada = entrada_de_antes(coluna, antigo)?;
         self.com_conexao(|conn| {
             let meta = self.meta(conn, nome)?;
             self.exigir_gravacao(&meta)?;
@@ -314,6 +360,124 @@ impl Banco {
                 }
                 self.atualizar(nome, chave, &[(coluna.to_string(), entrada)])
             })
+        })
+    }
+
+    /// Grava várias células numa transação só, tudo ou nada (o Colar, o Limpar e o Definir como NULL da grade): um
+    /// SAVEPOINT, que entra na transação aberta na Consulta SQL se houver uma. As células de uma mesma linha (a mesma
+    /// chave) saem num UPDATE só, como o [`Banco::atualizar`] (a chave pode mudar). Devolve uma [`LinhaGravada`] por
+    /// célula, na ordem pedida (as da mesma linha repetem a dela).
+    ///
+    /// [`Entrada::Padrao`] (que no `atualizar` é erro) grava o valor padrão da coluna (o DEFAULT avaliado agora; sem
+    /// DEFAULT → 400): é o Limpar de uma coluna `NOT NULL` que não é de texto. Qualquer erro (o valor que não serve, a
+    /// restrição quebrada, a linha que sumiu) desfaz o intervalo inteiro e diz em que linha foi.
+    pub fn atualizar_intervalo(
+        &self,
+        nome: &str,
+        celulas: &[(Chave, String, Entrada)],
+    ) -> Resultado<Vec<LinhaGravada>> {
+        if celulas.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.com_conexao(|conn| {
+            let meta = self.meta(conn, nome)?;
+            self.exigir_gravacao(&meta)?;
+            let (grupos, de_cada) = agrupar_por_linha(celulas.iter().map(|(k, c, e)| (k, (c, e))));
+            let erro = |e: rusqlite::Error| self.erro_gravacao(e, Some(MSG_SALVAR));
+            let gravadas = savepoint(conn, "editor_intervalo", erro, || {
+                let mut gravadas = Vec::with_capacity(grupos.len());
+                for (chave, itens) in &grupos {
+                    let valores = itens
+                        .iter()
+                        .map(|(c, e)| Ok(((*c).clone(), self.sem_padrao(conn, &meta, c, e)?)))
+                        .collect::<Resultado<Vec<_>>>()
+                        .map_err(|e| na_linha(e, chave, "Nada foi gravado"))?;
+                    let r =
+                        self.atualizar(nome, chave, &valores).map_err(|e| na_linha(e, chave, "Nada foi gravado"))?;
+                    gravadas.push(r);
+                }
+                Ok(gravadas)
+            })?;
+            Ok(de_cada.iter().filter_map(|&g| gravadas.get(g).cloned()).collect())
+        })
+    }
+
+    /// A entrada com o [`Entrada::Padrao`] trocado pelo DEFAULT da coluna, avaliado agora.
+    fn sem_padrao(&self, conn: &Connection, meta: &Meta, coluna: &str, entrada: &Entrada) -> Resultado<Entrada> {
+        if *entrada != Entrada::Padrao {
+            return Ok(entrada.clone());
+        }
+        let padrao = coluna_por_nome(&meta.colunas, coluna).and_then(|c| c.padrao.as_deref()).ok_or_else(|| {
+            ErroBanco::novo(format!("A coluna {coluna} não tem valor padrão; escolha um valor para ela."))
+        })?;
+        let valor = conn
+            .query_row(&format!("SELECT ({padrao})"), [], |r| Ok(Valor::de_ref(r.get_ref(0)?)))
+            .map_err(|e| self.erro_gravacao(e, Some(MSG_SALVAR)))?;
+        Ok(match valor {
+            Valor::Nulo => Entrada::Nulo,
+            Valor::Inteiro(i) => Entrada::Inteiro(i),
+            Valor::Real(r) => Entrada::Real(r),
+            Valor::Texto(s) => Entrada::TextoLiteral(s),
+            Valor::TextoBruto(b) => Entrada::TextoLiteral(String::from_utf8_lossy(&b).into_owned()),
+            Valor::Blob(b) => Entrada::Blob(b),
+        })
+    }
+
+    /// Desfaz um [`Banco::atualizar_intervalo`] de uma vez (o Desfazer do Colar e do Limpar), irmão do
+    /// [`Banco::desfazer_celula`]: grava o `antigo` de cada célula de volta, só se todas ainda têm o `gravado`. Numa
+    /// transação só, tudo ou nada, como o `atualizar_intervalo` (dentro da transação aberta na Consulta SQL, se houver).
+    ///
+    /// Uma célula que mudou depois → 409 "A célula cidade da linha 3 mudou depois; nada foi desfeito." e nada é
+    /// gravado; texto cortado e BLOB não voltam (400); linha que sumiu → 404, dizendo qual. Devolve uma
+    /// [`LinhaGravada`] por célula, na ordem pedida.
+    pub fn desfazer_intervalo(&self, nome: &str, celulas: &[CelulaDesfeita]) -> Resultado<Vec<LinhaGravada>> {
+        let entradas = celulas.iter().map(|c| entrada_de_antes(&c.coluna, &c.antigo)).collect::<Resultado<Vec<_>>>()?;
+        if celulas.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.com_conexao(|conn| {
+            let meta = self.meta(conn, nome)?;
+            self.exigir_gravacao(&meta)?;
+            let indices = celulas
+                .iter()
+                .map(|c| {
+                    meta.visiveis
+                        .iter()
+                        .position(|v| v.nome == c.coluna)
+                        .ok_or_else(|| ErroBanco::novo(format!("A coluna não existe em {}: {}.", meta.nome, c.coluna)))
+                })
+                .collect::<Resultado<Vec<_>>>()?;
+            let itens = celulas.iter().zip(entradas).zip(indices).map(|((c, e), i)| (&c.chave, (c, e, i)));
+            let (grupos, de_cada) = agrupar_por_linha(itens);
+            let erro = |e: rusqlite::Error| self.erro_gravacao(e, Some(MSG_SALVAR));
+            let gravadas = savepoint(conn, "editor_desfazer_intervalo", erro, || {
+                // primeiro confere todas: uma que mudou não deixa nenhuma voltar
+                for (chave, itens) in &grupos {
+                    let (_, linha) = self
+                        .ler_linha(conn, &meta, chave, Some(comum::LIMITE_TEXTO))?
+                        .ok_or_else(|| na_linha(Banco::linha_sumiu(), chave, "Nada foi desfeito"))?;
+                    if let Some((c, _, _)) = itens.iter().find(|(c, _, i)| linha.get(*i) != Some(&c.gravado)) {
+                        return Err(ErroBanco::com_status(
+                            format!(
+                                "A célula {} da {} mudou depois; nada foi desfeito.",
+                                c.coluna,
+                                linha_na_frase(chave)
+                            ),
+                            409,
+                        ));
+                    }
+                }
+                let mut gravadas = Vec::with_capacity(grupos.len());
+                for (chave, itens) in &grupos {
+                    let valores: Vec<(String, Entrada)> =
+                        itens.iter().map(|(c, e, _)| (c.coluna.clone(), e.clone())).collect();
+                    let r =
+                        self.atualizar(nome, chave, &valores).map_err(|e| na_linha(e, chave, "Nada foi desfeito"))?;
+                    gravadas.push(r);
+                }
+                Ok(gravadas)
+            })?;
+            Ok(de_cada.iter().filter_map(|&g| gravadas.get(g).cloned()).collect())
         })
     }
 
