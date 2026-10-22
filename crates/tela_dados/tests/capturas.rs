@@ -278,3 +278,32 @@ fn confirmar_excluir() {
     assert!(retrato(&h).confirmacao.is_some());
     capturar(&mut h, "confirmar-excluir-claro.png");
 }
+
+#[test]
+fn menu_da_celula_claro_e_escuro() {
+    let amb = Ambiente::exemplo("captura_menu_da_celula");
+    for (tema, nome) in
+        [(Tema::Claro, "dados-menu-da-celula-claro.png"), (Tema::Escuro, "dados-menu-da-celula-escuro.png")]
+    {
+        let mut h = abrir_com(&amb, amb.tabela("clientes"), tema, Ganchos::default());
+        clicar_celula(&mut h, 1, 4);
+        for _ in 0..3 {
+            tecla_com(&mut h, SHIFT, egui::Key::ArrowDown);
+        }
+        let pos = centro_celula(&h, 2, 4);
+        h.input_mut().events.push(egui::Event::PointerMoved(pos));
+        h.step();
+        for pressed in [true, false] {
+            h.input_mut().events.push(egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Secondary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            });
+        }
+        h.run_steps(3);
+        h.get_by_label("Colar").hover();
+        h.run_steps(30);
+        capturar(&mut h, nome);
+    }
+}

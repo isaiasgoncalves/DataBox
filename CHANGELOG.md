@@ -5,6 +5,20 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Clique direito numa célula ou num intervalo** nos Dados, no CSV, na planilha do Excel e no resultado da Consulta
+  SQL (também com o Shift+F10, com o foco na grade): **Copiar**, **Copiar com cabeçalho** (Ctrl+Shift+C com o foco na
+  grade; no Explorador continua o Copiar caminho) e **Copiar como** CSV, JSON, Markdown, `INSERT`, lista para `IN (…)`
+  ou pandas (no CSV e no Excel, o `INSERT` leva o nome do arquivo ou da planilha); **Filtrar por este valor** e
+  **Excluir este valor do filtro** nos Dados e no CSV (o NULL vira "é nulo", o vazio do CSV vira "é vazio"); **Marcar
+  as linhas** nos Dados e no CSV; **Abrir a ficha da linha** nos Dados. Colar, Limpar, Definir como NULL e Excluir as
+  linhas aparecem desligados: chegam na próxima etapa.
+- **O rodapé soma a seleção:** com mais de uma célula selecionada, "Contagem 33 · Soma 98.231,40 · Média 8.930,13 ·
+  Mín. 154,03 · Máx. 17.810,34", como a barra de status do Excel (a contagem das células não vazias; as contas, das
+  numéricas). Onde não cabe, saem o mínimo e o máximo, depois a média, e vão para a dica. No CSV grande, a conta roda
+  em segundo plano com "Somando…".
+
 ### Corrigido
 
 - **As contas da coluna do CSV não leem mais a coluna inteira para a memória:** a seção Coluna das Propriedades

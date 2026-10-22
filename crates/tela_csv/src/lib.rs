@@ -74,6 +74,12 @@
 //!   fora da página lidas numa tarefa), as linhas marcadas em TSV com o cabeçalho (numa tarefa) ou a célula ativa. Sem
 //!   "Primeira linha é o cabeçalho", as colunas não têm nome no arquivo: Renomear
 //!   fica desligado (com a dica) e a Nova coluna entra com o nome genérico.
+//! - **Menu da célula** (0.2.3, `selecao`): o clique direito numa célula ou num intervalo e o Shift+F10 (com colunas
+//!   escolhidas, o Shift+F10 continua o do cabeçalho): Copiar, Copiar com cabeçalho (também o Ctrl+Shift+C) e Copiar
+//!   como (o separador do arquivo no CSV, o nome dele no `INSERT`, os números pelo tipo detectado; as linhas fora da
+//!   página pela fila), Filtrar por este valor e Excluir este valor do filtro (o vazio vira "é vazio"), Marcar as
+//!   linhas; Colar, Limpar e Excluir as linhas desligados até a próxima etapa. Com mais de uma célula, o rodapé soma a
+//!   seleção à direita; além da página, numa tarefa cancelável, com "Somando…".
 //! - **Colunas** (passo 12, prancheta 16): o clique no cabeçalho seleciona a coluna (Ctrl soma ou tira, Shift
 //!   estende; o clique numa célula desfaz), "· coluna valor selecionada" no rodapé. O menu do cabeçalho (clique
 //!   direito e Shift+F10, a peça `MenuContexto`): Copiar coluna ("Copiar 3 colunas") · Colar como nova coluna ·
@@ -135,6 +141,7 @@ mod grade;
 mod janela_trazer;
 mod pintor;
 mod propriedades;
+mod selecao;
 mod sessao;
 mod tela;
 mod textos;

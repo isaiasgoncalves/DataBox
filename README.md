@@ -112,7 +112,9 @@ The labels below are translated; the app shows them in Portuguese (the main ones
    it; it is saved right away, and the notice says where and offers **Undo** (or Ctrl+Z). The row form shows BLOB,
    NULL and generated columns.
 4. Drag from one cell to another (or Shift with the arrows) to **select a range**; Ctrl+C copies it like Excel does,
-   ready to paste into a spreadsheet.
+   ready to paste into a spreadsheet. **Right-click** it (or Shift+F10) for the selection menu: copy with the header
+   (Ctrl+Shift+C) or as CSV, JSON, Markdown, `INSERT`, an `IN (…)` list or pandas, filter by the cell's value, mark
+   the rows and open the row form. With more than one cell, the footer shows the count, sum, average, min and max.
 5. **Properties** shows how the table is built: **Summary**, **Columns**, **Indexes** and **SQL** (Alt+1 to Alt+4);
    the chosen column lights up in the grid. Altering a column or creating an index always shows the SQL that will run
    first.
@@ -160,6 +162,9 @@ The labels below are translated; the app shows them in Portuguese (the main ones
   (or use *Destacar em janela*, "Pop out"). Each panel's place and width are remembered.
 - **Select a range of cells** in Data, CSV, Excel and SQL results: drag, Shift+click or Shift with the arrows;
   Ctrl+C copies it tab-separated, ready for a spreadsheet.
+- **Right-click the selection** (or Shift+F10): copy with the header or as CSV, JSON, Markdown, `INSERT`, an `IN (…)`
+  list or pandas; filter by that value or leave it out; mark the rows; open the row form. The footer sums the
+  selection like Excel's status bar (count, sum, average, min and max).
 - Frosted glass on menus, lists and dialogs; Light, Dark or Follow Windows theme.
 - Preferences (Ctrl+,): theme, code colors and font, export options; changes preview live and persist on **Save**.
 - **Search** (Ctrl+F) in every document, CSV, Excel and text included: the whole file, ignoring case and accents;

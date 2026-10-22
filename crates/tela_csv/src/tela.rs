@@ -55,6 +55,8 @@ pub struct Ganchos {
     pub trabalho: Option<Arc<dyn Fn() + Send + Sync>>,
     /// O caminho que o diálogo "Outro arquivo" do Trazer colunas devolveria.
     pub outro_arquivo: Option<PathBuf>,
+    /// Chamado na thread da conta do rodapé da seleção antes de ler o arquivo.
+    pub somar: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
 /// A tabela aberta pela tarefa de abertura.
@@ -183,6 +185,8 @@ pub struct TelaCsv {
     calculo: Option<CalculoColuna>,
     /// A conta que falhou (coluna e versão): não é pedida de novo a cada quadro.
     calculo_falhou: Option<(usize, u64)>,
+    /// As contas do rodapé da seleção (prontas, ou a tarefa que as faz).
+    pub(crate) soma: Option<crate::selecao::SomaSelecao>,
     /// O arquivo mudou por fora (a volta do foco conferiu): o aviso de topo.
     pub(crate) mudou_no_disco: bool,
     /// A janela tinha o foco no quadro anterior.
@@ -257,6 +261,7 @@ impl TelaCsv {
             estatisticas: HashMap::new(),
             calculo: None,
             calculo_falhou: None,
+            soma: None,
             mudou_no_disco: false,
             com_foco: true,
             confirmar_descartar: None,
@@ -816,6 +821,7 @@ impl TelaCsv {
         let menu_th = saida.menu_th;
         self.aplicar_grade(ui, resposta, saida);
         self.mostrar_menu(ui, &ths, menu_th);
+        self.menu_da_celula(ui);
     }
 
     /// Pede a página que cobre as linhas à vista, se a que está em mãos (ou a já pedida) não cobre.
@@ -915,6 +921,7 @@ impl TelaCsv {
         if !selecionadas.is_empty() {
             texto_simples(ui, &textos::colunas_selecionadas(&selecionadas), 12.0, p.estudio.t3);
         }
+        self.rodape_da_selecao(ui);
     }
 
     fn desenhar_propriedades(&mut self, ui: &mut Ui, ctx: &mut Contexto) {

@@ -32,6 +32,10 @@
 //!   volta); a faixa diz "3 de 41" ("41+" enquanto conta); Esc limpa e volta à célula de antes.
 //! - **Sem planilha à vista**: a tela abre sem grade, com a frase e a faixa vazia; as Propriedades têm a caixa
 //!   "Mostrar planilhas ocultas".
+//! - **Menu da célula** (0.2.3, `selecao`): o clique direito numa célula ou num intervalo e o Shift+F10 (com colunas
+//!   escolhidas, o do cabeçalho): Copiar, Copiar com cabeçalho (a letra da coluna; também o Ctrl+Shift+C) e Copiar como
+//!   (o `INSERT` com o nome da planilha), das linhas que já chegaram; o filtro aparece desligado ([`MSG_SEM_FILTRO`]).
+//!   Com mais de uma célula, o rodapé soma a seleção pelos números do Excel (além dos blocos guardados, numa tarefa).
 //!
 //! # Testes
 //!
@@ -47,6 +51,7 @@ mod fonte;
 mod grade;
 mod menu;
 mod propriedades;
+mod selecao;
 mod sessao;
 
 use std::path::{Path, PathBuf};
@@ -60,7 +65,7 @@ use estado::{
 };
 use interface::fontes::{self, Peso};
 use interface::formato::formatar_numero;
-use interface::grade::RespostaNucleo;
+use interface::grade::{AcaoCelula, RespostaNucleo, menu_da_celula, rodape_da_selecao, rodape_somando};
 use interface::icones::{self, EstadoIcone, Icone, TipoArquivo};
 use interface::pecas::arranjo::em_linha;
 use interface::pecas::avisos::{TomAviso, aviso_tom, carregando};
@@ -84,6 +89,7 @@ pub use crate::grade::{
 };
 pub use crate::menu::{COPIAR_COLUNA, MSG_ABRA_UM_CSV, TRAZER_DESTA_PLANILHA, rotulo_de_copiar};
 pub use crate::propriedades::{COPIAR_A_FORMULA, MSG_FILTRO, MSG_FORMULAS, MSG_MACROS};
+pub use crate::selecao::MSG_SEM_FILTRO;
 pub use crate::sessao::{
     BLOCOS_GUARDADOS, ESPERA_DA_BARRA, Mudancas, ResumoDoIndice, SessaoDaFolha, bloco_de, frase_da_folha,
 };
@@ -238,6 +244,8 @@ pub struct TelaPlanilha {
     fonte: Option<(ChaveDaFonte, Arc<dyn FonteDeColunas>)>,
     /// A busca da barra (Ctrl+F) na planilha inteira.
     busca: busca::BuscaPlanilha,
+    /// As contas do rodapé da seleção (prontas, ou a tarefa que as faz).
+    soma: Option<selecao::SomaSelecao>,
 }
 
 /// O que a origem de colunas descreve: a aba, as colunas à vista e a última linha conhecida.
@@ -271,6 +279,7 @@ impl TelaPlanilha {
             visto_no_disco: None,
             fonte: None,
             busca: busca::BuscaPlanilha::default(),
+            soma: None,
         }
     }
 
@@ -606,6 +615,7 @@ impl TelaPlanilha {
     fn instalar(&mut self, aberta: Aberta, egui: &Context) {
         self.info = aberta.info;
         self.mudou_no_disco = false;
+        self.soma = None;
         match aberta.pasta {
             Err(e) => self.corpo = Corpo::Falhou(e),
             Ok((pasta, inicial)) => {
@@ -698,7 +708,13 @@ impl TelaPlanilha {
                 }
                 Some(aba) => {
                     let foco = ui_grade.memory(|m| m.has_focus(aba.grade.nucleo.id_corpo()));
+                    // com colunas escolhidas, o Shift+F10 é o menu do cabeçalho: o núcleo (o menu da célula) não o vê
+                    let menu_th_teclado =
+                        foco && !aba.grade.colunas_selecionadas.is_empty() && menu::tomar_shift_f10(&ui_grade);
                     let (resposta, visiveis) = aba.grade.mostrar(&mut ui_grade, &aba.sessao, rect_grade.height());
+                    if menu_th_teclado {
+                        menu::devolver_shift_f10(&ui_grade);
+                    }
                     let visiveis = visiveis.unwrap_or(1..=LINHAS_POR_BLOCO);
                     let congeladas = aba.grade.nucleo.congelado_efetivo().linhas as u32;
                     aba.sessao.pedir(&egui, visiveis, congeladas);
@@ -719,6 +735,18 @@ impl TelaPlanilha {
                         Some(menu::PedidoDoMenu::Copiar) => copiar = true,
                         Some(menu::PedidoDoMenu::Trazer) => trazer = true,
                         None => {}
+                    }
+                    // o Ctrl+Shift+C e o menu da célula (o clique direito, o Shift+F10)
+                    if resposta.copiar_com_cabecalho
+                        && let Some(iv) = aba.grade.nucleo.intervalo()
+                    {
+                        selecao::copiar(&egui, AcaoCelula::CopiarComCabecalho, iv, &aba.grade, &aba.sessao);
+                    }
+                    let ofertas = aba.grade.nucleo.intervalo().map(selecao::ofertas).unwrap_or_default();
+                    if let Some(acao) = menu_da_celula(&ui_grade, &mut aba.grade.nucleo, &ofertas)
+                        && let Some(iv) = aba.grade.nucleo.intervalo()
+                    {
+                        selecao::copiar(&egui, acao, iv, &aba.grade, &aba.sessao);
                     }
                 }
             }
@@ -799,7 +827,7 @@ impl TelaPlanilha {
 
     fn rodape_da_planilha(&mut self, ui: &mut Ui) {
         let e = &paleta(ui).estudio;
-        let Some(p) = self.pronta() else { return };
+        let Corpo::Pronta(p) = &self.corpo else { return };
         let Some(aba) = &p.aba else {
             let c = Contagem::de(&p.pasta);
             let frase = if c.planilhas == 0 {
@@ -830,6 +858,14 @@ impl TelaPlanilha {
         }
         let fracao = s.fracao_da_barra();
         let mut cancelar = false;
+        // com mais de uma célula selecionada, as contas da seleção à direita (A.3)
+        let resumo = selecao::resumo(&mut self.soma, ui.ctx(), &aba.grade, s);
+        if let Some(resumo) = resumo {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| match resumo {
+                Some(r) => rodape_da_selecao(ui, &r),
+                None => rodape_somando(ui),
+            });
+        }
         if let Some(f) = fracao {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 cancelar = ui.add(Botao::ghost(CANCELAR).pequeno()).clicked();

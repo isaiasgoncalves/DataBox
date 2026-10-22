@@ -73,14 +73,36 @@ pub fn menu_do_cabecalho(
     pedido
 }
 
+/// Tira o Shift+F10 (só com o Shift) dos eventos do quadro, antes de a grade vê-lo (com colunas escolhidas ele é o menu
+/// do cabeçalho, não o da célula). Devolve se ele veio.
+pub(crate) fn tomar_shift_f10(ui: &Ui) -> bool {
+    ui.input_mut(|i| {
+        let achado = i.events.iter().position(e_shift_f10);
+        achado.map(|p| i.events.remove(p)).is_some()
+    })
+}
+
+/// Devolve o Shift+F10 aos eventos do quadro, para o menu do cabeçalho abrir com ele.
+pub(crate) fn devolver_shift_f10(ui: &Ui) {
+    ui.input_mut(|i| {
+        i.events.push(egui::Event::Key {
+            key: egui::Key::F10,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::SHIFT,
+        })
+    });
+}
+
+fn e_shift_f10(e: &egui::Event) -> bool {
+    matches!(e, egui::Event::Key { key: egui::Key::F10, pressed: true, modifiers, .. }
+        if modifiers.matches_exact(egui::Modifiers::SHIFT))
+}
+
 /// O Shift+F10 (só com o Shift) foi apertado neste quadro.
 fn shift_f10(ui: &Ui) -> bool {
-    ui.input(|i| {
-        i.events.iter().any(|e| {
-            matches!(e, egui::Event::Key { key: egui::Key::F10, pressed: true, modifiers, .. }
-                if modifiers.matches_exact(egui::Modifiers::SHIFT))
-        })
-    })
+    ui.input(|i| i.events.iter().any(e_shift_f10))
 }
 
 #[cfg(test)]

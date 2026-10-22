@@ -5,7 +5,7 @@
 use comum::{Codigo, ErroBanco};
 use egui::Ui;
 use estado::{Estado as EstadoApp, Oferta, Ofertas, Verbo};
-use interface::grade::{Intervalo, RespostaNucleo, frase_do_intervalo_copiado, tsv_do_intervalo};
+use interface::grade::{AcaoCelula, Intervalo, RespostaNucleo, frase_do_intervalo_copiado};
 use interface::pecas::avisos::TomAviso;
 use interface::pecas::botao::Botao;
 use interface::pecas::progresso::barra_progresso;
@@ -13,7 +13,7 @@ use interface::pecas::texto::texto as texto_simples;
 use interface::pecas::toast::{toast, toast_atencao, toast_concluido, toast_erro};
 use tabular::colunas::escrever_tsv;
 
-use crate::colunas::{ColunaDaGrade, FimCabecalho};
+use crate::colunas::FimCabecalho;
 use crate::edicao::{Mutacao, ajustar_marcas, alvo_em_palavras};
 use crate::grade::PRIMEIRA_DE_DADOS;
 use crate::pintor::{Edicao, FimEdicao, Pendente, preparar_edicao};
@@ -167,9 +167,9 @@ impl TelaCsv {
                 self.mudou_no_disco = true;
                 toast_erro(ectx, textos::MUDOU_AO_SALVAR);
             }
-            (Trabalho::LerIntervalo { .. }, Efeito::Intervalo(linhas)) => {
+            (Trabalho::LerIntervalo { como, .. }, Efeito::Intervalo(linhas)) => {
                 let colunas = linhas.first().map_or(0, Vec::len);
-                ectx.copy_text(escrever_tsv(&linhas));
+                ectx.copy_text(como.escrever(&linhas));
                 let iv = Intervalo::entre((0, 0), (linhas.len().saturating_sub(1), colunas.saturating_sub(1)));
                 toast_concluido(ectx, frase_do_intervalo_copiado(iv));
             }
@@ -307,6 +307,10 @@ impl TelaCsv {
             && ui.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Copy)));
         if r.copiar || copia_sem_ativa {
             self.copiar(&ectx);
+        } else if r.copiar_com_cabecalho
+            && let Some(iv) = self.grade.as_ref().and_then(|g| g.nucleo.intervalo())
+        {
+            self.copiar_intervalo_como(&ectx, AcaoCelula::CopiarComCabecalho, iv);
         }
     }
 
@@ -352,41 +356,7 @@ impl TelaCsv {
     /// O Ctrl+C de um intervalo da grade (linhas da vista, colunas da grade), como o Excel copia: na hora, se as linhas
     /// estão na página em mãos; senão numa tarefa, que lê as que faltam.
     fn copiar_intervalo(&mut self, ectx: &egui::Context, iv: Intervalo) {
-        if iv.celulas() > LIMITE_DA_COPIA {
-            toast_atencao(ectx, textos::grande_demais_para_copiar(iv.celulas()));
-            return;
-        }
-        let Some(g) = self.grade.as_ref() else { return };
-        // a coluna da tabela de cada coluna da grade (a provisória vai vazia)
-        let colunas: Vec<Option<usize>> = iv
-            .colunas()
-            .map(|c| match g.dado(c).map(|d| self.mapa.get(d)) {
-                Some(Some(ColunaDaGrade::Dados(t))) => Some(*t),
-                Some(None) => g.dado(c),
-                _ => None,
-            })
-            .collect();
-        let pagina = self.pagina.as_ref();
-        if pagina.is_some_and(|p| p.contem(iv.linha0 as u64) && p.contem(iv.linha1 as u64)) {
-            let primeira = iv.coluna0;
-            let texto = tsv_do_intervalo(iv, |l, c| {
-                let t = colunas.get(c - primeira).copied().flatten()?;
-                pagina?.celula(l as u64, t).map(str::to_string)
-            });
-            ectx.copy_text(texto);
-            toast_concluido(ectx, frase_do_intervalo_copiado(iv));
-            return;
-        }
-        // as posições na tabela das linhas da vista (sem filtro nem ordem, a vista é a própria tabela)
-        let vista = self.janela.vista.clone();
-        let posicoes: Vec<u64> = iv
-            .linhas()
-            .filter_map(|l| match &vista {
-                Some(v) => v.get(l).copied(),
-                None => Some(l as u64),
-            })
-            .collect();
-        self.enfileirar(Trabalho::LerIntervalo { posicoes, colunas });
+        self.copiar_intervalo_como(ectx, AcaoCelula::Copiar, iv);
     }
 
     // ------------------------------------------------------------------ a edição no lugar

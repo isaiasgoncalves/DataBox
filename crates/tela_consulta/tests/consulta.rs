@@ -1161,3 +1161,135 @@ fn banco_sem_tabelas_mostra_o_aviso_nas_propriedades() {
     assert!(h.query_by_label("O banco ainda não tem tabelas; crie a primeira com CREATE TABLE.").is_some());
     capturar_sem_hover(&mut h, "consulta-sem-tabelas-claro.png");
 }
+
+// ------------------------------------------------------------------ o menu da célula (0.2.3)
+
+/// O centro do texto pintado `texto` na grade (o primeiro).
+fn centro_do_texto(h: &H, texto: &str) -> Pos2 {
+    h.output()
+        .shapes
+        .iter()
+        .find_map(|c| match &c.shape {
+            egui::Shape::Text(t) if t.galley.text() == texto => Some(t.pos + vec2(t.galley.size().x / 2.0, 7.0)),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{texto} não foi pintado"))
+}
+
+fn botao_em(h: &mut H, pos: Pos2, button: PointerButton) {
+    h.hover_at(pos);
+    for pressed in [true, false] {
+        h.event(Event::PointerButton { pos, button, pressed, modifiers: Modifiers::NONE });
+    }
+    h.run_steps(3);
+}
+
+fn menu_aberto(h: &H) -> Option<String> {
+    h.query_by_role(Role::Menu).and_then(|m| m.accesskit_node().label())
+}
+
+/// Escolhe um item do menu (no submenu "Copiar como", passa por ele antes) e devolve o que foi copiado.
+fn escolher_no_menu(h: &mut H, item: &str, submenu: bool) -> Option<String> {
+    if submenu {
+        h.get_by_label("Copiar como").hover();
+        h.run_steps(3);
+    }
+    h.get_by_label(item).click();
+    let mut copiado = None;
+    for _ in 0..4 {
+        h.step();
+        copiado = copiado.or_else(|| {
+            h.output().platform_output.commands.iter().find_map(|c| match c {
+                egui::OutputCommand::CopyText(t) => Some(t.clone()),
+                _ => None,
+            })
+        });
+    }
+    copiado
+}
+
+/// Executa o SELECT dos testes do menu e seleciona `linhas` × 2 a partir do nome da primeira linha.
+fn selecionar_nome_e_limite(h: &mut H, linhas: usize) -> Vec<Vec<comum::Celula>> {
+    executar(h, Some("SELECT nome, limite FROM clientes ORDER BY id LIMIT 8"), false);
+    assentar(h);
+    let dados = tela(h).grade(0).expect("a grade").1.to_vec();
+    let pos = centro_do_texto(h, &texto_da_celula(&dados[0][0]));
+    botao_em(h, pos, PointerButton::Primary);
+    for _ in 1..linhas {
+        h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowDown);
+        h.run_steps(1);
+    }
+    h.key_press_modifiers(Modifiers::SHIFT, Key::ArrowRight);
+    h.run_steps(2);
+    dados
+}
+
+#[test]
+fn menu_da_celula_copia_e_o_rodape_soma() {
+    let amb = Ambiente::exemplo("consulta_menu_da_celula");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    let dados = selecionar_nome_e_limite(&mut h, 3);
+    let mut resumo = interface::grade::ResumoSelecao::default();
+    for linha in &dados[..3] {
+        for c in linha {
+            resumo.somar_celula(c, true);
+        }
+    }
+    assert!(resumo.texto().starts_with("Contagem 6 · Soma "), "{}", resumo.texto());
+    assert_eq!(rodape(&h, "Contagem "), Some(resumo.texto()), "o valor decide o que é número");
+    assert!(rodape(&h, "8 linhas · ").is_some(), "o rodapé do resultado continua à esquerda");
+
+    // dentro do intervalo: só os itens de copiar
+    let pos = centro_do_texto(&h, &texto_da_celula(&dados[1][0]));
+    botao_em(&mut h, pos, PointerButton::Secondary);
+    assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da seleção"));
+    for item in ["Colar", "Limpar", "Filtrar por este valor", "Marcar as linhas", "Excluir as linhas"] {
+        assert!(h.query_by_label(item).is_none(), "a Consulta não tem {item}");
+    }
+    let insert = escolher_no_menu(&mut h, "INSERT", true).expect("copiou");
+    let primeiro = texto_da_celula(&dados[0][0]).replace('\'', "''");
+    assert!(
+        insert.starts_with(&format!("INSERT INTO \"clientes\" (\"nome\", \"limite\") VALUES\n  ('{primeiro}', ")),
+        "a tabela do FROM: {insert}"
+    );
+    assert_eq!(insert.matches("\n  (").count(), 3);
+    assert!(menu_aberto(&h).is_none());
+
+    // Copiar com cabeçalho
+    botao_em(&mut h, pos, PointerButton::Secondary);
+    let tsv = escolher_no_menu(&mut h, "Copiar com cabeçalho", false).expect("copiou");
+    assert!(tsv.starts_with(&format!("nome\tlimite\r\n{}\t", texto_da_celula(&dados[0][0]))), "{tsv}");
+
+    // o Shift+F10 abre na ativa, com o foco no primeiro item; o Esc fecha e devolve o foco à grade
+    h.key_press_modifiers(Modifiers::SHIFT, Key::F10);
+    h.run_steps(3);
+    assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da seleção"));
+    assert!(h.get_by_label("Copiar").accesskit_node().is_focused());
+    h.key_press(Key::Escape);
+    h.run_steps(3);
+    assert!(menu_aberto(&h).is_none());
+
+    // fora do intervalo: a célula vira a ativa, e uma célula só tira as contas do rodapé
+    let fora = centro_do_texto(&h, &texto_da_celula(&dados[6][0]));
+    botao_em(&mut h, fora, PointerButton::Secondary);
+    assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da célula"));
+    let copiado = escolher_no_menu(&mut h, "Copiar", false);
+    assert_eq!(copiado, Some(texto_da_celula(&dados[6][0])));
+    assert_eq!(rodape(&h, "Contagem "), None);
+}
+
+#[test]
+fn capturas_do_menu_da_celula() {
+    let amb = Ambiente::exemplo("consulta_menu_capturas");
+    for (tema, nome) in
+        [(Tema::Claro, "consulta-menu-da-celula-claro.png"), (Tema::Escuro, "consulta-menu-da-celula-escuro.png")]
+    {
+        let mut h = abrir(&amb, None, tema);
+        let dados = selecionar_nome_e_limite(&mut h, 4);
+        let pos = centro_do_texto(&h, &texto_da_celula(&dados[1][0]));
+        botao_em(&mut h, pos, PointerButton::Secondary);
+        h.get_by_label("Copiar como").hover();
+        h.run_steps(4);
+        capturar(&mut h, nome);
+    }
+}

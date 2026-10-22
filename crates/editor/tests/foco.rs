@@ -1,6 +1,7 @@
 //! O foco do teclado na casca (as correções das revisões da etapa 2): o Tab só para em peças com nome e segue a
 //! ordem da tela (a barra de título, a barra de ferramentas, a barra de ícones, os painéis e o documento), as setas
-//! do menu aberto ficam no painel dele e as do Explorador ficam na árvore, e o Esc do menu devolve o foco ao botão.
+//! do menu aberto ficam no painel dele e as do Explorador ficam na árvore, e o Esc do menu devolve o foco ao botão. O
+//! Shift+F10 na grade abre o menu da célula com o foco no primeiro item, e o Esc devolve o foco à grade.
 
 // teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -179,4 +180,35 @@ fn setas_do_menu_ficam_no_painel_e_o_esc_devolve_o_foco() {
     h.run_steps(1);
     assert_eq!(rotulo_focado(&h, "o ↑ no Exibir"), "Tema");
     assert!(h.get(by().role(Role::Button).label("Tema")).is_focused());
+}
+
+#[cfg(feature = "telas")]
+#[test]
+fn shift_f10_na_grade_abre_o_menu_da_celula_e_o_esc_volta_a_ela() {
+    let amb = Ambiente::exemplo("foco_menu_da_celula");
+    let mut h = harness(&amb);
+    clicar_link(&mut h, "clientes");
+    assentar(&mut h);
+    let grade = h.get(by().label("Grade")).rect();
+    // o corpo da grade, depois da caixa de marcar (32)
+    let pos = egui::pos2(grade.left() + 32.0 + 60.0, grade.top() + 14.0);
+    h.event(egui::Event::PointerMoved(pos));
+    for pressed in [true, false] {
+        let button = egui::PointerButton::Primary;
+        h.event(egui::Event::PointerButton { pos, button, pressed, modifiers: egui::Modifiers::NONE });
+    }
+    h.run_steps(2);
+    assert_eq!(rotulo_focado(&h, "o clique na célula"), "Grade");
+    h.key_press_modifiers(egui::Modifiers::SHIFT, Key::F10);
+    h.run_steps(3);
+    assert!(h.query_by_role(Role::Menu).is_some(), "o Shift+F10 abre o menu da célula");
+    assert_eq!(rotulo_focado(&h, "o Shift+F10"), "Copiar", "o foco no primeiro item");
+    // as setas andam pelos itens, sem sair do menu
+    h.key_press(Key::ArrowDown);
+    h.run_steps(1);
+    assert_eq!(rotulo_focado(&h, "o ↓"), "Copiar com cabeçalho");
+    h.key_press(Key::Escape);
+    h.run_steps(2);
+    assert!(h.query_by_role(Role::Menu).is_none(), "o Esc fecha");
+    assert_eq!(rotulo_focado(&h, "o Esc"), "Grade", "e devolve o foco à grade");
 }
