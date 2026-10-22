@@ -249,7 +249,9 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 - **Buscar** (Ctrl+F) na planilha inteira, pelo texto como ele aparece na grade (as colunas ocultas ficam de fora).
 - Ctrl+C copia a célula ou a coluna; o clique direito no cabeçalho oferece **Trazer colunas desta planilha** para o
   CSV aberto. Ctrl+PageUp e Ctrl+PageDown trocam de planilha.
-- Arquivo com senha ou no formato antigo (`.xls`) diz o que fazer e oferece **Abrir no programa padrão**.
+- O rodapé mostra a planilha e a célula ativa ("Vendas › B7"), o tamanho e as contas da seleção.
+- Arquivo com senha ou no formato antigo (`.xls`) diz o que fazer e oferece **Abrir no programa padrão** (que também
+  fica no menu Arquivo, para qualquer arquivo aberto).
 
 ### Atalhos principais
 

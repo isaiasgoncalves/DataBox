@@ -6,7 +6,9 @@
 //!   Ctrl+Shift+O) · Abrir arquivo (a folha; Ctrl+O) · Novo banco (o cilindro com o "+") | Abertos recentemente ▸
 //!   (sem silhueta por ora; os recentes que existem, menos o banco aberto e a pasta aberta, com o sólido de 24 de
 //!   cada tipo, a pasta, o cilindro ou a folha, em linhas de 44px: são objetos; o clique abre pelo tipo; desligado
-//!   sem nenhum) | Salvar (o disquete; Ctrl+S, o verbo da aba) · Fechar aba (Ctrl+W; desligado com o Início sozinho)
+//!   sem nenhum) | Salvar (o disquete; Ctrl+S, o verbo da aba) · Abrir no programa padrão (o arquivo da aba à vista no
+//!   programa associado do sistema; desde a 0.2.3, quando a planilha e o CSV perderam a faixa do documento, que tinha o
+//!   botão; desligado sem um documento de arquivo) · Fechar aba (Ctrl+W; desligado com o Início sozinho)
 //!   · Fechar banco (com um banco aberto) · Fechar pasta (desligado sem pasta) | Preferências (sem silhueta por ora;
 //!   Ctrl+,).
 //! - **Editar**: os verbos da aba, das mesmas `Ofertas` da barra de ferramentas: Desfazer · Refazer | Novo · Nova
@@ -35,6 +37,8 @@
 //! Clicar num item fecha o menu. O que a pessoa escolheu volta como [`PedidoMenu`] para a casca aplicar.
 
 use banco::{AcaoManutencao, BancoInfo};
+use std::path::{Path, PathBuf};
+
 use egui::{Id, Ui};
 use estado::{Acao, Ofertas, Parte, Rota, Verbo};
 use interface::icones::Icone;
@@ -45,6 +49,9 @@ use super::RecenteMenu;
 use super::docas::{Paineis, Painel};
 use super::ferramentas::EstadoPainel;
 use super::preferencias::Secao;
+
+/// O item do Arquivo que abre o arquivo da aba no programa padrão (o botão que a faixa da planilha tinha).
+pub(crate) const ABRIR_NO_PROGRAMA: &str = "Abrir no programa padrão";
 
 /// Os ids dos menus, na ordem da barra (o Banco e a Tabela só aparecem com banco aberto e tabela à vista).
 const IDS: [&str; 6] = ["arquivo", "editar", "exibir", "banco", "tabela", "ajuda"];
@@ -91,6 +98,8 @@ pub(crate) struct Menus<'a> {
     pub banco: Option<&'a BancoInfo>,
     /// A tabela ou visão à vista (com ela, o menu Tabela).
     pub tabela: Option<MenuTabela<'a>>,
+    /// O arquivo do documento à vista (o CSV, a planilha, o texto, a ficha): liga o "Abrir no programa padrão".
+    pub arquivo: Option<&'a Path>,
 }
 
 /// O que o menu Tabela precisa saber da tabela à vista.
@@ -133,6 +142,8 @@ pub(crate) enum PedidoMenu {
     /// A janela "Atalhos do teclado" e a "Sobre o DataBox".
     Atalhos,
     Sobre,
+    /// O arquivo da aba à vista no programa padrão do sistema (Arquivo › Abrir no programa padrão).
+    AbrirNoPrograma(PathBuf),
     /// A janela Preferências, já na seção (Arquivo › Preferências: Geral; Exibir › Tema › Preferências de aparência).
     Preferencias(Secao),
 }
@@ -189,6 +200,16 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
         p.silhueta(Icone::Salvar);
         if item_do_verbo(p, m.ofertas, Verbo::Salvar) {
             pedido = Some(PedidoMenu::Verbo(Verbo::Salvar));
+        }
+        match m.arquivo {
+            Some(caminho) => {
+                if p.item(ABRIR_NO_PROGRAMA, None, false).clicked() {
+                    pedido = Some(PedidoMenu::AbrirNoPrograma(caminho.to_path_buf()));
+                }
+            }
+            None => {
+                p.item_desligado(ABRIR_NO_PROGRAMA, None);
+            }
         }
         if !m.pode_fechar_aba {
             p.item_desligado("Fechar aba", Some("Ctrl+W"));

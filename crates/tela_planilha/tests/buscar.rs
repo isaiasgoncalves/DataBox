@@ -58,7 +58,8 @@ fn busca_na_aba_inteira_anda_e_volta_a_celula_de_antes() {
     esperar_a_busca(&mut t);
     // o primeiro achado depois de A51: B97, o terceiro dos 41 (o C10 oculto não conta)
     assert_eq!(rotulo(&t).as_deref(), Some("3 de 41"));
-    assert!(t.query_by_label("3 de 41").is_some(), "a contagem na faixa");
+    // a planilha não tem faixa nem barra de filtros: a contagem vai à direita do rodapé
+    assert!(t.get_by_label("3 de 41").rect().top() > TAMANHO.y - 40.0, "a contagem no rodapé");
     assert_eq!(ativa(&t), Some((97, 1)));
     t.key_press(Key::Enter);
     t.run_steps(2);

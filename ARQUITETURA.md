@@ -668,7 +668,7 @@ O que cada tela diz (a anatomia, a busca da barra e as Propriedades; os textos e
 | Consulta SQL | faixa, rodapé, própria | "Buscar no editor" | Execução, Tabelas (com o Inserir) |
 | CSV (`tela_csv`) | rodapé (com o formato), própria; sem faixa (0.2.3), a barra dos filtros no alto | "Buscar em vendas.csv" | Formato, Arquivo, Coluna {nome} |
 | Texto e JSON (`tela_texto`) | faixa, rodapé, própria | "Buscar em notas.txt" | Estrutura do documento (JSON) ou Texto, Arquivo |
-| Planilha (`tela_planilha`) | faixa, rodapé, própria (a faixa das planilhas entre a grade e o rodapé) | "Buscar em Plan1" | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
+| Planilha (`tela_planilha`) | rodapé (com a planilha, a célula ativa e o "Somente leitura"), própria (a faixa das planilhas entre a grade e o rodapé); sem faixa de contexto desde a 0.2.3, salvo na ficha do arquivo que não abriu | "Buscar em Plan1" | Arquivo, Planilha, Pasta de trabalho, Célula {A1} |
 
 **A busca nos arquivos (0.2.3).** No CSV, na planilha e no texto, a busca da barra procura no arquivo inteiro, numa
 tarefa, pelo `estado::busca::BuscaEmFundo<P>`: `nova(egui, origem, em_ordem, |&mut Coletor<P>| …)` roda a passada,

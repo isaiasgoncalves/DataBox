@@ -24,6 +24,10 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 - **O CSV não tem mais a faixa de cima:** o nome do arquivo já está na aba e nas Propriedades, e o formato (separador,
   codificação e fim de linha) foi para o rodapé, ao lado da contagem de linhas. A barra dos filtros sobe para o alto
   do documento, como nos Dados, e a contagem da busca ("3 de 41") fica na ponta direita dela. A grade ganha uma linha.
+- **A planilha do Excel também não tem mais a faixa de cima:** a planilha e a célula ativa ("Vendas › B7") e o
+  "Somente leitura" vão para o rodapé, antes da contagem de linhas e colunas, e a contagem da busca fica na ponta
+  direita dele. **Abrir no programa padrão** passa para o menu Arquivo, ligado com o Excel, o CSV, o texto/JSON e a
+  ficha de um arquivo. O texto e o JSON continuam com a faixa (o Formatar, o sinal de válido e o caminho do JSON).
 
 ### Corrigido
 

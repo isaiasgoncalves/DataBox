@@ -292,8 +292,7 @@ impl TelaArquivo {
         }
     }
 
-    /// O caminho do arquivo.
-    #[allow(dead_code)] // os editores e os testes
+    /// O caminho do arquivo (o Arquivo › Abrir no programa padrão).
     pub(crate) fn caminho(&self) -> &Path {
         match self {
             TelaArquivo::Ficha(f) => &f.caminho,

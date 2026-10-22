@@ -209,6 +209,8 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 - Large sheets show the first page immediately and keep indexing in the background.
 - Copy a cell or a column, or bring a sheet's columns into the open CSV.
 - Search (Ctrl+F) the whole sheet, as the grid shows it (hidden columns are skipped).
+- The footer shows the sheet and the active cell ("Vendas › B7"), its size and the selection's sums; **Open in the
+  default program** (*Abrir no programa padrão*) is in the File menu, for any open file.
 
 The full feature list, keyboard shortcuts and details are in the [Portuguese guide](README.pt-BR.md#recursos).
 

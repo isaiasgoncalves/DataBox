@@ -195,3 +195,43 @@ fn capturas_do_menu_da_celula() {
         capturar(&mut t, nome);
     }
 }
+
+/// O rodapé sem a faixa (0.2.3, item F): da janela larga à estreita, as contas da seleção encolhem primeiro; depois
+/// saem os itens da esquerda (o chip "Somente leitura" antes da contagem de linhas), e a planilha com a célula ativa
+/// fica até o fim.
+#[test]
+fn rodape_corta_as_contas_antes_e_a_migalha_por_ultimo() {
+    let rotulo_no_rodape =
+        |h: &H, rotulo: &str, altura: f32| h.query_all_by_label(rotulo).any(|n| n.rect().top() > altura - 40.0);
+    let pintado = |h: &H, inicio: &str| {
+        h.output()
+            .shapes
+            .iter()
+            .any(|c| matches!(&c.shape, egui::Shape::Text(t) if t.galley.text().starts_with(inicio)))
+    };
+    // (as contas inteiras, o chip, a contagem de linhas, a planilha e a célula)
+    let mut estados = Vec::new();
+    for largura in (560..=1240).rev().step_by(40) {
+        let tamanho = egui::vec2(largura as f32, 700.0);
+        let nome = format!("pl_menu_rodape_{largura}");
+        let mut t = abrir_com(&nome, "relatorio_q3.xlsx", &relatorio_q3(60), Tema::Claro, tamanho, |t| t);
+        esperar_o_indice(&mut t);
+        t.run_steps(3);
+        tela_mut(&mut t).grade_mut().expect("a grade").nucleo.selecionar(Some((2, 4)));
+        t.run_steps(2);
+        tela_mut(&mut t).grade_mut().expect("a grade").nucleo.estender((4, 4));
+        t.run_steps(3);
+        let contas = rodape_da_selecao(&t).expect("as contas");
+        assert!(rotulo_no_rodape(&t, "Vendas", 700.0) && rotulo_no_rodape(&t, "D3", 700.0), "a migalha ({largura})");
+        estados.push((
+            pintado(&t, &contas),
+            rotulo_no_rodape(&t, "Somente leitura", 700.0),
+            rotulo_no_rodape(&t, "· 60 linhas · 6 colunas", 700.0),
+        ));
+    }
+    assert_eq!(estados.first(), Some(&(true, true, true)), "larga: tudo cabe");
+    assert!(estados.contains(&(false, true, true)), "as contas encolhem primeiro: {estados:?}");
+    assert!(estados.iter().any(|e| !e.1), "o chip sai quando falta espaço: {estados:?}");
+    assert!(!estados.iter().any(|e| e.0 && !e.1), "as contas encolhem antes de o chip sair: {estados:?}");
+    assert!(!estados.iter().any(|e| e.1 && !e.2), "o chip sai antes da contagem: {estados:?}");
+}

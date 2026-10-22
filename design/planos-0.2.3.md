@@ -11,7 +11,7 @@ sem recurso novo. Os recursos (perfil, Salvar como, SQL sobre CSV, gráficos…)
 | C | Contas da coluna do CSV sem ler a coluna inteira na memória | correção | um CSV grande pode esgotar a memória |
 | D | CI confiável no Windows | correção (infra) | a repetição dos testes esconde as falhas intermitentes |
 | E | Fatiar o `editor/src/app.rs` e o `editor/tests/casca.rs` | dívida técnica | a 0.3 mexe nos dois; arquivos de ~5 mil linhas |
-| F | O CSV sem a faixa: o formato no rodapé | refinamento | a faixa repetia o nome da aba e ocupava uma linha |
+| F | O CSV e o Excel sem a faixa: o formato, a planilha e a célula no rodapé | refinamento | a faixa repetia o nome da aba e ocupava uma linha |
 
 ---
 
@@ -214,7 +214,7 @@ desligado com a dica e o rodapé da seleção, nos dois temas, antes do PR do me
 
 ---
 
-## F. O CSV sem a faixa: o formato no rodapé
+## F. O CSV e o Excel sem a faixa: o formato, a planilha e a célula no rodapé
 
 Pedido do Isaías em 21/10/2026: "essa primeira barra onde está escrito validação.csv e as tags vírgula utf-8 lf poderia
 facilmente não existir, e essas informações poderiam estar na barra inferior onde está a contagem de linhas".
@@ -228,7 +228,17 @@ facilmente não existir, e essas informações poderiam estar na barra inferior 
 - *O rodapé dividido:* com a seleção (A.3), as contas ficam à direita e encolhem primeiro (o Mín. e o Máx., depois a
   Média); o formato só sai, para a dica da contagem, quando nem a contagem e a soma caberiam com ele
   (`interface::grade::largura_minima_da_selecao`).
-- *Fora:* as faixas do Excel e do texto/JSON ficam como estão (o Isaías ainda vai decidir).
+- *Excel* (decisão do Isaías em 21/10/2026: "Tira também a faixa do Excel (planilha e célula ativa no rodapé, Abrir
+  no programa padrão no menu Arquivo); o texto/JSON fica com a faixa"): a planilha aberta não tem faixa. O rodapé
+  começa por "Vendas › B7" (a planilha e a célula ativa, ou o intervalo da mescla), o chip "Somente leitura", "· 1.204
+  linhas · 8 colunas", "· A1:H1204", as mescladas e a seleção em palavras; à direita, a barra do índice, a contagem
+  da busca ("3 de 41"; a planilha não tem barra de filtros) e as contas da seleção. Falta espaço: as contas encolhem
+  primeiro; depois saem, para a dica da migalha, as mescladas, a dimensão, o chip, a seleção em palavras e a contagem;
+  a planilha e a célula ficam por último. "Abrir no programa padrão" vai para o menu Arquivo da casca, ligado com
+  qualquer documento de arquivo à vista (o Excel, o CSV, o texto/JSON e a ficha). A ficha do arquivo que não abriu
+  mantém a faixa com o nome e o caminho (o único lugar deles nesse caso).
+- *Fora:* o texto/JSON fica com a faixa (decisão de 21/10/2026): ela tem o Formatar, o sinal de válido e o caminho
+  do JSON.
 - *Onde:* no PR 5 (o menu nas telas), num commit separado: ele mexe no mesmo rodapé.
 
 ---
@@ -241,7 +251,7 @@ facilmente não existir, e essas informações poderiam estar na barra inferior 
 3. `feat(tabular, interface)`: formatos de cópia e o menu da célula na grade, com o mostruário (A).
 4. `fix(tela_csv, tabular)`: as contas da coluna em fluxo (C).
 5. `feat(tela_*)`: o menu nas quatro grades, só os itens de leitura (copiar, filtrar, marcar, ficha) e o rodapé da
-   seleção (A). Depende do 3. Leva também o CSV sem a faixa (F), num commit à parte.
+   seleção (A). Depende do 3. Leva também o CSV e o Excel sem a faixa (F), em commits à parte.
 6. `feat(banco, tela_dados, tela_csv)`: Colar, Limpar, Definir como NULL e Excluir as linhas, com o Desfazer de uma
    vez (A). Depende do 5.
 7. `fix(tabular, planilha, tela_csv, tela_planilha, tela_texto)`: Ctrl+F nos arquivos (B). Toca as mesmas telas que o
