@@ -323,8 +323,10 @@ fatiado, o menu da seleção, o Ctrl+F nos arquivos e as contas do CSV em fluxo.
 **Depois da 0.3.0:**
 
 - **0.3.1:** subir para o egui 0.37 e o `egui_plot` 0.38 (PR só disso).
-- **0.4 — "Conectar":** o contrato de fonte de dados (um documento de decisão escrito ainda durante a 0.3, sem
-  código), PostgreSQL só leitura por padrão, senhas no cofre do sistema.
+- **0.4 — "Conectar":** abre pelo **SSH** (ver arquivos e bancos de outras máquinas; decidido em 21/10/2026, plano em
+  [`planos-ssh.md`](planos-ssh.md), com o spike da biblioteca no fim da 0.3); depois, o contrato de fonte de dados
+  (um documento de decisão escrito ainda durante a 0.3, sem código), PostgreSQL só leitura por padrão, com o túnel
+  SSH, senhas no cofre do sistema.
 
 **Fora da 0.3:** PostgreSQL e outros bancos, DuckDB e Parquet, `.xls`/`.xlsb`, outros idiomas além do inglês (a
 porta fica aberta), macOS, editar texto acima de
