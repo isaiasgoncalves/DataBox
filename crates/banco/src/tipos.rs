@@ -378,6 +378,17 @@ pub struct LinhaGravada {
     pub linha: Option<Vec<Celula>>,
 }
 
+/// Uma célula do [`crate::Banco::desfazer_intervalo`]: grava `antigo` de volta em `coluna` da linha `chave`, só se
+/// ela ainda tem `gravado` (o valor relido depois da gravação, cortado como a grade o lê).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CelulaDesfeita {
+    /// A chave da linha depois da gravação (a PK colada muda a chave).
+    pub chave: Chave,
+    pub coluna: String,
+    pub gravado: Celula,
+    pub antigo: Celula,
+}
+
 /// Resultado de um comando da Consulta SQL.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResultadoComando {

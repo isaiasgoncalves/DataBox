@@ -545,6 +545,36 @@ fn desfazer_celula_volta_o_valor_e_respeita_a_transacao() {
     assert_eq!(e.codigo, Some(Codigo::BancoTrocado));
 }
 
+/// O Colar da grade e o Desfazer dele pelo serviço: tudo ou nada, a transação aberta dita, o banco trocado recusado.
+#[test]
+fn intervalo_grava_e_desfaz_de_uma_vez() {
+    let a = ambiente("intervalo");
+    let id = a.id();
+    let chaves = [Chave::Rowid(1), Chave::Rowid(2)];
+    let antes: Vec<Celula> =
+        chaves.iter().map(|k| a.servico.linha(&id, "clientes", k).unwrap().valor("cidade").cloned().unwrap()).collect();
+    let lote: Vec<(Chave, String, Entrada)> =
+        chaves.iter().map(|k| (k.clone(), "cidade".into(), tx("Natal"))).collect();
+    let r = a.servico.atualizar_intervalo(&id, "clientes", &lote).unwrap();
+    assert_eq!((r.resultado.len(), r.transacao_aberta), (2, false));
+    let desfazer: Vec<banco::CelulaDesfeita> = chaves
+        .iter()
+        .zip(&antes)
+        .map(|(k, a)| banco::CelulaDesfeita {
+            chave: k.clone(),
+            coluna: "cidade".into(),
+            gravado: ct("Natal"),
+            antigo: a.clone(),
+        })
+        .collect();
+    let r = a.servico.desfazer_intervalo(&id, "clientes", &desfazer).unwrap();
+    assert_eq!(r.resultado[1].linha.as_ref().unwrap()[3], antes[1]);
+    let e = erro_com(a.servico.desfazer_intervalo(&id, "clientes", &desfazer), 409);
+    assert!(e.mensagem.contains("mudou depois"), "{e:?}");
+    let e = erro_com(a.servico.atualizar_intervalo("outro", "clientes", &lote), 409);
+    assert_eq!(e.codigo, Some(Codigo::BancoTrocado));
+}
+
 #[test]
 fn gravacao_com_erro_de_regra() {
     let a = ambiente("regra");

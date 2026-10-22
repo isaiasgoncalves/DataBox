@@ -72,7 +72,9 @@ ou num intervalo não faz nada em nenhuma grade, e só os cabeçalhos do CSV e d
   existentes; um valor só, com um intervalo selecionado, preenche o intervalo inteiro. Não cria linhas nem colunas
   (o colar como nova coluna do CSV continua no menu do cabeçalho). Se o que foi colado passa da última linha ou coluna,
   o aviso diz quantas ficaram de fora. Coluna que não se edita (gerada, rowid só leitura, banco só leitura) desliga o
-  item com o motivo.
+  item com o motivo. No CSV, com uma coluna escolhida (ou o foco num cabeçalho), o Ctrl+V continua o colar como nova
+  coluna; no corpo da grade, cola nas células. O Delete sem linhas marcadas é o Limpar; com marcadas, continua
+  excluindo-as (decidido no PR 6).
 - **Limpar:** o vazio no CSV; nos Dados, o texto vazio nas colunas de texto e o NULL nas outras que aceitam NULL
   (coluna `NOT NULL` sem padrão desliga o item com o motivo). **Definir como NULL:** só nos Dados.
 - **Filtrar por este valor / Excluir este valor do filtro:** pela célula ativa, viram uma condição "igual a" ou

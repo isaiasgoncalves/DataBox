@@ -241,7 +241,8 @@ fn excluir_coluna_entra_no_desfazer() {
 fn colar_como_nova_coluna_um_passo_so() {
     let amb = Ambiente::vazio("csv_colar_nova");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(5)));
-    clicar_celula(&mut h, 0, 1);
+    // com a coluna escolhida, o Ctrl+V cola como nova coluna (na célula, cola por cima das células)
+    clicar_cabecalho(&mut h, 1, Modifiers::NONE);
     // texto de fora (o Excel): a primeira linha é texto sobre números, então é o nome
     colar(&mut h, "preco\r\n1,5\r\n2\r\n3\r\n4\r\n5\r\n");
     assert!(h.query(by().role(Role::TextInput).label("Nome da coluna")).is_some(), "o cabeçalho colado em edição");
@@ -270,7 +271,7 @@ fn colar_com_cabecalho_do_proprio_databox() {
     assert_eq!(coluna(&h, 2), ["Sul", "Sudeste", "Nordeste", "Norte"]);
     // o mesmo texto vindo de fora não tem cabeçalho
     let mut h2 = abrir(&amb, arquivo(&amb, "outro.csv", vendas(4)));
-    clicar_celula(&mut h2, 0, 0);
+    clicar_cabecalho(&mut h2, 0, Modifiers::NONE);
     colar(&mut h2, "a\r\nb\r\nc\r\nd\r\n");
     tecla(&mut h2, Key::Enter, Modifiers::NONE);
     esperar_ociosa(&mut h2);
@@ -281,7 +282,7 @@ fn colar_com_cabecalho_do_proprio_databox() {
 fn colar_com_quantidades_diferentes_mostra_o_aviso_e_acrescenta_linhas() {
     let amb = Ambiente::vazio("csv_colar_quantidades");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(5)));
-    clicar_celula(&mut h, 0, 5);
+    clicar_cabecalho(&mut h, 5, Modifiers::NONE);
     colar(&mut h, "1\n2\n3\n4\n5\n6\n7\n");
     assert!(h.query_by_label("A coluna colada tem 7 valores e o arquivo, 5 linhas.").is_some());
     assert!(h.query_by_label("Colar 5").is_some());
@@ -305,7 +306,7 @@ fn colar_com_quantidades_diferentes_mostra_o_aviso_e_acrescenta_linhas() {
 fn colar_com_menos_valores_so_informa() {
     let amb = Ambiente::vazio("csv_colar_menos");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(5)));
-    clicar_celula(&mut h, 0, 5);
+    clicar_cabecalho(&mut h, 5, Modifiers::NONE);
     colar(&mut h, "1\n2\n3\n");
     assert!(h.query_by_label("2 linhas ficaram vazias").is_some());
     tecla(&mut h, Key::Enter, Modifiers::NONE);
@@ -336,7 +337,7 @@ fn colar_sobre_pergunta_substituir() {
 fn cola_e_desfazer_voltam_o_arquivo() {
     let amb = Ambiente::vazio("csv_cola_desfazer");
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(5)));
-    clicar_celula(&mut h, 0, 5);
+    clicar_cabecalho(&mut h, 5, Modifiers::NONE);
     colar(&mut h, "1\n2\n3\n4\n5\n6\n");
     h.get_by_label("Acrescentar 1 linha").click();
     h.run_steps(3);
@@ -381,7 +382,7 @@ fn capturas_do_menu_e_do_aviso_contra_a_prancheta_16() {
     clicar_direito_em(&mut h, pos);
     capturar(&mut h, "menu-cabecalho-escuro.png");
     tecla(&mut h, Key::Escape, Modifiers::NONE);
-    clicar_celula(&mut h, 0, 1);
+    clicar_cabecalho(&mut h, 1, Modifiers::NONE);
     let valores: String = (0..1210).map(|i| format!("{},{:02}\n", 10 + i % 300, i % 100)).collect();
     colar(&mut h, &format!("valor\n{valores}"));
     capturar(&mut h, "colar-aviso-escuro.png");

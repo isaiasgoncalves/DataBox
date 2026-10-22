@@ -62,7 +62,7 @@
 //! - **Editar** (passo 11): a célula no lugar (`Entrada::compacta`; duplo clique, Enter, F2 ou uma tecla de texto;
 //!   Enter grava, Tab grava e anda, Esc desiste, perder o foco grava; o texto fica na célula até a resposta). Nova
 //!   linha (depois da ativa; sem ativa, no fim), Duplicar e Excluir (as marcadas ou a linha da ativa; a dica diz o
-//!   alvo: "Excluir as 2 linhas marcadas", "Duplicar a linha 7"), Delete exclui as marcadas, espaço marca a ativa.
+//!   alvo: "Excluir as 2 linhas marcadas", "Duplicar a linha 7"), Delete exclui as marcadas (sem marcadas, limpa o intervalo), espaço marca a ativa.
 //!   As marcas são posições: acompanham inserir, duplicar e excluir; desfazer, refazer e reler limpam.
 //!   O desfazer leva rótulos ("Desfazer Excluir 2 linhas"); fora de passo com o núcleo, o genérico. Salvar
 //!   (`Tabela::salvar`, com o aviso "Salvando vendas_2025.csv… 43%" e o Cancelar depois de 0,4 s; o toast
@@ -79,8 +79,12 @@
 //!   escolhidas, o Shift+F10 continua o do cabeçalho): Copiar, Copiar com cabeçalho (também o Ctrl+Shift+C) e Copiar
 //!   como (o separador do arquivo no CSV, o nome dele no `INSERT`, os números pelo tipo detectado; as linhas fora da
 //!   página pela fila), Filtrar por este valor e Excluir este valor do filtro (o vazio vira "é vazio"), Marcar as
-//!   linhas; Colar, Limpar e Excluir as linhas desligados até a próxima etapa. Com mais de uma célula, o rodapé soma a
-//!   seleção à direita; além da página, numa tarefa cancelável, com "Somando…".
+//!   linhas; Colar (o Ctrl+V com o foco no corpo e sem coluna escolhida: o TSV a partir da célula de cima à esquerda
+//!   do intervalo, por cima das células, um valor só preenchendo o intervalo, sem criar linhas nem colunas; o toast
+//!   diz quantas ficaram de fora), Limpar (o Delete sem linhas marcadas: o vazio) e Excluir as linhas (o caminho do
+//!   Excluir da barra). O Colar e o Limpar são um passo só no desfazer ("Desfazer Colar 9 células"); desligados, com
+//!   o motivo, enquanto o arquivo grava ou uma alteração que mexe nas linhas não voltou. Com mais de uma célula, o
+//!   rodapé soma a seleção à direita; além da página, numa tarefa cancelável, com "Somando…".
 //! - **Colunas** (passo 12, prancheta 16): o clique no cabeçalho seleciona a coluna (Ctrl soma ou tira, Shift
 //!   estende; o clique numa célula desfaz), "· coluna valor selecionada" no rodapé. O menu do cabeçalho (clique
 //!   direito e Shift+F10, a peça `MenuContexto`): Copiar coluna ("Copiar 3 colunas") · Colar como nova coluna ·
@@ -90,7 +94,7 @@
 //!   `.th-edit`, o nome selecionado): Enter confirma, Esc desiste (a cola mantém o nome sugerido), e o núcleo só é
 //!   tocado no fim, num passo só. Copiar coluna: TSV com o cabeçalho (numa tarefa, fora do `Mutex`), o toast "Coluna
 //!   valor copiada · 1.204 linhas"; o DataBox lembra o último texto que copiou (a cola dele tem cabeçalho). Colar
-//!   (Ctrl+V, ou o item do menu, que pede o `RequestPaste`): `ler_tsv` + `colunas_coladas` + `posicionar`; com mais
+//!   (Ctrl+V com uma coluna escolhida ou o foco num cabeçalho, ou o item do menu, que pede o `RequestPaste`): `ler_tsv` + `colunas_coladas` + `posicionar`; com mais
 //!   valores que linhas, o aviso "A coluna colada tem 1.204 valores e o arquivo, 1.180 linhas." com Colar 1.180 ·
 //!   Acrescentar 24 linhas · Cancelar; com menos, "24 linhas ficaram vazias"; sobre uma coluna com valores,
 //!   "Substituir 1.180 valores de quantidade?". Os Colar por posição ficam desligados com filtro ou ordem

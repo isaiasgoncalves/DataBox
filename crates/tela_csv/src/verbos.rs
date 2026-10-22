@@ -14,7 +14,7 @@ use interface::pecas::toast::{toast, toast_atencao, toast_concluido, toast_erro}
 use tabular::colunas::escrever_tsv;
 
 use crate::colunas::FimCabecalho;
-use crate::edicao::{Mutacao, ajustar_marcas, alvo_em_palavras};
+use crate::edicao::{AcaoCelulas, Mutacao, ajustar_marcas, alvo_em_palavras};
 use crate::grade::PRIMEIRA_DE_DADOS;
 use crate::pintor::{Edicao, FimEdicao, Pendente, preparar_edicao};
 use crate::sessao::{Efeito, LIMITE_DA_COPIA, Trabalho};
@@ -143,6 +143,10 @@ impl TelaCsv {
                 match m {
                     Mutacao::NovaLinha { posicao } if self.janela.vista.is_none() => self.ir_para_linha(*posicao),
                     Mutacao::ColarColunas { .. } | Mutacao::ColarSobre { .. } => self.toast_da_cola(ectx, m),
+                    Mutacao::Celulas { acao, celulas, de_fora } => {
+                        let frase = textos::celulas_alteradas(*acao == AcaoCelulas::Colar, celulas.len(), *de_fora);
+                        toast_concluido(ectx, frase);
+                    }
                     Mutacao::Trazer(plano) => self.depois_do_trazer(ectx, plano),
                     _ => {}
                 }
@@ -151,7 +155,10 @@ impl TelaCsv {
                 }
             }
             // a cola por cima e o Trazer com os valores que já estavam lá: nada entrou no desfazer, e a tela diz
-            (Trabalho::Mutacao(Mutacao::ColarSobre { .. } | Mutacao::Trazer(_)), Efeito::Alterou(false)) => {
+            (
+                Trabalho::Mutacao(Mutacao::ColarSobre { .. } | Mutacao::Trazer(_) | Mutacao::Celulas { .. }),
+                Efeito::Alterou(false),
+            ) => {
                 toast(ectx, textos::NADA_MUDOU);
             }
             (Trabalho::Salvar, Efeito::Salvo(_)) => {
@@ -294,6 +301,13 @@ impl TelaCsv {
         // o Delete repetido (ou a tecla segura) com a exclusão ainda na fila excluiria as linhas de baixo: espera
         if r.excluir && !self.marcadas.is_empty() && self.livre_para_editar() {
             self.mutar(Mutacao::Excluir { linhas: self.marcadas.iter().copied().collect() });
+        }
+        // sem linhas marcadas, o Delete é o Limpar do intervalo (0.2.3)
+        if r.excluir
+            && self.marcadas.is_empty()
+            && let Some(iv) = self.grade.as_ref().and_then(|g| g.nucleo.intervalo())
+        {
+            self.limpar_intervalo(&ectx, iv);
         }
         if r.espaco
             && let Some(l) = self.grade.as_ref().and_then(|g| g.nucleo.selecao()).map(|(l, _)| l)

@@ -12,8 +12,16 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   grade; no Explorador continua o Copiar caminho) e **Copiar como** CSV, JSON, Markdown, `INSERT`, lista para `IN (…)`
   ou pandas (no CSV e no Excel, o `INSERT` leva o nome do arquivo ou da planilha); **Filtrar por este valor** e
   **Excluir este valor do filtro** nos Dados e no CSV (o NULL vira "é nulo", o vazio do CSV vira "é vazio"); **Marcar
-  as linhas** nos Dados e no CSV; **Abrir a ficha da linha** nos Dados. Colar, Limpar, Definir como NULL e Excluir as
-  linhas aparecem desligados: chegam na próxima etapa.
+  as linhas** nos Dados e no CSV; **Abrir a ficha da linha** nos Dados. **Colar** (Ctrl+V) nos Dados e no CSV: o que
+  foi copiado (do Excel, de outra grade) cai a partir da célula ativa, por cima das células; um valor só preenche o
+  intervalo selecionado; não cria linhas nem colunas, e o aviso diz quantas células ficaram de fora (no CSV, com uma
+  coluna escolhida, o Ctrl+V continua colando como nova coluna). **Limpar** (Delete, sem linhas marcadas): o vazio no
+  CSV; nos Dados, o texto vazio nas colunas de texto, o NULL nas outras e o valor padrão na que não aceita NULL.
+  **Definir como NULL** nos Dados. **Excluir as linhas** do intervalo, com a mesma pergunta do Excluir da barra. Nos
+  Dados, o Colar e o Limpar gravam numa transação só (tudo ou nada), perguntam antes acima de 100 células ("Colar 120
+  células em clientes?"), avisam "Gravado em clientes (9 células)" e se desfazem de uma vez com o Ctrl+Z (se uma célula
+  mudou depois, nada é desfeito e o aviso diz qual); no CSV, são um passo só no desfazer. Coluna gerada, banco só
+  leitura e coluna que não aceita NULL desligam o item, com o motivo na dica.
 - **O rodapé soma a seleção:** com mais de uma célula selecionada, "Contagem 33 · Soma 98.231,40 · Média 8.930,13 ·
   Mín. 154,03 · Máx. 17.810,34", como a barra de status do Excel (a contagem das células não vazias; as contas, das
   numéricas). Onde não cabe, saem o mínimo e o máximo, depois a média, e vão para a dica. No CSV grande, a conta roda

@@ -33,6 +33,12 @@
 //!   desfazer_celula(nome, &Chave, coluna, gravado: &Celula, antigo: &Celula) -> Resultado<LinhaGravada>
 //!                                                       o Desfazer da grade: grava `antigo` só se a célula ainda
 //!                                                       tem `gravado` (senão 409 MSG_CELULA_MUDOU)
+//!   atualizar_intervalo(nome, &[(Chave, coluna, Entrada)]) -> Resultado<Vec<LinhaGravada>>
+//!                                                       o Colar e o Limpar da grade: um SAVEPOINT, tudo ou nada; uma
+//!                                                       resposta por célula; Entrada::Padrao grava o DEFAULT avaliado
+//!   desfazer_intervalo(nome, &[CelulaDesfeita]) -> Resultado<Vec<LinhaGravada>>
+//!                                                       o Desfazer deles: todas voltam só se todas ainda têm o
+//!                                                       `gravado` (senão 409 dizendo qual, e nada volta)
 //!   excluir(nome, &[Chave]) -> Resultado<usize>         tudo ou nada
 //!   consultar(sql, limite: usize) -> Resultado<ResultadoConsulta>   comando a comando, para no primeiro erro
 //!   interromper_consulta() -> bool                      corta o `consultar` em andamento ou que espera a vez;
@@ -68,7 +74,7 @@
 //! [`ChaveEstrangeira`], [`IndiceInfo`], [`ColunaIndice`], [`GatilhoInfo`], [`TipoChave`], [`TipoObjeto`],
 //! [`OrigemIndice`]), [`Pagina`] ([`LinhaPagina`]: `chave: Option<Chave>`, `valores: Vec<Celula>` cortadas em
 //! `LIMITE_TEXTO`), [`Contagem`], [`LinhaCompleta`] (`valores: Vec<(String, Celula)>`, texto inteiro),
-//! [`LinhaGravada`] (`chave`, `linha: Option<Vec<Celula>>`), [`ResultadoConsulta`] com
+//! [`LinhaGravada`] (`chave`, `linha: Option<Vec<Celula>>`), [`CelulaDesfeita`] (`chave`, `coluna`, `gravado`, `antigo`), [`ResultadoConsulta`] com
 //! [`ResultadoComando`]`::{Linhas, Alteracao, Erro}`, [`ResultadoManutencao`], [`CopiaFeita`].
 //!
 //! # Regras que quem chama precisa saber
@@ -152,10 +158,10 @@ pub use exportacao::{FiltroExportacao, LinhasExportacao, Parar};
 pub use manutencao::{AcaoManutencao, CopiaFeita, ResultadoManutencao};
 pub use sql::dividir_comandos;
 pub use tipos::{
-    BancoInfo, ChaveEstrangeira, ColunaIndice, ColunaInfo, Contagem, ContagemObjetos, Direcao, FkColuna, GatilhoInfo,
-    GatilhoResumo, IndiceInfo, IndiceResumo, LinhaCompleta, LinhaGravada, LinhaPagina, ObjetosInfo, OrigemIndice,
-    Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, SistemaResumo, TabelaInfo, TabelaResumo, TipoChave,
-    TipoObjeto, VisaoResumo,
+    BancoInfo, CelulaDesfeita, ChaveEstrangeira, ColunaIndice, ColunaInfo, Contagem, ContagemObjetos, Direcao,
+    FkColuna, GatilhoInfo, GatilhoResumo, IndiceInfo, IndiceResumo, LinhaCompleta, LinhaGravada, LinhaPagina,
+    ObjetosInfo, OrigemIndice, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, SistemaResumo, TabelaInfo,
+    TabelaResumo, TipoChave, TipoObjeto, VisaoResumo,
 };
 pub use valores::{Coagido, coagir};
 

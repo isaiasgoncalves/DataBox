@@ -1729,15 +1729,13 @@ fn menu_da_celula_copia_filtra_marca_e_abre_a_ficha() {
     // o clique direito dentro do intervalo age nele
     clique_direito(&mut h, 1, 1);
     assert_eq!(menu_aberto(&h).as_deref(), Some("Menu da seleção"));
-    for item in ["Colar", "Limpar", "Definir como NULL", "Excluir as linhas"] {
-        let n = h.get_by_label(item);
-        assert!(desabilitado(&n), "{item} desligado");
-        assert_eq!(
-            n.accesskit_node().description().as_deref(),
-            Some(interface::grade::MOTIVO_PROXIMA_ETAPA),
-            "{item} com a dica"
-        );
+    for item in ["Colar", "Limpar", "Excluir as linhas"] {
+        assert!(!desabilitado(&h.get_by_label(item)), "{item} ligado");
     }
+    // nome é NOT NULL: o Limpar grava o texto vazio, o NULL não vale
+    let n = h.get_by_label("Definir como NULL");
+    assert!(desabilitado(&n));
+    assert_eq!(n.accesskit_node().description().as_deref(), Some("A coluna nome não aceita NULL."));
     let copiado = escolher_no_menu(&mut h, "JSON", true);
     let nomes = ler(&h, "SELECT nome FROM clientes ORDER BY id LIMIT 3");
     let esperado = format!(
@@ -1828,4 +1826,195 @@ fn menu_da_celula_filtra_o_null() {
     let filtro = ultima_rota(&h).and_then(|r| r.filtros.first().cloned()).expect("a condição");
     assert_eq!(filtro.op, Operador::Nulo);
     assert_eq!(retrato(&h).linhas, 1);
+}
+
+// ---- os itens de escrita do menu da célula (0.2.3, A.2 e A.4) ------------------------------------------------
+
+/// O Ctrl+V com o foco na grade: o texto chega no `Event::Paste`.
+fn colar(h: &mut H, texto: &str) {
+    h.input_mut().events.push(Event::Paste(texto.to_string()));
+    h.step();
+    h.run_steps(2);
+    esperar_grade(h);
+    h.run_steps(1);
+}
+
+fn cidades_e_limites(h: &H, n: usize) -> Vec<(String, String)> {
+    ler(h, &format!("SELECT cidade, limite FROM clientes ORDER BY id LIMIT {n}"))
+        .iter()
+        .map(|l| (texto(&l[0]), texto(&l[1])))
+        .collect()
+}
+
+/// O Colar por cima das células, um passo só no Desfazer; o valor só preenche o intervalo; o que passa da última
+/// linha ou coluna fica de fora e o aviso diz quantas.
+#[test]
+fn colar_e_desfazer_de_uma_vez() {
+    use estado::Verbo;
+    let amb = Ambiente::exemplo("dados_colar");
+    let mut h = abrir(&amb, "clientes");
+    let antes = cidades_e_limites(&h, 2);
+    clicar_celula(&mut h, 0, 3);
+    colar(&mut h, "Natal\t10,5\r\nBelém\t20\r\n");
+    assert_eq!(
+        cidades_e_limites(&h, 2),
+        [("Natal".to_string(), "10.5".to_string()), ("Belém".to_string(), "20".to_string())]
+    );
+    assert_eq!(toast(&h).as_deref(), Some("Gravado em clientes (4 células)"));
+    assert_eq!(celula(&h, 0, 3), "Natal", "a página leva o que o banco releu");
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), "Desfazer Colar em 4 células (Ctrl+Z)");
+
+    clicar_botao(&mut h, "Desfazer");
+    esperar_que(&mut h, |r| !r.desfazendo);
+    h.run_steps(1);
+    assert_eq!(cidades_e_limites(&h, 2), antes);
+    assert_eq!(toast(&h).as_deref(), Some("Edição desfeita em clientes (4 células)"));
+    assert_eq!(celula(&h, 1, 3), antes[1].0);
+
+    // um valor só com um intervalo: preenche o intervalo inteiro
+    clicar_celula(&mut h, 0, 3);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    colar(&mut h, "Natal\r\n");
+    let n = contar(&h, "SELECT count(*) FROM (SELECT cidade FROM clientes ORDER BY id LIMIT 3) WHERE cidade = 'Natal'");
+    assert_eq!(n, 3);
+
+    // a última linha da página e a última coluna: três células ficam de fora
+    let ultima = retrato(&h).linhas - 1;
+    tecla_com(&mut h, CTRL, Key::End);
+    tecla(&mut h, Key::End);
+    assert_eq!(retrato(&h).ativa, Some((ultima, 6)));
+    colar(&mut h, "2026-01-01\tx\r\ny\tz\r\n");
+    let t = toast(&h).unwrap_or_default();
+    assert!(t.starts_with("Gravado em clientes (linha"), "{t}");
+    assert!(t.ends_with("3 células ficaram de fora: passavam da última linha ou coluna."), "{t}");
+
+    // a célula mudada depois por fora: nada volta, e o aviso diz qual
+    for _ in 0..6 {
+        tecla(&mut h, Key::PageUp);
+    }
+    tecla(&mut h, Key::Home);
+    tecla(&mut h, Key::ArrowRight);
+    tecla(&mut h, Key::ArrowRight);
+    tecla(&mut h, Key::ArrowRight);
+    assert_eq!(retrato(&h).ativa, Some((0, 3)));
+    colar(&mut h, "Fortaleza\r\nManaus\r\n");
+    executar(&amb, "UPDATE clientes SET cidade = 'Outra' WHERE id = 2");
+    clicar_botao(&mut h, "Desfazer");
+    esperar_que(&mut h, |r| !r.desfazendo);
+    h.run_steps(1);
+    assert_eq!(toast(&h).as_deref(), Some("A célula cidade da linha 2 mudou depois; nada foi desfeito."));
+    assert_eq!(texto(&ler_um(&h, "SELECT cidade FROM clientes WHERE id = 1")), "Fortaleza");
+}
+
+/// O Limpar (o Delete sem marcadas): o texto vazio na de texto, o NULL na que aceita, o DEFAULT na NOT NULL; o
+/// Definir como NULL pelo menu.
+#[test]
+fn limpar_e_definir_como_null() {
+    let amb = Ambiente::exemplo("dados_limpar");
+    executar(&amb, "UPDATE clientes SET ativo = 0 WHERE id = 1");
+    let mut h = abrir(&amb, "clientes");
+    clicar_celula(&mut h, 0, 3);
+    tecla_com(&mut h, SHIFT, Key::ArrowRight);
+    tecla_com(&mut h, SHIFT, Key::ArrowRight);
+    tecla(&mut h, Key::Delete);
+    esperar_grade(&mut h);
+    let l = &ler(&h, "SELECT cidade, limite, ativo FROM clientes WHERE id = 1")[0];
+    assert_eq!(
+        (l[0].clone(), l[1].clone(), l[2].clone()),
+        (Celula::Texto(String::new()), Celula::Nulo, Celula::Inteiro(1))
+    );
+    assert_eq!(toast(&h).as_deref(), Some("Gravado em clientes (3 células)"));
+
+    // de novo: nada muda
+    tecla(&mut h, Key::Delete);
+    h.run_steps(2);
+    assert_eq!(toast(&h).as_deref(), Some("Nada mudou: as células já tinham esses valores."));
+
+    // Definir como NULL na cidade de duas linhas
+    clicar_celula(&mut h, 1, 3);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    clique_direito(&mut h, 1, 3);
+    escolher_no_menu(&mut h, "Definir como NULL", false);
+    esperar_grade(&mut h);
+    assert_eq!(contar(&h, "SELECT count(*) FROM clientes WHERE id IN (2, 3) AND cidade IS NULL"), 2);
+    assert_eq!(celula(&h, 1, 3), "NULL");
+}
+
+/// Acima de 100 células, o lote pergunta antes; o Cancelar não grava nada.
+#[test]
+fn colar_acima_de_cem_celulas_pergunta() {
+    let amb = Ambiente::exemplo("dados_colar_pergunta");
+    let mut h = abrir(&amb, "eventos");
+    clicar_celula(&mut h, 0, 1);
+    tecla_com(&mut h, SHIFT, Key::ArrowRight);
+    tecla_com(&mut h, CTRL | SHIFT, Key::ArrowDown);
+    colar(&mut h, "x");
+    assert_eq!(retrato(&h).confirmacao.as_deref(), Some("Colar 200 células em eventos?"));
+    clicar_botao(&mut h, "Cancelar");
+    h.run_steps(2);
+    assert_eq!(contar(&h, "SELECT count(*) FROM eventos WHERE tipo = 'x'"), 0);
+    // o intervalo continua; o foco volta à grade
+    let id = h.state().tela.doc.parte.id_grade().unwrap();
+    h.ctx.memory_mut(|m| m.request_focus(id));
+    h.run_steps(2);
+    colar(&mut h, "x");
+    clicar_botao(&mut h, "Colar");
+    esperar_grade(&mut h);
+    assert_eq!(contar(&h, "SELECT count(*) FROM eventos WHERE tipo = 'x'"), 100);
+    assert_eq!(toast(&h).as_deref(), Some("Gravado em eventos (200 células)"));
+}
+
+/// O Excluir as linhas do menu: a pergunta e o caminho do Excluir da barra.
+#[test]
+fn excluir_as_linhas_do_intervalo() {
+    use estado::Verbo;
+    let amb = Ambiente::exemplo("dados_excluir_intervalo");
+    let mut h = abrir(&amb, "clientes");
+    clicar_celula(&mut h, 0, 1);
+    tecla_com(&mut h, SHIFT, Key::ArrowDown);
+    clique_direito(&mut h, 0, 1);
+    escolher_no_menu(&mut h, "Excluir as linhas", false);
+    assert_eq!(retrato(&h).confirmacao.as_deref(), Some("Excluir 2 linhas de clientes? Isso não pode ser desfeito."));
+    clicar_botao(&mut h, "Excluir");
+    // a exclusão volta e a página é relida: só então o Desfazer sabe que ela não se desfaz
+    esperar(&mut h, |h| contar(h, "SELECT count(*) FROM clientes") == N_CLIENTES as u64 - 2);
+    esperar_que(&mut h, |r| r.confirmacao.is_none() && !r.carregando && r.linhas > 0);
+    assentar(&mut h);
+    assert_eq!(contar(&h, "SELECT count(*) FROM clientes"), N_CLIENTES as u64 - 2);
+    assert_eq!(ofertas(&h).dica(Verbo::Desfazer), tela_dados::DICA_EXCLUIR);
+}
+
+/// Os itens de escrita desligados, com o motivo: a coluna gerada, o banco só leitura; o Ctrl+V explica no aviso.
+#[test]
+fn itens_de_escrita_desligados_com_o_motivo() {
+    let mut amb = Ambiente::exemplo("dados_escrita_desligada");
+    let mut h = abrir(&amb, "produtos");
+    let gerada = h.state().tela.doc.parte.colunas_da_grade().iter().position(|c| c == "preco_centavos").unwrap();
+    clique_direito(&mut h, 0, gerada);
+    let motivo = "A coluna preco_centavos é gerada; o valor dela vem da fórmula.";
+    for item in ["Colar", "Limpar", "Definir como NULL"] {
+        let n = h.get_by_label(item);
+        assert!(desabilitado(&n), "{item}");
+        assert_eq!(n.accesskit_node().description().as_deref(), Some(motivo));
+    }
+    assert!(!desabilitado(&h.get_by_label("Excluir as linhas")));
+    tecla(&mut h, Key::Escape);
+    colar(&mut h, "1");
+    assert_eq!(toast(&h).as_deref(), Some(motivo));
+
+    let caminho = amb.caminho_banco();
+    amb.servico.fechar_banco(&amb.estado.banco_id(), true).expect("fechar");
+    amb.servico.abrir_banco(&caminho, true, false).expect("abrir só para leitura");
+    amb.recarregar();
+    let mut h = abrir(&amb, "clientes");
+    clique_direito(&mut h, 0, 1);
+    for item in ["Colar", "Limpar", "Definir como NULL", "Excluir as linhas"] {
+        let n = h.get_by_label(item);
+        assert!(desabilitado(&n), "{item}");
+        assert_eq!(
+            n.accesskit_node().description().as_deref(),
+            Some("O banco foi aberto só para leitura; nada pode ser gravado nele.")
+        );
+    }
 }

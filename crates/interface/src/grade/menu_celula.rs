@@ -130,8 +130,6 @@ pub struct OfertasCelula {
 
 /// A frase do "Lista para IN (…)" desligado.
 pub const MOTIVO_LISTA_IN: &str = "Selecione uma coluna só.";
-/// A dica dos itens de escrita (Colar, Limpar, Definir como NULL, Excluir as linhas) enquanto eles não chegam.
-pub const MOTIVO_PROXIMA_ETAPA: &str = "Chega na próxima etapa da 0.2.3.";
 
 impl OfertasCelula {
     /// Os itens de copiar, que valem nas quatro grades: Copiar, Copiar com cabeçalho e os seis formatos do "Copiar
@@ -145,15 +143,6 @@ impl OfertasCelula {
             ofertas = ofertas.desligar(AcaoCelula::CopiarComo(FormatoCopia::ListaIn), MOTIVO_LISTA_IN);
         }
         ofertas
-    }
-
-    /// Com os itens de escrita que valem na grade (Colar, Limpar, Definir como NULL, Excluir as linhas) desligados,
-    /// com a dica [`MOTIVO_PROXIMA_ETAPA`]: eles chegam na próxima etapa da 0.2.3.
-    pub fn com_escrita_por_vir(mut self, acoes: &[AcaoCelula]) -> Self {
-        for &acao in acoes {
-            self = self.desligar(acao, MOTIVO_PROXIMA_ETAPA);
-        }
-        self
     }
 
     /// Com esta oferta para o item.

@@ -53,6 +53,10 @@
 //!   pub fn desfazer_celula(&self, banco_id: &str, nome: &str, chave: &Chave, coluna: &str, gravado: &Celula,
 //!                          antigo: &Celula) -> Resultado<Gravado<LinhaGravada>>   o Desfazer da grade (409 se a
 //!       célula mudou depois da edição)
+//!   pub fn atualizar_intervalo(&self, banco_id: &str, nome: &str, celulas: &[(Chave, String, Entrada)])
+//!       -> Resultado<Gravado<Vec<LinhaGravada>>>   o Colar e o Limpar da grade, tudo ou nada
+//!   pub fn desfazer_intervalo(&self, banco_id: &str, nome: &str, celulas: &[CelulaDesfeita])
+//!       -> Resultado<Gravado<Vec<LinhaGravada>>>   o Desfazer deles (409 se uma célula mudou depois)
 //!   pub fn excluir(&self, banco_id: &str, nome: &str, chaves: &[Chave]) -> Resultado<Gravado<usize>>
 //!   pub fn salvar_blob(&self, banco_id: &str, nome: &str, chave: &Chave, coluna: &str, caminho: &Path,
 //!                      substituir: bool) -> Resultado<BlobSalvo>
