@@ -5,6 +5,12 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- **O rodapé da planilha do Excel fica mais curto** (revisão de UI de 22/10/2026, U9): "Vendas › E6 · Somente
+  leitura · 1.204 linhas · 6 colunas". A dimensão ("A1:F1204") e as mescladas saem dele: continuam na seção Planilha
+  das Propriedades.
+
 ## [0.2.3] - 2026-10-22
 
 ### Adicionado

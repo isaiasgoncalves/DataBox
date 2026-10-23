@@ -32,8 +32,9 @@
 //!   fora das colunas ocultas. A célula achada vira a ativa e a grade rola até ela; Enter e Shift+Enter andam (com
 //!   volta); a ponta direita do rodapé diz "3 de 41" ("41+" enquanto conta); Esc limpa e volta à célula de antes.
 //! - **Sem a faixa** (0.2.3, item F): a planilha aberta não tem faixa de contexto. O rodapé mostra "Vendas › B7" (a
-//!   planilha e a célula ativa; a mesclada diz o intervalo), o chip "Somente leitura", "· 1.204 linhas · 8 colunas",
-//!   "· A1:H1204", as mescladas e a seleção em palavras; à direita, a barra do índice, a contagem da busca e as contas
+//!   planilha e a célula ativa; a mesclada diz o intervalo), o chip "Somente leitura", "· 1.204 linhas · 8 colunas"
+//!   e a seleção em palavras (a dimensão e as mescladas ficam nas Propriedades: U9 da revisão de UI de 22/10/2026);
+//!   à direita, a barra do índice, a contagem da busca e as contas
 //!   da seleção. Falta espaço: as contas encolhem primeiro, e a migalha sai por último (o que sai vai na dica dela). O
 //!   "Abrir no programa padrão" está no menu Arquivo da casca. A ficha do arquivo que não abriu mantém a faixa com o
 //!   nome e o caminho.
@@ -805,11 +806,12 @@ impl TelaPlanilha {
     }
 
     /// O rodapé da planilha (0.2.3, item F: o que a faixa mostrava veio para cá). À esquerda, "Vendas › B7" (a planilha
-    /// e a célula ativa; a mesclada diz o intervalo, `A1:F1`), o chip "Somente leitura", "· 1.204 linhas · 8 colunas",
-    /// "· A1:H1204", "· 1 mesclada" e a seleção em palavras; à direita, a barra do índice com o Cancelar, a contagem da
-    /// busca da barra ("3 de 41") e, com mais de uma célula selecionada, as contas da seleção. Quando falta espaço, as
-    /// contas encolhem primeiro (até a contagem e a soma); depois saem, para a dica da migalha, as mescladas, a
-    /// dimensão, o chip, a seleção em palavras, a contagem de linhas e colunas e, por último, a planilha e a célula.
+    /// e a célula ativa; a mesclada diz o intervalo, `A1:F1`), o chip "Somente leitura", "· 1.204 linhas · 8 colunas" e
+    /// a seleção em palavras; à direita, a barra do índice com o Cancelar, a contagem da busca da barra ("3 de 41") e,
+    /// com mais de uma célula selecionada, as contas da seleção. A dimensão ("A1:H1204") e as mescladas saíram (U9 da
+    /// revisão de UI de 22/10/2026): estão na seção Planilha das Propriedades. Quando falta espaço, as contas encolhem
+    /// primeiro (até a contagem e a soma); depois saem, para a dica da migalha, o chip, a seleção em palavras, a
+    /// contagem de linhas e colunas e, por último, a planilha e a célula.
     fn rodape_da_planilha(&mut self, ui: &mut Ui) {
         let e = paleta(ui).estudio;
         let Corpo::Pronta(p) = &self.corpo else { return };
@@ -866,18 +868,6 @@ impl TelaPlanilha {
             plural(colunas as usize, "coluna", "colunas")
         );
         itens.push(ItemDoRodape::Texto { texto: contagem, cor: e.t2, fica: 5 });
-        if linhas > 0 && colunas > 0 {
-            itens.push(ItemDoRodape::Texto {
-                texto: format!("· A1:{}", referencia_a1(linhas, colunas - 1)),
-                cor: e.t2,
-                fica: 2,
-            });
-        }
-        let mescladas = s.meta.mescladas.len();
-        if mescladas > 0 {
-            let texto = format!("· {}", plural(mescladas, "mesclada", "mescladas"));
-            itens.push(ItemDoRodape::Texto { texto, cor: e.t3, fica: 1 });
-        }
         if let Some(frase) = selecao_em_palavras(&aba.grade) {
             itens.push(ItemDoRodape::Texto { texto: format!("· {frase}"), cor: e.t3, fica: 4 });
         }
