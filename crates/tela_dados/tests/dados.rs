@@ -903,14 +903,28 @@ fn pagina_que_falha_mostra_o_aviso_na_grade() {
 fn tabela_vazia_mostra_o_estado_vazio() {
     let amb = Ambiente::exemplo("dados_tabela_vazia");
     executar(&amb, "CREATE TABLE vazia (id INTEGER PRIMARY KEY, nome TEXT);");
-    let h = abrir(&amb, "vazia");
+    let mut h = abrir(&amb, "vazia");
     let r = retrato(&h);
-    assert_eq!(
-        r.vazio.as_deref(),
-        Some("Nenhuma linha. Use Nova linha, na barra de ferramentas, para incluir a primeira.")
-    );
+    assert_eq!(r.vazio.as_deref(), Some("Nenhuma linha nesta tabela."));
     assert_eq!(r.contagem_linhas, "Nenhuma linha");
     assert_eq!(r.total, "0 linhas");
+    // o botão do vazio (o de baixo; o da barra é o mesmo verbo) abre a ficha da linha nova
+    clicar_botao(&mut h, "Nova linha");
+    esperar_que(&mut h, |r| r.janela.is_some());
+}
+
+#[test]
+fn filtro_sem_linhas_oferece_limpar_os_filtros() {
+    let amb = Ambiente::exemplo("dados_filtro_vazio");
+    let mut h = abrir(&amb, "clientes");
+    condicao_pelo_popover(&mut h, "nome", "igual a", Some("ninguém com este nome"));
+    esperar_que(&mut h, |r| r.vazio.is_some() && !r.carregando);
+    assert_eq!(retrato(&h).vazio.as_deref(), Some("Nenhuma linha corresponde à busca ou aos filtros."));
+    assert!(h.query_by_label("nome").is_some(), "o cabeçalho continua à vista");
+    // dois "Limpar filtros": o da faixa e o do vazio, embaixo
+    assert_eq!(h.query_all_by_role_and_label(Role::Button, "Limpar filtros").count(), 2);
+    clicar_botao(&mut h, "Limpar filtros");
+    esperar_que(&mut h, |r| r.filtros == 0 && r.vazio.is_none() && !r.carregando);
 }
 
 // ---- correções da segunda revisão ---------------------------------------------------------------------------

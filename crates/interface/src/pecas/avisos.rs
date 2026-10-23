@@ -1,6 +1,6 @@
 //! Avisos e estados do visual Estúdio: [`aviso`] (o `.aviso` âmbar das pranchetas; com `perigo`, o `.erro`
 //! vermelho) e [`aviso_tom`] com os outros tons de [`TomAviso`] (concluído e informação), [`vazio`] (o que o vazio
-//! significa, em `--t3`) e [`carregando`] (o ponto que pulsa na cor de destaque e o texto).
+//! significa, em `--t3`), [`vazio_da_grade`] (a grade sem linhas, embaixo do cabeçalho, com a ação) e [`carregando`] (o ponto que pulsa na cor de destaque e o texto).
 //!
 //! O aviso é uma caixa com o sólido de estado à esquerda (24px: atenção, erro, concluído ou informação),
 //! `gap:12px` e o texto centrado na altura dele (pranchetas 6, 12b e 15), fundo da cor do estado a 12% (`--aviso`; no erro, `--perigo` a 10%; no concluído, `--ok`; na
@@ -101,6 +101,47 @@ pub fn vazio(ui: &mut Ui, texto: &str, compacto: bool) -> Response {
     }
     resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, texto));
     resp
+}
+
+/// O vazio de uma grade que tem colunas e nenhuma linha (U5 da revisão de UI de 22/10/2026): no `rect` embaixo do
+/// cabeçalho, que continua à vista, a frase em 13px/600 (`--t`), a explicação opcional em `--t3` e, opcional, o
+/// botão da ação ("Nova linha", o principal; "Limpar filtros"), tudo centrado. Devolve se o botão foi clicado.
+pub fn vazio_da_grade(ui: &mut Ui, rect: Rect, frase: &str, explicacao: Option<&str>, acao: Option<Botao<'_>>) -> bool {
+    let p = paleta(ui);
+    let fonte = fontes::fonte(13.0, Peso::Medio);
+    let g = ui.fonts_mut(|fs| fs.layout_no_wrap(frase.to_owned(), fonte, p.estudio.t));
+    let g2 = explicacao.map(|t| {
+        let f = fontes::fonte(12.0, Peso::Normal);
+        ui.fonts_mut(|fs| fs.layout_no_wrap(t.to_owned(), f, p.estudio.t3))
+    });
+    let altura_botao = if acao.is_some() { 12.0 + crate::pecas::botao::ALTURA } else { 0.0 };
+    let altura = g.size().y + g2.as_ref().map_or(0.0, |g| 6.0 + g.size().y) + altura_botao;
+    // no terço de cima da área (no meio, numa grade alta, o olho já passou)
+    let topo = rect.top() + ((rect.height() - altura) * 0.4).max(16.0);
+    let mut filho = ui.new_child(
+        egui::UiBuilder::new()
+            .id_salt(("databox::vazio_da_grade", frase))
+            .max_rect(Rect::from_min_max(pos2(rect.left(), topo), rect.max))
+            .layout(egui::Layout::top_down(egui::Align::Center)),
+    );
+    filho.set_clip_rect(rect.intersect(ui.clip_rect()));
+    filho.spacing_mut().item_spacing.y = 0.0;
+    let (r, resp) = filho.allocate_exact_size(g.size(), Sense::hover());
+    filho.painter().galley(r.min, g, p.estudio.t);
+    resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, frase));
+    if let (Some(g2), Some(t)) = (g2, explicacao) {
+        filho.add_space(6.0);
+        let (r, resp) = filho.allocate_exact_size(g2.size(), Sense::hover());
+        filho.painter().galley(r.min, g2, p.estudio.t3);
+        resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, t));
+    }
+    match acao {
+        Some(b) => {
+            filho.add_space(12.0);
+            filho.add(b).clicked()
+        }
+        None => false,
+    }
 }
 
 /// O tom de um aviso: o sólido de estado, o fundo e o fio.

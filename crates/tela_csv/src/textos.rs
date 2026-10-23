@@ -16,6 +16,12 @@ pub const DICA_FORMATO_TRAVADO: &str = "Salve ou desfaça as alterações para m
 pub const PRIMEIRA_LINHA_CABECALHO: &str = "Primeira linha é o cabeçalho";
 /// A dica do Renomear (o item do menu, o F2, o botão das Propriedades) sem cabeçalho: o nome não seria gravado.
 pub const DICA_SEM_CABECALHO: &str = "Ligue \"Primeira linha é o cabeçalho\" para dar nome às colunas.";
+/// O vazio da grade sem linhas (U5 da revisão de UI de 22/10/2026): o arquivo só com o cabeçalho, com o botão
+/// [`NOVA_LINHA`]; o filtro que não acha nada, com o [`LIMPAR_FILTROS`].
+pub const VAZIO_ARQUIVO: &str = "Nenhuma linha neste arquivo.";
+pub const VAZIO_FILTRANDO: &str = "Nenhuma linha com estes filtros.";
+pub const NOVA_LINHA: &str = "Nova linha";
+pub const LIMPAR_FILTROS: &str = "Limpar filtros";
 /// O toast da cola por cima e do Trazer que não mudaram nada (os valores já eram esses).
 pub const NADA_MUDOU: &str = "Nada mudou: as células já tinham esses valores.";
 /// O aviso de topo quando o foco volta e o arquivo mudou por fora.
