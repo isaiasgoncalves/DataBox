@@ -72,7 +72,7 @@ fn barra_de_filtros_no_alto_e_o_formato_no_rodape() {
     // filtrando, o total é o da vista
     doc_mut(&mut h).filtrar("regiao", tela_csv::OperadorCsv::Igual, "Sul");
     esperar_ociosa(&mut h);
-    assert!(h.query_by_label("241 de 1.204 linhas").is_some(), "a contagem na barra dos filtros");
+    assert!(h.query_by_label("· filtradas de 1.204").is_some(), "de quantas o arquivo tem, no rodapé");
     assert!(h.query_by_label_contains("de 241").is_some(), "o rodapé conta a vista");
 }
 

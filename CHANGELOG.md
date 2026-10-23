@@ -18,6 +18,10 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   - **Visão geral:** sem faixa. O caminho do banco continua nas Propriedades, e o "só leitura", na Gravação delas.
 - **A dica de cada aba de documento mostra o caminho inteiro** do arquivo ou do banco (nas abas da Visão geral, das
   tabelas e das Consultas).
+- **A contagem das linhas fica só no rodapé** (revisão de UI de 22/10/2026, U3): com busca ou filtro, os Dados e o
+  CSV mostravam "236 de 1.180 linhas" na barra dos filtros e "Linhas 1–24 de 236" no rodapé. Agora o rodapé diz tudo,
+  "Linhas 1–24 de 236 · filtradas de 1.180" (no CSV, "contando…" enquanto a vista é calculada), e a barra dos filtros
+  fica com as condições e o "Limpar filtros".
 
 ## [0.2.3] - 2026-10-22
 
