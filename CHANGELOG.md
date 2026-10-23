@@ -5,6 +5,12 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- **A Consulta SQL vazia usa a altura toda** (revisão de UI de 22/10/2026, U10): antes da primeira execução, o editor
+  desce até o rodapé, em vez de ocupar um terço do documento e deixar o resto vazio. A primeira execução abre a área
+  do resultado, e o editor volta à altura de sempre (ou à que a pessoa deu arrastando a borda de baixo).
+
 ## [0.2.3] - 2026-10-22
 
 ### Adicionado
