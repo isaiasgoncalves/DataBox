@@ -407,8 +407,9 @@ fn propriedades_arquivo_planilha_pasta_e_celula() {
 fn rodape_conta_e_mostra_a_barra_depois_de_400_ms() {
     let t = abrir_relatorio("rodape");
     assert!(t.query_by_label("· 60 linhas · 6 colunas").is_some());
-    assert!(t.query_by_label("· A1:F60").is_some());
-    assert!(t.query_by_label("· 1 mesclada").is_some());
+    // a dimensão e as mescladas ficam nas Propriedades, não no rodapé (U9 da revisão de UI de 22/10/2026)
+    assert!(t.query_by_label("· A1:F60").is_none() && t.query_by_label("A1:F60").is_some());
+    assert!(t.query_by_label("· 1 mesclada").is_none());
     drop(t);
     // uma planilha grande: a barra não aparece antes de 400 ms
     let bytes = Montador::novo().aba("Lançamentos", &linhas_simples(200_000)).bytes();
