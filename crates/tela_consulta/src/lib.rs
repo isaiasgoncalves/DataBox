@@ -63,7 +63,8 @@
 //!   uma transação aberta. As alterações só gravam no arquivo com COMMIT." e "Gravar (COMMIT)" / "Descartar
 //!   (ROLLBACK)" (este pergunta antes, na confirmação "Descartar a transação"); o fim mostra "Transação gravada." /
 //!   "Transação descartada." e recarrega os objetos. Erro do COMMIT/ROLLBACK vai para o toast de erro.
-//! - **Editor** (232px; a borda de baixo se arrasta, com mínimo de 96px): o [`AreaTexto::codigo`] plano, encostado
+//! - **Editor** (232px; a borda de baixo se arrasta, com mínimo de 96px; antes da primeira execução, sem resultado,
+//!   a altura toda do documento e sem a borda que se arrasta: U10 da revisão de UI de 22/10/2026): o [`AreaTexto::codigo`] plano, encostado
 //!   no documento, com a calha de 46px dos números, as cores do código das Preferências (`interface::codigo`), a
 //!   linha do cursor em `--selh` e, depois de um erro, as linhas do comando que falhou em `--perigo` a 9% e o
 //!   sublinhado ondulado no nome que a frase cita ("A tabela não existe: X.") quando ele aparece no comando (o melhor
@@ -488,7 +489,8 @@ impl TelaConsulta {
         self.interrupcao = Some(ctx.tarefa(egui, |servico, id| servico.interromper_sql_detalhado(id)));
     }
 
-    /// Onde o editor ficou no último quadro (a altura é 232px até a pessoa arrastar a borda de baixo).
+    /// Onde o editor ficou no último quadro (a altura toda antes da primeira execução; depois, 232px até a pessoa
+    /// arrastar a borda de baixo).
     #[doc(hidden)]
     pub fn area_editor(&self) -> Rect {
         self.area_editor
@@ -588,10 +590,16 @@ impl TelaConsulta {
 
         let area = ui.max_rect();
         let maximo = (area.height() - SOBRA_ABAIXO_DO_EDITOR).max(ALTURA_MIN_EDITOR);
-        let altura = self.altura_editor.min(maximo);
+        // antes da primeira execução não há resultado: o editor fica com a altura toda (U10 da revisão de UI de
+        // 22/10/2026; antes, dois terços do documento ficavam vazios). A primeira execução abre a área do resultado,
+        // e o editor volta à altura dele (a de antes, ou a que a pessoa deu pela borda)
+        let sem_resultado = self.cards.is_empty() && self.execucao.is_none();
+        let altura = if sem_resultado { area.height() } else { self.altura_editor.min(maximo) };
         let rect_editor = Rect::from_min_size(area.min, vec2(area.width(), altura));
         self.editor(ui, rect_editor, agora, ctx);
-        alca_do_editor(ui, self.id("consulta::editor::alca"), rect_editor, &mut self.altura_editor, maximo);
+        if !sem_resultado {
+            alca_do_editor(ui, self.id("consulta::editor::alca"), rect_editor, &mut self.altura_editor, maximo);
+        }
 
         let mut topo = rect_editor.bottom();
         if let Some(faixa) = resultados::faixa_erro(&self.cards) {

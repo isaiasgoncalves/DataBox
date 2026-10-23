@@ -302,10 +302,12 @@ fn tela_tem_faixa_editor_e_tabelas() {
     assert!(h.query_by_role_and_label(Role::Button, "Executar").is_none());
     assert!(h.query_by_label("Buscar no editor").is_some());
     assert!(h.query_by_role_and_label(Role::Button, "Exportar").is_none());
-    // o foco nasce no editor, que encosta na faixa e tem 232px
+    // o foco nasce no editor, que encosta na faixa e, sem resultado ainda, desce até o rodapé (U10 da revisão de UI de
+    // 22/10/2026)
     assert!(h.get_by_label("Comando SQL").is_focused());
     let area = tela(&h).area_editor();
-    assert_eq!(area.height(), ALTURA_EDITOR);
+    let rodape = h.get_by_label(tela_consulta::NADA_EXECUTADO).rect();
+    assert!(area.height() > ALTURA_EDITOR && (rodape.top() - area.bottom()).abs() < 20.0, "{area:?} {rodape:?}");
     assert!((area.top() - h.get_by_label("exemplo.db").rect().bottom()).abs() < 20.0, "{area:?}");
 }
 

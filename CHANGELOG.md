@@ -44,6 +44,9 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 - **O rodapé da planilha do Excel fica mais curto** (revisão de UI de 22/10/2026, U9): "Vendas › E6 · Somente
   leitura · 1.204 linhas · 6 colunas". A dimensão ("A1:F1204") e as mescladas saem dele: continuam na seção Planilha
   das Propriedades.
+- **A Consulta SQL vazia usa a altura toda** (revisão de UI de 22/10/2026, U10): antes da primeira execução, o editor
+  desce até o rodapé, em vez de ocupar um terço do documento e deixar o resto vazio. A primeira execução abre a área
+  do resultado, e o editor volta à altura de sempre (ou à que a pessoa deu arrastando a borda de baixo).
 
 ## [0.2.3] - 2026-10-22
 
