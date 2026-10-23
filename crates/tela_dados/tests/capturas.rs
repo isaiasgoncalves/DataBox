@@ -149,7 +149,13 @@ fn grade_vazia() {
     executar(&amb, "CREATE TABLE extra_03 (a);");
     let mut h = abrir(&amb, "extra_03");
     afastar_mouse(&mut h);
-    assert!(h.query_by_label_contains("Nenhuma linha. Use Nova linha").is_some());
+    // o cabeçalho continua à vista, e o vazio vai embaixo dele com o botão (U5 da revisão de UI de 22/10/2026)
+    let frase = h.get_by_label("Nenhuma linha nesta tabela.").rect();
+    let cabecalho = h.query_all_by_label("a").map(|n| n.rect()).find(|r| r.bottom() <= frase.top());
+    assert!(cabecalho.is_some(), "o cabeçalho da coluna a, acima do vazio");
+    let botao =
+        h.query_all_by_role_and_label(Role::Button, "Nova linha").map(|n| n.rect()).find(|r| r.top() > frase.bottom());
+    assert!(botao.is_some(), "o Nova linha embaixo da frase");
     assert!(h.query_by_label("Nenhuma linha").is_some() && h.query_by_label("Página 1 de 1").is_some());
     capturar(&mut h, "dados-vazio-claro.png");
 }

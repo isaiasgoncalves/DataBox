@@ -7,14 +7,15 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use comum::{Codigo, Resultado};
-use egui::{Align, Layout, Pos2, Sense, Ui, UiBuilder, vec2};
+use egui::{Align, Layout, Pos2, Rect, Sense, Ui, UiBuilder, vec2};
 use estado::{
     Acao, Anatomia, Contexto, Documento, Estado as EstadoApp, Ofertas, Promessa, Reacao, Situacao, StatusDeArquivo,
     Verbo,
 };
 use interface::formato::contagem_linhas;
 use interface::grade::{largura_minima_da_selecao, rodape_da_selecao, rodape_somando};
-use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando};
+use interface::icones::Icone;
+use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando, vazio_da_grade};
 use interface::pecas::botao::Botao;
 use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::progresso::barra_progresso;
@@ -796,6 +797,8 @@ impl TelaCsv {
             origem: None,
             visivel: None,
         };
+        let topo = ui.cursor().top();
+        let altura_cabecalho = grade.nucleo.altura_do_cabecalho();
         let resposta = grade.nucleo.mostrar(ui, altura_max, &mut pintor);
         grade.origem = pintor.origem;
         grade.visivel = pintor.visivel;
@@ -823,6 +826,28 @@ impl TelaCsv {
         self.aplicar_grade(ui, resposta, saida);
         self.mostrar_menu(ui, &ths, menu_th);
         self.menu_da_celula(ui);
+        // sem linhas (o arquivo só com o cabeçalho, ou o filtro que não acha nada), o vazio embaixo do cabeçalho, com
+        // a ação (U5 da revisão de UI de 22/10/2026); a vista em cálculo ainda não diz nada
+        if linhas_da_vista == 0 && self.calculo_vista.is_none() {
+            let largura = ui.max_rect().x_range();
+            let embaixo = topo + altura_cabecalho;
+            let rect = Rect::from_x_y_ranges(largura, embaixo..=(topo + altura_max).min(ui.max_rect().bottom()));
+            let filtrando = !self.filtros.is_empty();
+            let (frase, botao) = if filtrando {
+                (textos::VAZIO_FILTRANDO, Some(Botao::new(textos::LIMPAR_FILTROS)))
+            } else {
+                let nova = Botao::primario(textos::NOVA_LINHA).com_icone(Icone::Novo).habilitado(editavel);
+                (textos::VAZIO_ARQUIVO, Some(nova))
+            };
+            if vazio_da_grade(ui, rect, frase, None, botao) {
+                if filtrando {
+                    self.filtros.clear();
+                    self.condicao = None;
+                } else {
+                    self.executar_verbo(estado::Verbo::Novo, &ectx);
+                }
+            }
+        }
     }
 
     /// Pede a página que cobre as linhas à vista, se a que está em mãos (ou a já pedida) não cobre.

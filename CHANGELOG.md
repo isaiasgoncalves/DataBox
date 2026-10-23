@@ -5,6 +5,14 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- **O vazio da grade mostra as colunas** (revisão de UI de 22/10/2026, U5): uma tabela sem linhas, um CSV só com o
+  cabeçalho, um filtro que não acha nada e uma consulta que não devolve linhas mantêm o cabeçalho da grade (os nomes
+  e as pastilhas de tipo), com a frase embaixo dele. A ação vai num botão, em vez de mandar procurar na barra:
+  **Nova linha** na tabela e no CSV que gravam ("Nenhuma linha nesta tabela.", "Nenhuma linha neste arquivo.") e
+  **Limpar filtros** quando o filtro não acha nada.
+
 ## [0.2.3] - 2026-10-22
 
 ### Adicionado

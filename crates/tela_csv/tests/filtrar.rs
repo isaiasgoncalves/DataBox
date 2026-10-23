@@ -179,3 +179,71 @@ fn captura_do_csv_filtrado_contra_a_prancheta_16_b() {
     h.run_steps(4);
     capturar(&mut h, "csv-filtrado-escuro.png");
 }
+
+/// O centro do botão mais embaixo com este rótulo (o do vazio, abaixo do da barra dos filtros ou da barra de
+/// ferramentas).
+fn botao_de_baixo(h: &H, rotulo: &str) -> egui::Pos2 {
+    h.query_all_by_role_and_label(Role::Button, rotulo)
+        .map(|n| n.rect())
+        .max_by(|a, b| a.center().y.total_cmp(&b.center().y))
+        .unwrap_or_else(|| panic!("o botão {rotulo}"))
+        .center()
+}
+
+#[test]
+fn filtro_sem_linhas_mostra_o_vazio_com_limpar_filtros() {
+    let amb = Ambiente::vazio("filtro_vazio");
+    let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(20)));
+    doc_mut(&mut h).filtrar("regiao", OperadorCsv::Igual, "Antártida");
+    esperar_ociosa(&mut h);
+    assert_eq!(doc(&h).linhas_filtradas(), Some(0));
+    // o cabeçalho continua à vista, e o vazio vai embaixo dele (U5 da revisão de UI de 22/10/2026)
+    let frase = h.get_by_label("Nenhuma linha com estes filtros.").rect();
+    assert!(h.query_all_by_label("regiao").any(|n| n.rect().bottom() <= frase.top()), "o cabeçalho acima");
+    assert_eq!(h.query_all_by_role_and_label(Role::Button, "Limpar filtros").count(), 2, "o da barra e o do vazio");
+    let centro = botao_de_baixo(&h, "Limpar filtros");
+    h.input_mut().events.push(Event::PointerMoved(centro));
+    h.input_mut().events.push(Event::PointerButton {
+        pos: centro,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
+    h.input_mut().events.push(Event::PointerButton {
+        pos: centro,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::NONE,
+    });
+    esperar_ociosa(&mut h);
+    assert!(h.query_by_label("Nenhuma linha com estes filtros.").is_none());
+    assert_eq!(posicoes(&h).len(), 20, "sem filtro, as 20 linhas");
+}
+
+#[test]
+fn arquivo_so_com_o_cabecalho_oferece_nova_linha() {
+    let amb = Ambiente::vazio("so_cabecalho");
+    let mut h = abrir(&amb, arquivo(&amb, "vazio.csv", "nome;valor\n"));
+    esperar_ociosa(&mut h);
+    let frase = h.get_by_label("Nenhuma linha neste arquivo.").rect();
+    assert!(h.query_all_by_label("nome").any(|n| n.rect().bottom() <= frase.top()), "o cabeçalho acima");
+    let centro = botao_de_baixo(&h, "Nova linha");
+    assert!(centro.y > frase.bottom(), "o Nova linha do vazio, embaixo da frase");
+    capturar(&mut h, "csv-vazio-claro.png");
+    h.input_mut().events.push(Event::PointerMoved(centro));
+    h.input_mut().events.push(Event::PointerButton {
+        pos: centro,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
+    h.input_mut().events.push(Event::PointerButton {
+        pos: centro,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::NONE,
+    });
+    esperar_ociosa(&mut h);
+    assert!(h.query_by_label("Nenhuma linha neste arquivo.").is_none(), "a linha nova entrou");
+    assert!(doc(&h).alterado());
+}

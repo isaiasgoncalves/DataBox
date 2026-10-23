@@ -43,8 +43,10 @@ pub const AVISO_SEM_CHAVE: &str = "Esta linha não tem chave: a chave primária 
 pub use interface::pecas::filtros::{CONTANDO, LINHAS_NAO_CONTADAS};
 pub const LENDO: &str = "Lendo as linhas…";
 pub const VAZIO_FILTRANDO: &str = "Nenhuma linha corresponde à busca ou aos filtros.";
-/// O "+ Nova linha" do card saiu (etapa 3): a linha nova é o Nova linha da barra de ferramentas.
-pub const VAZIO_EDITAVEL: &str = "Nenhuma linha. Use Nova linha, na barra de ferramentas, para incluir a primeira.";
+/// O botão do vazio da tabela que grava (U5 da revisão de UI de 22/10/2026), o mesmo verbo da barra de ferramentas.
+pub const VAZIO_NOVA_LINHA: &str = "Nova linha";
+/// O botão do vazio com filtros: tira as condições (a busca da barra fica).
+pub const VAZIO_LIMPAR_FILTROS: &str = "Limpar filtros";
 pub const VAZIO_VISAO: &str = "A visão não devolveu nenhuma linha.";
 pub const VAZIO_TABELA: &str = "Nenhuma linha nesta tabela.";
 pub const DICA_BUSCA_LENTA: &str = "A busca percorre todas as colunas; um filtro por coluna costuma ser mais rápido.";
