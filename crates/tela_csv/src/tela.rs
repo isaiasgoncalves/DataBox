@@ -12,11 +12,12 @@ use estado::{
     Acao, Anatomia, Contexto, Documento, Estado as EstadoApp, Ofertas, Promessa, Reacao, Situacao, StatusDeArquivo,
     Verbo,
 };
-use interface::formato::contagem_linhas;
+use interface::formato::{contagem_linhas, filtradas_de};
 use interface::grade::{largura_minima_da_selecao, rodape_da_selecao, rodape_somando};
 use interface::icones::Icone;
 use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando, vazio_da_grade};
 use interface::pecas::botao::Botao;
+use interface::pecas::filtros::CONTANDO;
 use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::progresso::barra_progresso;
 use interface::pecas::texto::texto as texto_simples;
@@ -928,7 +929,8 @@ impl TelaCsv {
     }
 
     /// O rodapé (o dos Dados, sem as páginas: a grade rola todas as linhas): "Linhas 1–24 de 1.204" (as à vista, de
-    /// quantas a vista tem), o formato em `--t3` ("· Ponto e vírgula · UTF-8 · CRLF", o que a faixa mostrava até a
+    /// quantas a vista tem), filtrando, "· filtradas de 1.204" em `--t3` (ou "contando…" com a vista em cálculo), o
+    /// formato em `--t3` ("· Ponto e vírgula · UTF-8 · CRLF", o que a faixa mostrava até a
     /// 0.2.3) e, em `--acct`, "· 1 alteração não salva"; em `--t3`, as marcadas e as colunas selecionadas. Com mais de
     /// uma célula selecionada, as contas da seleção à direita: elas encolhem primeiro (o Mín. e o Máx., depois a
     /// Média), e o formato só sai, para a dica da contagem, quando nem a contagem e a soma caberiam.
@@ -939,6 +941,9 @@ impl TelaCsv {
         let total = self.linhas_da_vista();
         let (a, b) = self.visiveis.filter(|_| total > 0).map_or((0, 0), |(a, b)| (a + 1, (b + 1).min(total)));
         let contagem = contagem_linhas(a, b, total);
+        // filtrando, de quantas linhas o arquivo tem (o que a barra dos filtros dizia até a 0.2.3)
+        let filtradas = (!self.filtros.is_empty()).then(|| format!("· {}", filtradas_de(r.linhas)));
+        let contando = self.calculo_vista.is_some();
         let formato = textos::formato_no_rodape(&r.formato);
         let mut depois: Vec<(String, egui::Color32)> = Vec::new();
         if r.alterada {
@@ -956,10 +961,17 @@ impl TelaCsv {
         let fonte = interface::fontes::fonte(12.0, interface::fontes::Peso::Normal);
         let largura = |t: &str| interface::pecas::texto::galley(ui, t, fonte.clone(), p.estudio.t3).size().x;
         let gap = ui.spacing().item_spacing.x;
-        let esquerda: f32 = largura(&contagem) + depois.iter().map(|(t, _)| gap + largura(t)).sum::<f32>();
+        let esquerda: f32 = largura(&contagem)
+            + filtradas.as_deref().map_or(0.0, |f| gap + largura(f))
+            + depois.iter().map(|(t, _)| gap + largura(t)).sum::<f32>();
         let contas = resumo.as_ref().map_or(0.0, |r| gap + largura_minima_da_selecao(ui, r.as_ref()));
         let com_formato = esquerda + gap + largura(&formato) + contas <= ui.available_width() + 0.5;
         let r_contagem = texto_simples(ui, &contagem, 12.0, p.estudio.t2);
+        if contando {
+            carregando(ui, CONTANDO);
+        } else if let Some(f) = &filtradas {
+            texto_simples(ui, f, 12.0, p.estudio.t3);
+        }
         if com_formato {
             texto_simples(ui, &formato, 12.0, p.estudio.t3);
         } else {

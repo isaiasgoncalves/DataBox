@@ -437,9 +437,9 @@ mod testes {
 
     #[test]
     fn cada_documento_diz_a_anatomia() {
-        // a Visão geral: a faixa, sem rodapé, na página (passo 9)
+        // a Visão geral: na página, sem faixa (U4 da revisão de UI de 22/10/2026) nem rodapé
         let banco = Documento::novo(IdAba(5), &Rota::Banco, None);
-        assert_eq!(banco.doc_ref().anatomia(), Anatomia::default().com_faixa());
+        assert_eq!(banco.doc_ref().anatomia(), Anatomia::default());
         // o Início e a tabela, por enquanto, são a página sem faixa nem rodapé (passos 10 e 11)
         for rota in [Rota::Inicio, Rota::objeto("clientes", false)] {
             let d = Documento::novo(IdAba(5), &rota, None);

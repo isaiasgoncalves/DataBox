@@ -308,12 +308,17 @@ os gráficos para a 0.3.0.
 **Antes: 0.2.3 — refinamentos e correções** ([`planos-0.2.3.md`](planos-0.2.3.md)): o CI confiável, o `app.rs`
 fatiado, o menu da seleção, o Ctrl+F nos arquivos e as contas do CSV em fluxo.
 
+**Depois: 0.2.4 — acabamento da interface** (decidido em 22/10/2026, revisão de UI em
+[`revisao-ui-0.3.md`](revisao-ui-0.3.md)): contagem num lugar só, faixa do topo com uma regra só, vazio com as colunas
+à vista, caminhos cortados, seta da ordenação, Visão geral, rodapé da planilha e Consulta vazia, um PR por assunto,
+**antes do M0** (a varredura da tradução mexe em todo texto; estes PRs mexem em texto e vêm antes).
+
 **Versão 0.3.0 — "Entender, levar e ver os dados".**
 
 | Marco | Conteúdo | PRs |
 |---|---|---|
-| **M0 · Idioma** | O crate `idioma`, a varredura de todos os crates, o inglês completo e revisado, o seletor nas Preferências | I1 a I4 |
-| **M1 · Fundação** | `FonteDeLinhas`; gravador de SQLite e de JSON Lines | 1, 2 |
+| **M0 · Idioma** | O crate `idioma`, a varredura de todos os crates, o inglês completo e revisado, o seletor nas Preferências; **os números da grade dos Dados e da Consulta no formato do idioma**, com "Como gravados" nas Preferências (U1 da revisão de UI de 22/10/2026) | I1 a I4 |
+| **M1 · Fundação** | `FonteDeLinhas`; gravador de SQLite e de JSON Lines; **rolagem contínua nos Dados** (sem páginas, como o CSV; U2 da revisão de UI de 22/10/2026) | 1, 2 |
 | **M2 · Entender** | Perfil da coluna, da tabela e da seleção | 3, 6 |
 | **M3 · Levar** | Salvar como (CSV, Excel, JSON, JSON Lines, SQLite) e Salvar tudo; SQL sobre CSV e planilha pela bancada | 4, 5 |
 | **M4 · Ver** | Gráficos no app (barras, linhas, histograma, dispersão); Abrir no Python | 7, 8, 9 |

@@ -205,8 +205,8 @@ pub fn texto_edicao(c: &Celula) -> String {
     texto_celula(c)
 }
 
-/// A contagem da faixa dos Dados ("41 de 60 linhas", "60 linhas") e a do rodapé ("Linhas 1–100 de 5.000"): as
-/// das grades, iguais no CSV.
+/// A contagem das linhas que passam ("41 de 60 linhas", "60 linhas", a da faixa até a 0.2.3; hoje, a do retrato dos
+/// testes) e a do rodapé ("Linhas 1–100 de 5.000"): as das grades, iguais no CSV.
 pub use interface::formato::{contagem_filtrada as texto_contagem_faixa, contagem_linhas as texto_contagem_linhas};
 
 /// O rótulo do operador ("igual a"), o da etiqueta e do select.

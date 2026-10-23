@@ -7,6 +7,21 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ### Alterado
 
+- **A faixa do topo segue uma regra só** (revisão de UI de 22/10/2026, U4): ela existe para o que a aba não diz, e a
+  posição do cursor e as contagens moram no rodapé, à direita.
+  - **JSON:** a faixa não repete mais o nome do arquivo; mostra a migalha do ponto do cursor a partir da raiz
+    ("raiz › conexoes › 0 › arquivo"), com o sinal de válido e o Formatar.
+  - **Texto (TXT, MD, LOG):** sem faixa. A contagem da busca ("3 de 41") e, no arquivo grande, o "Somente leitura"
+    vão para o rodapé (também no JSON).
+  - **Consulta SQL:** "Linha 3, coluna 37" desce para a ponta direita do rodapé, como no JSON; a faixa fica com o
+    banco.
+  - **Visão geral:** sem faixa. O caminho do banco continua nas Propriedades, e o "só leitura", na Gravação delas.
+- **A dica de cada aba de documento mostra o caminho inteiro** do arquivo ou do banco (nas abas da Visão geral, das
+  tabelas e das Consultas).
+- **A contagem das linhas fica só no rodapé** (revisão de UI de 22/10/2026, U3): com busca ou filtro, os Dados e o
+  CSV mostravam "236 de 1.180 linhas" na barra dos filtros e "Linhas 1–24 de 236" no rodapé. Agora o rodapé diz tudo,
+  "Linhas 1–24 de 236 · filtradas de 1.180" (no CSV, "contando…" enquanto a vista é calculada), e a barra dos filtros
+  fica com as condições e o "Limpar filtros".
 - **O vazio da grade mostra as colunas** (revisão de UI de 22/10/2026, U5): uma tabela sem linhas, um CSV só com o
   cabeçalho, um filtro que não acha nada e uma consulta que não devolve linhas mantêm o cabeçalho da grade (os nomes
   e as pastilhas de tipo), com a frase embaixo dele. A ação vai num botão, em vez de mandar procurar na barra:

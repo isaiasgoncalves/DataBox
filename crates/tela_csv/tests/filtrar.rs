@@ -30,7 +30,7 @@ fn filtro_pela_faixa_e_o_popover() {
     let mut h = abrir(&amb, arquivo(&amb, "vendas_2025.csv", vendas(20)));
     assert!(!doc(&h).anatomia().faixa, "sem a faixa: a barra dos filtros fica no alto (0.2.3, item F)");
     assert!(h.query_by_label("Filtros").is_some(), "a barra dos filtros, mesmo sem filtro");
-    assert!(h.query_by_label_contains(" de 20 linhas").is_none(), "sem filtro, sem contagem na barra");
+    assert!(h.query_by_label_contains("filtradas de").is_none(), "sem filtro, o rodapé só conta as linhas");
     clicar_celula(&mut h, 0, 1);
     h.get_by_label("Filtrar").click();
     h.run_steps(3);
@@ -50,8 +50,9 @@ fn filtro_pela_faixa_e_o_popover() {
     assert_eq!(posicoes(&h), [0, 5, 10, 15]);
     assert!(coluna(&h, 1).iter().all(|r| r == "Sul"));
     assert_eq!(doc(&h).linhas_filtradas(), Some(4));
-    assert!(h.query_by_label("4 de 20 linhas").is_some(), "a contagem na barra dos filtros");
     assert!(h.query_by_label("Linhas 1–4 de 4").is_some(), "o rodapé: as linhas da vista");
+    assert!(h.query_by_label("· filtradas de 20").is_some(), "e de quantas o arquivo tem, no rodapé (U3)");
+    assert!(h.query_by_label("4 de 20 linhas").is_none(), "a barra dos filtros não conta mais");
     assert_eq!(doc(&h).ofertas(&h.state().estado).dica(Verbo::Filtrar), "Filtrar (1 condição)");
     assert!(doc(&h).ofertas(&h.state().estado).get(Verbo::Filtrar).marcado);
 }
@@ -152,7 +153,7 @@ fn colar_por_posicao_desligado_com_filtro_ou_ordem() {
     assert_eq!(doc(&h).retrato().unwrap().colunas(), 6);
 }
 
-/// A captura do fechamento das etapas 5 e 6, a 1280×800: o CSV filtrado (a faixa com a condição e "de 1.180 linhas"
+/// A captura do fechamento das etapas 5 e 6, a 1280×800: o CSV filtrado (a barra com a condição e "filtradas de 1.180"
 /// no rodapé) e ordenado pela quantidade.
 #[test]
 fn captura_do_csv_filtrado_do_fechamento() {

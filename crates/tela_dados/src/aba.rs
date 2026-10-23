@@ -16,7 +16,7 @@ use estado::{
     Acao, Anatomia, ConsultaDados, Contexto, FiltroDigitado, FormatoArquivo, LIMIAR_TABELA_GRANDE, MSG_SO_NA_TRANSACAO,
     Oferta, Ofertas, Promessa, Reacao, TabelaAberta, Verbo,
 };
-use interface::formato::{formatar_numero, formatar_segundos, nome_do_caminho, plural};
+use interface::formato::{filtradas_de, formatar_numero, formatar_segundos, nome_do_caminho, plural};
 use interface::grade::{
     AcaoCelula, Intervalo, OfertaCelula, ResumoSelecao, colagem, frase_de_fora, menu_da_celula, rodape_da_selecao,
     texto_celula, texto_colado, texto_exibicao,
@@ -26,7 +26,7 @@ use interface::pecas::avisos::{aviso_texto, carregando, vazio, vazio_da_grade};
 use interface::pecas::botao::Botao;
 use interface::pecas::campos::Select;
 use interface::pecas::filtros::{
-    CondicaoEmEdicao, ContagemFiltros, EtiquetaFiltro, FimCondicao, filtros as desenhar_filtros, popover_condicao,
+    CondicaoEmEdicao, EtiquetaFiltro, FimCondicao, filtros as desenhar_filtros, popover_condicao,
 };
 use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::painel::{Secao, ficha};
@@ -165,6 +165,8 @@ struct Rodape {
     contagem: String,
     /// O total ainda não chegou: depois do texto, "contando…" (ou "…" com o motivo da falha).
     sem_total: Option<Option<String>>,
+    /// Com busca ou filtro, de quantas linhas a tabela tem: "filtradas de 60" (U3 da revisão de UI de 22/10/2026).
+    filtradas: Option<String>,
     pagina: String,
     anterior: bool,
     proxima: bool,
@@ -175,10 +177,13 @@ struct Rodape {
 #[doc(hidden)]
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Retrato {
-    /// A contagem da faixa como texto ("41 de 60 linhas", "60 linhas", "contando…", "linhas não contadas"; vazia
-    /// antes da página ou com ela sem leitura).
-    pub faixa: String,
+    /// As linhas que a busca e os filtros deixam passar, de quantas a tabela tem ("41 de 60 linhas", "60 linhas",
+    /// "contando…", "linhas não contadas"; vazia antes da página ou com ela sem leitura). Até a 0.2.3, a contagem da
+    /// faixa; hoje a tela a mostra no rodapé, em [`Retrato::contagem_linhas`] e [`Retrato::filtradas`].
+    pub total: String,
     pub contagem_linhas: String,
+    /// "filtradas de 60" depois da contagem do rodapé, com busca ou filtro; vazia sem eles.
+    pub filtradas: String,
     pub pagina_atual: String,
     pub anterior_habilitado: bool,
     pub proxima_habilitada: bool,
@@ -856,20 +861,22 @@ impl AbaDados {
 
     // ------------------------------------------------------------------ textos
 
-    /// A contagem da faixa: as linhas da busca e dos filtros de quantas a tabela tem ("41 de 60 linhas"), ou só as
-    /// linhas sem busca nem filtro ("60 linhas").
-    fn contagem_faixa(&self, info: &TabelaInfo) -> ContagemFiltros {
+    /// A busca ou algum filtro escondem linhas.
+    fn filtrando(&self) -> bool {
+        !self.consulta.busca.is_empty() || !self.consulta.filtros.is_empty()
+    }
+
+    /// As linhas da busca e dos filtros de quantas a tabela tem ("41 de 60 linhas"), ou só as linhas sem busca nem
+    /// filtro ("60 linhas"), para o [`Retrato`].
+    fn contagem_total(&self, info: &TabelaInfo) -> String {
         if self.erro.is_some() {
-            return ContagemFiltros::Nada;
+            return String::new();
         }
-        let Some(d) = &self.dados else { return ContagemFiltros::Nada };
+        let Some(d) = &self.dados else { return String::new() };
         match (d.total, &d.contagem_falhou) {
-            (Some(t), _) => {
-                let filtrando = !self.consulta.busca.is_empty() || !self.consulta.filtros.is_empty();
-                ContagemFiltros::Texto(texto_contagem_faixa(t, info.linhas, filtrando))
-            }
-            (None, Some(motivo)) => ContagemFiltros::NaoContadas(motivo.clone()),
-            (None, None) => ContagemFiltros::Contando,
+            (Some(t), _) => texto_contagem_faixa(t, info.linhas, self.filtrando()),
+            (None, Some(_)) => LINHAS_NAO_CONTADAS.to_string(),
+            (None, None) => CONTANDO.to_string(),
         }
     }
 
@@ -884,6 +891,7 @@ impl AbaDados {
         Some(Rodape {
             contagem,
             sem_total,
+            filtradas: info.linhas.filter(|_| self.filtrando()).map(filtradas_de),
             pagina: texto_pagina(p.pagina, d.paginas),
             anterior: p.pagina > 1,
             // sem o total ainda (tabela grande), o "›" segue o tem_mais da página
@@ -979,7 +987,7 @@ impl AbaDados {
     }
 
     /// A faixa de contexto: "Filtros", uma etiqueta por condição aplicada (o clique abre a condição no popover, o ×
-    /// a tira), "+ Condição" e, à direita, a contagem e "Limpar filtros" (só com condição).
+    /// a tira), "+ Condição" e, à direita, "Limpar filtros" (só com condição); a contagem fica no rodapé.
     fn desenhar_faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto, tabela: &mut TabelaAberta) {
         let etiquetas: Vec<EtiquetaFiltro<'_>> = self
             .filtros
@@ -991,8 +999,7 @@ impl AbaDados {
                 valor: (!f.op.sem_valor()).then_some(f.valor.as_str()),
             })
             .collect();
-        let contagem = self.contagem_faixa(tabela.info());
-        let r = desenhar_filtros(ui, &etiquetas, &contagem);
+        let r = desenhar_filtros(ui, &etiquetas);
         self.rect_condicao = Some(r.nova_condicao);
         let (abrir, tirar, limpar) = (r.abrir, r.tirar, r.limpar);
         if let Some(id) = tirar {
@@ -1293,6 +1300,9 @@ impl AbaDados {
                     carregando(ui, CONTANDO);
                 }
             }
+        }
+        if let Some(f) = &r.filtradas {
+            texto_simples(ui, &format!("· {f}"), 12.0, p.estudio.t3);
         }
         let n_marcadas = self.marcadas.len();
         if n_marcadas > 0 {
@@ -2307,16 +2317,12 @@ impl AbaDados {
     /// O que a aba mostra agora (para os testes).
     #[doc(hidden)]
     pub fn retrato(&self, tabela: &TabelaAberta) -> Retrato {
-        let faixa = match self.contagem_faixa(tabela.info()) {
-            ContagemFiltros::Texto(t) => t,
-            ContagemFiltros::Contando => CONTANDO.to_string(),
-            ContagemFiltros::NaoContadas(_) => LINHAS_NAO_CONTADAS.to_string(),
-            ContagemFiltros::Nada => String::new(),
-        };
+        let total = self.contagem_total(tabela.info());
         let rodape = self.rodape(tabela.info(), false);
         let primeira = self.grade.as_ref().map_or(0, GradeDados::primeira);
         Retrato {
-            faixa,
+            total,
+            filtradas: rodape.as_ref().and_then(|r| r.filtradas.clone()).unwrap_or_default(),
             contagem_linhas: rodape.as_ref().map_or_else(String::new, |r| match &r.sem_total {
                 None => r.contagem.clone(),
                 Some(None) => format!("{}{CONTANDO}", r.contagem),
