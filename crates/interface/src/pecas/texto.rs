@@ -73,28 +73,48 @@ pub fn galley_cortado(ui: &Ui, texto: &str, fonte: FontId, cor: Color32, largura
     ui.fonts_mut(|f| f.layout_job(job))
 }
 
-/// O caminho que cabe (`cabe` mede o texto): inteiro, se couber; senão, com o nome do arquivo inteiro e a pasta
-/// cortada no meio com "…" ("C:\dados\…\2026\vendas.db", item 17 da revisão). `None` quando nem "…\nome" cabe, ou
-/// quando não há pasta.
+/// O caminho que cabe (`cabe` mede o texto), U6 da revisão de UI de 22/10/2026: inteiro, se couber; senão, cortado
+/// do começo, com o nome do arquivo e as pastas mais perto dele inteiras ("…/dados/vendas_2025.csv",
+/// "…\2026\vendas.db"), quantas couberem. `None` quando nem "…/nome" cabe, ou quando não há pasta; aí o
+/// [`encurtar_nome`] corta o nome. Até a 0.2.3, a reticência ia no meio da pasta ("/h…s/config.json").
 pub fn encurtar_caminho(caminho: &str, cabe: impl Fn(&str) -> bool) -> Option<String> {
     if cabe(caminho) {
         return Some(caminho.to_owned());
     }
-    let corte = caminho.rfind(['\\', '/'])?;
-    let (pasta, nome) = (&caminho[..corte], &caminho[corte..]);
-    let letras: Vec<char> = pasta.chars().collect();
+    // o separador do caminho (o último que aparece, para o caminho que mistura os dois)
+    let sep = caminho.rfind(['\\', '/']).and_then(|i| caminho[i..].chars().next())?;
+    let partes: Vec<&str> = caminho.split(['\\', '/']).filter(|p| !p.is_empty()).collect();
+    // da maior cauda que ainda deixa algo de fora (a inteira já não coube) até só o nome
+    (1..partes.len())
+        .rev()
+        .map(|k| format!("…{sep}{}", partes[partes.len() - k..].join(&sep.to_string())))
+        .find(|s| cabe(s))
+}
+
+/// O nome que cabe, cortado no meio e com a extensão inteira ("vendas_20…25.csv"); sem extensão, também no meio.
+/// `None` quando nem "…" com a extensão cabe.
+pub fn encurtar_nome(nome: &str, cabe: impl Fn(&str) -> bool) -> Option<String> {
+    if cabe(nome) {
+        return Some(nome.to_owned());
+    }
+    // a extensão: depois do último ponto, se não for o primeiro caractere e for curta
+    let (base, ext) = match nome.rfind('.') {
+        Some(i) if i > 0 && nome.len() - i <= 8 => (&nome[..i], &nome[i..]),
+        _ => (nome, ""),
+    };
+    let letras: Vec<char> = base.chars().collect();
     let montar = |k: usize| -> String {
         let (inicio, fim) = (k.div_ceil(2), k / 2);
         let mut s: String = letras[..inicio].iter().collect();
         s.push('…');
         s.extend(&letras[letras.len() - fim..]);
-        s.push_str(nome);
+        s.push_str(ext);
         s
     };
     if !cabe(&montar(0)) {
         return None;
     }
-    // o maior número de letras da pasta que ainda cabe (a medida cresce com as letras)
+    // o maior número de letras do nome que ainda cabe (a medida cresce com as letras)
     let (mut cabe_k, mut nao_cabe) = (0, letras.len());
     while nao_cabe - cabe_k > 1 {
         let meio = (cabe_k + nao_cabe) / 2;
@@ -107,16 +127,18 @@ pub fn encurtar_caminho(caminho: &str, cabe: impl Fn(&str) -> bool) -> Option<St
     Some(montar(cabe_k))
 }
 
-/// Uma linha com o caminho que cabe em `largura` ([`encurtar_caminho`]: a reticência no meio da pasta e o nome do
-/// arquivo inteiro); se nem o nome couber, ele é cortado no fim.
+/// Uma linha com o caminho que cabe em `largura` ([`encurtar_caminho`]: cortado do começo, com o nome e as pastas
+/// mais perto dele inteiras); se nem "…/nome" couber, o nome sozinho cortado no meio, com a extensão
+/// ([`encurtar_nome`]); se nem isso, cortado no fim.
 pub fn galley_caminho(ui: &Ui, caminho: &str, fonte: FontId, cor: Color32, largura: f32) -> Arc<Galley> {
     let cabe = |s: &str| galley(ui, s, fonte.clone(), cor).size().x <= largura + 0.5;
-    match encurtar_caminho(caminho, cabe) {
-        Some(texto) => galley(ui, &texto, fonte, cor),
-        None => {
-            let nome = caminho.rsplit(['\\', '/']).next().unwrap_or(caminho);
-            galley_cortado(ui, nome, fonte, cor, largura)
-        }
+    if let Some(texto) = encurtar_caminho(caminho, cabe) {
+        return galley(ui, &texto, fonte.clone(), cor);
+    }
+    let nome = caminho.rsplit(['\\', '/']).find(|p| !p.is_empty()).unwrap_or(caminho);
+    match encurtar_nome(nome, cabe) {
+        Some(texto) => galley(ui, &texto, fonte.clone(), cor),
+        None => galley_cortado(ui, nome, fonte.clone(), cor, largura),
     }
 }
 

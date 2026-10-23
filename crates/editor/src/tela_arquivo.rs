@@ -30,8 +30,8 @@
 //! Enquanto os editores de CSV, JSON e texto (etapa 5) e o do Excel (etapa 6) não existem, a aba diz o que o
 //! arquivo é e o abre no programa padrão do Windows. Sem prancheta própria: o sistema visual de sempre.
 //!
-//! - **Faixa**: a folha de 20 do tipo (CSV, XLSX, JSON, TXT), o nome em 600/13 e o caminho em `--t3` com a
-//!   reticência no meio.
+//! - **Faixa**: a folha de 20 do tipo (CSV, XLSX, JSON, TXT), o nome em 600/13 e o caminho em `--t3`, cortado do
+//!   começo quando não cabe (`galley_caminho`).
 //! - **Conteúdo** (a página): o aviso informativo de até 560 pt, centrado ("O editor de CSV ainda não está pronto.
 //!   Enquanto isso, o arquivo abre no programa padrão do Windows.") e, embaixo, centrados, **Abrir no programa
 //!   padrão** (primário) e **Mostrar na pasta**. O arquivo que sumiu: o erro do serviço ("O arquivo não existe (ou foi
