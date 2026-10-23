@@ -388,11 +388,15 @@ fn rodape_com_linhas_e_tempo() {
     let r = rodape(&h, "mais de 1.000 linhas · ").expect("o rodapé do resultado cortado");
     assert!(r.ends_with(" ms · mostrando as primeiras 1.000"), "{r}");
     assert_eq!(tela(&h).grade(0).map(|(_, l)| l.len()), Some(1000));
-    // o segundo, sem linhas: o vazio no lugar da grade
+    // o segundo, sem linhas: o cabeçalho continua, com o vazio embaixo dele (U5 da revisão de UI de 22/10/2026)
     h.get_by_label("Comando 2 · 0 linhas").click();
     h.run_steps(3);
     assert_eq!(tela(&h).escolhido(), 1);
-    assert!(h.query_by_label("A consulta não devolveu linhas.").is_some());
+    let frase = h.get_by_label("A consulta não devolveu linhas.").rect();
+    assert!(frase.top() > 400.0, "o vazio embaixo do cabeçalho da grade, não no alto: {frase:?}");
+    assert_eq!(tela(&h).grade(1).map(|(c, l)| (c.len(), l.len())), Some((7, 0)), "as colunas, sem linhas");
+    capturar(&mut h, "consulta-sem-linhas-claro.png");
+    assert!(!tela(&h).ofertas(&h.state().estado).ligado(estado::Verbo::Exportar), "nada a exportar sem linhas");
     assert!(rodape(&h, "0 linhas · ").is_some_and(|t| t.ends_with(" ms")));
 }
 

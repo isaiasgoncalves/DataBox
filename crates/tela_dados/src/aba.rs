@@ -22,7 +22,7 @@ use interface::grade::{
     texto_celula, texto_colado, texto_exibicao,
 };
 use interface::icones::{self, EstadoIcone, Icone};
-use interface::pecas::avisos::{aviso_texto, carregando, vazio};
+use interface::pecas::avisos::{aviso_texto, carregando, vazio, vazio_da_grade};
 use interface::pecas::botao::Botao;
 use interface::pecas::campos::Select;
 use interface::pecas::filtros::{
@@ -56,9 +56,9 @@ use crate::modelo::{
 };
 use crate::regras::{
     AVISO_SEM_CHAVE, BUSCA_LENTA_MS, CONTANDO, DICA_BUSCA_LENTA, ESPERA_DIGITACAO, LENDO, LINHAS_NAO_CONTADAS,
-    LinhaFiltro, OPERADORES, ORDENAR_LENTO_MS, VAZIO_EDITAVEL, VAZIO_FILTRANDO, VAZIO_TABELA, VAZIO_VISAO,
-    chave_filtro, chave_texto, descricao_exclusao, dica_duplicar, dica_excluir, dica_filtrar, extensao_do_blob,
-    filtros_completos, intervalo, regras_em_pills, rotulo_operador, tamanhos_por_pagina, tem_quebra,
+    LinhaFiltro, OPERADORES, ORDENAR_LENTO_MS, VAZIO_FILTRANDO, VAZIO_LIMPAR_FILTROS, VAZIO_NOVA_LINHA, VAZIO_TABELA,
+    VAZIO_VISAO, chave_filtro, chave_texto, descricao_exclusao, dica_duplicar, dica_excluir, dica_filtrar,
+    extensao_do_blob, filtros_completos, intervalo, regras_em_pills, rotulo_operador, tamanhos_por_pagina, tem_quebra,
     texto_contagem_faixa, texto_contagem_linhas, texto_contagem_sem_total, texto_edicao, texto_pagina, titulo_linha,
 };
 
@@ -930,12 +930,21 @@ impl AbaDados {
     fn texto_vazio(&self) -> &'static str {
         if !self.consulta.busca.is_empty() || !self.consulta.filtros.is_empty() {
             VAZIO_FILTRANDO
-        } else if self.editavel {
-            VAZIO_EDITAVEL
         } else if self.e_visao {
             VAZIO_VISAO
         } else {
             VAZIO_TABELA
+        }
+    }
+
+    /// O botão do vazio: "Limpar filtros" com condição; "Nova linha" na tabela que grava, sem busca nem filtro.
+    fn acao_do_vazio(&self) -> Option<AcaoVazio> {
+        if !self.consulta.filtros.is_empty() {
+            Some(AcaoVazio::LimparFiltros)
+        } else if self.editavel && self.consulta.busca.is_empty() {
+            Some(AcaoVazio::NovaLinha)
+        } else {
+            None
         }
     }
 
@@ -1071,12 +1080,12 @@ impl AbaDados {
             });
             return;
         };
-        if dados.n_linhas() == 0 {
-            // o vazio do documento, no alto do conteúdo (`.grade-dados .empty{padding:28px 20px}`)
-            vazio(ui, self.texto_vazio(), false);
+        let sem_linhas = dados.n_linhas() == 0;
+        let (texto_vazio, acao_vazio) = (self.texto_vazio(), self.acao_do_vazio());
+        let Some(grade) = self.grade.as_mut() else {
+            vazio(ui, texto_vazio, false);
             return;
-        }
-        let Some(grade) = self.grade.as_mut() else { return };
+        };
         let p = paleta(ui);
         let cabecalho_abrir = match &info.chave {
             Some(TipoChave::Rowid { alias }) => Some(alias.as_str()),
@@ -1122,7 +1131,24 @@ impl AbaDados {
             origem: None,
             visivel: None,
         };
+        let topo = ui.cursor().top();
         let r = grade.nucleo.mostrar(ui, altura_max, &mut pintor);
+        // sem linhas, o cabeçalho continua à vista e o vazio vai embaixo dele, com a ação (U5 da revisão de UI de
+        // 22/10/2026)
+        if sem_linhas {
+            let largura = ui.max_rect().x_range();
+            let embaixo = topo + grade.nucleo.altura_do_cabecalho();
+            let rect = Rect::from_x_y_ranges(largura, embaixo..=(topo + altura_max).min(ui.max_rect().bottom()));
+            let botao = acao_vazio.map(|a| match a {
+                AcaoVazio::NovaLinha => {
+                    Botao::primario(VAZIO_NOVA_LINHA).com_icone(Icone::Novo).habilitado(impedimento.is_none())
+                }
+                AcaoVazio::LimparFiltros => Botao::new(VAZIO_LIMPAR_FILTROS),
+            });
+            if vazio_da_grade(ui, rect, texto_vazio, None, botao) {
+                acoes.vazio = acao_vazio;
+            }
+        }
         grade.origem = pintor.origem;
         grade.visivel = pintor.visivel;
         acoes.ordenar = pintor.ordenar.and_then(|c| dados.colunas.get(c)).map(|c| c.nome.clone());
@@ -1332,6 +1358,15 @@ impl AbaDados {
         }
         if let Some(coluna) = a.ordenar {
             self.ordenar(ctx, tabela, &coluna);
+        }
+        match a.vazio {
+            Some(AcaoVazio::NovaLinha) => self.abrir_nova(tabela.info(), Vec::new(), false),
+            Some(AcaoVazio::LimparFiltros) => {
+                self.filtros.clear();
+                self.condicao = None;
+                self.aplicar_filtros(ctx, tabela);
+            }
+            None => {}
         }
         if let Some(coluna) = a.criar_indice {
             ctx.emitir(Acao::AbrirNovoIndice { tabela: self.nome.clone(), colunas: vec![coluna] });
@@ -2480,6 +2515,15 @@ struct AcoesQuadro {
     lote: Option<Result<Lote, String>>,
     /// O "Excluir as linhas" do menu: as chaves das linhas do intervalo.
     excluir_linhas: Option<Vec<Chave>>,
+    /// O botão do vazio da grade.
+    vazio: Option<AcaoVazio>,
+}
+
+/// O botão do vazio da grade (U5 da revisão de UI de 22/10/2026).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AcaoVazio {
+    NovaLinha,
+    LimparFiltros,
 }
 
 /// A nota da ficha só leitura de um banco aberto só para leitura (prancheta 15).

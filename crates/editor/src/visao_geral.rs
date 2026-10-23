@@ -699,8 +699,8 @@ fn com_recuo(ui: &mut Ui, [cima, lados, baixo]: [f32; 3], conteudo: impl FnOnce(
     ui.allocate_space(vec2(ui.available_width(), altura));
 }
 
-/// O Caminho das Propriedades numa linha, com a reticência no meio quando não cabe (o `dd.caminho`: `.ini` cortado,
-/// `.fim` inteiro; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele
+/// O Caminho das Propriedades numa linha, cortado do começo quando não cabe, com o nome e a pasta-mãe inteiros (o
+/// `galley_caminho`; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele
 /// foi clicado. A ficha do arquivo de dados usa a mesma.
 pub(crate) fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
     let e = &paleta(ui).estudio;

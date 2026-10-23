@@ -15,7 +15,7 @@ use interface::grade::{
     AcaoCelula, ColunaGrade, GradeSomenteLeitura, Intervalo, OfertasCelula, OpcoesCopia, ResumoSelecao,
     frase_do_intervalo_copiado, menu_da_celula, pastilha_pelos_valores,
 };
-use interface::pecas::avisos::{Aviso, TomAviso, vazio};
+use interface::pecas::avisos::{Aviso, TomAviso, vazio, vazio_da_grade};
 use interface::pecas::documento::RECUO_PAGINA;
 use interface::pecas::texto::{
     Paragrafo, Trecho, formato, mostrar_paragrafo_selecionavel, paragrafo_de_job, texto_rico,
@@ -141,7 +141,7 @@ impl Card {
     /// O pedido da janela Exportar (só num resultado com linhas).
     pub(crate) fn pedido(&self) -> Option<&PedidoJanelaExportar> {
         match self {
-            Card::Linhas { grade: Some(_), pedido, .. } => Some(pedido),
+            Card::Linhas { grade: Some(g), pedido, .. } if !g.linhas().is_empty() => Some(pedido),
             _ => None,
         }
     }
@@ -280,7 +280,8 @@ fn card_linhas(
     let tabela = nome_sugerido.strip_prefix("consulta_").unwrap_or(TABELA_DO_INSERT).to_string();
     let pedido =
         PedidoJanelaExportar { origem: OrigemJanelaExportar::Consulta { sql: comando.clone() }, nome_sugerido };
-    let grade = (!linhas.is_empty()).then(|| {
+    // sem linhas, a grade fica com o cabeçalho, e o vazio vai embaixo dele (U5 da revisão de UI de 22/10/2026)
+    let grade = (!colunas.is_empty()).then(|| {
         // a pastilha de tipo no cabeçalho: pelo que os valores de cada coluna são (a Consulta não sabe o tipo
         // declarado da coluna de origem); `Aa` quando não dá para saber
         let colunas = colunas
@@ -303,8 +304,15 @@ pub(crate) fn desenhar(ui: &mut Ui, card: &mut Card, id: Id) {
     let altura = ui.available_height();
     match card {
         Card::Linhas { grade: Some(g), tabela, .. } => {
+            let topo = ui.cursor().top();
             g.mostrar(ui, altura);
-            menu_da_grade(ui, g, tabela);
+            if g.linhas().is_empty() {
+                let embaixo = topo + g.nucleo().altura_do_cabecalho();
+                let rect = Rect::from_x_y_ranges(ui.max_rect().x_range(), embaixo..=(topo + altura));
+                vazio_da_grade(ui, rect, MSG_SEM_LINHAS, None, None);
+            } else {
+                menu_da_grade(ui, g, tabela);
+            }
         }
         Card::Linhas { grade: None, .. } => {
             vazio(ui, MSG_SEM_LINHAS, false);
