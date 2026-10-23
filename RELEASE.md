@@ -31,10 +31,10 @@ GitHub: compila o `DataBox.exe` otimizado e cria a página com o executável, um
 ### Passo a passo
 
 1. **Atualize a versão** em `Cargo.toml` (`[workspace.package] version`) e em `crates/editor/recursos/databox.rc`
-   (`FILEVERSION`, `PRODUCTVERSION` e os textos `FileVersion`/`ProductVersion`). (Na 0.2.3, já está feito.)
+   (`FILEVERSION`, `PRODUCTVERSION` e os textos `FileVersion`/`ProductVersion`). (Na 0.2.4, já está feito.)
 2. **Atualize o [`CHANGELOG.md`](CHANGELOG.md):** mova o que está em "Não lançado" para uma seção nova com a versão e
    a data.
-3. Rode os testes (`.\cargo.ps1 test --workspace`) e faça o commit (`git commit -am "chore: versão 0.2.3"`).
+3. Rode os testes (`.\cargo.ps1 test --workspace`) e faça o commit (`git commit -am "chore: versão 0.2.4"`).
 4. **Crie a tag e envie:**
 
    ```powershell
@@ -84,6 +84,12 @@ app compilado. Antes da tag, no Windows e no Linux (no GNOME, uma vez no Wayland
     "3 de 41" e o Esc volta para onde estava.
 11. **Abrir no programa padrão** no menu Arquivo, com um CSV, uma planilha, um texto e a ficha de um `.xls`: abre no
     programa do sistema (no Linux, pelo `xdg-open`); com um banco ou sem arquivo à vista, fica desligado.
+12. **Dica das abas:** pare o ponteiro numa aba de arquivo, numa da Visão geral e numa de tabela: a dica mostra o
+    caminho inteiro (no Início, nenhuma).
+13. **Visão geral:** passe o ponteiro pelas linhas da lista de tabelas: o lápis "Colunas de …" aparece na ponta da
+    linha e abre a vista Colunas; o Tab chega nele; o duplo clique fora do nome abre a tabela.
+14. **Seta da ordenação no CSV:** com o ponteiro no cabeçalho, a seta aparece apagada logo depois do nome; o clique
+    nela ordena, o clique no resto do cabeçalho escolhe a coluna, e o clique direito (também na seta) abre o menu dela.
 
 A tag precisa bater com a versão do `Cargo.toml` (`v0.1.0` ↔ `0.1.0`); se não bater, o workflow para antes de
 publicar. Se algo der errado depois de criada, apague a versão na página de Releases e a tag
