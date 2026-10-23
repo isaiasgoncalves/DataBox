@@ -157,7 +157,7 @@ Somente leitura · 1.204 linhas · 6 colunas". **PO:** de acordo. Esforço: P.
 vazio. **Designer:** sem resultado, o editor ocupa a altura toda; o primeiro Ctrl+Enter abre a área do resultado.
 **PO:** baixa prioridade, mas é a primeira coisa que quem abre uma Consulta vê. Esforço: P.
 
-### U11 · Regras a registrar no guia (custo zero)
+### U11 · Regras a registrar no guia
 
 - **Ícone em item de menu só quando o mesmo verbo tem botão na barra de ferramentas** (Filtrar, Excluir, Abrir pasta,
   Salvar…): o menu ensina a barra. É quase o que já acontece no menu da célula e no Arquivo; falta escrever.
@@ -189,4 +189,7 @@ Decididas em 22/10/2026 (registradas na "Revisão de UI de 22/10/2026" do [`READ
 3. ~~Ganhos rápidos~~ **Decidido:** numa 0.2.4 de acabamento, antes da varredura da tradução, um PR por assunto (U3,
    U4 sem a faixa das fontes da Consulta, U5, U6, U7, U8, U9, U10).
 4. ~~U4 Visão geral~~ **Decidido:** sem faixa, e o caminho inteiro na dica de toda aba de documento.
-5. **U11 (em aberto):** registrar no guia a regra dos ícones nos menus e a de nada com largura fixa pelo texto.
+5. ~~U11~~ **Decidido:** as quatro regras no guia (`README.md`). A dos ícones nos menus não é de custo zero como o
+   debate disse: ela revê a decisão de 20/10/2026 e tira as silhuetas de seis itens dos menus da barra (Novo banco,
+   Colunas, Renomear a tabela, Propriedades em janela própria, Fazer cópia de segurança e as manutenções do Banco);
+   fica para um PR pequeno.
