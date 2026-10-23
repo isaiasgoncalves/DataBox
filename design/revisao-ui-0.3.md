@@ -6,7 +6,10 @@ cientistas de dados, engenheiros de dados e desenvolvedores que abrem um arquivo
 fim, as decisões que ficam com o Isaías. **Nada aqui está implementado nem decidido.**
 
 As propostas desenhadas estão na página **"Propostas 0.3"** do [canvas do DataBox](https://claude.ai/artifact/TCdgEPdRzEzWEmC6XTJVu9).
-Cada achado tem um número (U1, U2…) que aparece nas pranchetas.
+Cada achado tem um número (U1, U2…) que aparece nas pranchetas. Cada prancheta sai de uma prancheta original (Dados,
+CSV, JSON, Consulta, Visão geral, o perfil do roadmap, Preferências), com os mesmos ícones, folha de estilo e peças,
+e muda só o que a proposta muda (`ferramentas/propostas_03.py`); a "Hoje" junta as capturas de antes. A U7 (a seta da
+ordenação), a U9 (o rodapé da planilha), a U10 e a U11 não têm prancheta: são uma linha cada.
 
 ## Cobertura
 
@@ -169,12 +172,12 @@ O PO lembrou que as pranchetas do perfil (`FuturoPerfil`) e do gráfico (`Futuro
 desenho para três superfícies decididas em 21/10/2026:
 
 - **As fontes da Consulta com a bancada (P4)**: a faixa da U4, com "+ Arquivo" e o arquivo ligado como esquema
-  `arquivos`. Desenhada na prancheta "Faixas e rodapés".
+  `arquivos`. Desenhada na prancheta "Consulta com as fontes".
 - **O Perfil da tabela (P1)**, decidido como aba de documento: uma linha por coluna (tipo, preenchidas, nulos,
   distintos, mín., máx., média, mais frequente e um histograma pequeno), com o "≈" acima de 100 mil valores.
   Desenhado na prancheta "Perfil da tabela".
-- **Preferências › Idioma (P7)**: "Seguir o sistema · Português (Brasil) · English", ao lado do Tema. Desenhado na
-  prancheta "Detalhes".
+- **Preferências › Idioma (P7)**: "Seguir o sistema · Português (Brasil) · English", ao lado do Tema, com
+  "Números na grade" (U1). Desenhado na prancheta "Preferências com o idioma".
 
 ## Decisões para o Isaías
 
