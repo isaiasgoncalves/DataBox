@@ -15,8 +15,8 @@ use estado::{
 use interface::formato::{contagem_linhas, filtradas_de};
 use interface::grade::{largura_minima_da_selecao, rodape_da_selecao, rodape_somando};
 use interface::pecas::avisos::{Aviso, TomAviso, aviso_texto, carregando};
-use interface::pecas::filtros::CONTANDO;
 use interface::pecas::botao::Botao;
+use interface::pecas::filtros::CONTANDO;
 use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::progresso::barra_progresso;
 use interface::pecas::texto::texto as texto_simples;

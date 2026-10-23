@@ -10,8 +10,7 @@ use egui::Ui;
 use estado::Promessa;
 use interface::formato::plural;
 use interface::pecas::filtros::{
-    CondicaoEmEdicao, EtiquetaFiltro, FimCondicao, barra_filtros, filtros_com_direita,
-    popover_condicao,
+    CondicaoEmEdicao, EtiquetaFiltro, FimCondicao, barra_filtros, filtros_com_direita, popover_condicao,
 };
 
 use crate::filtro::{CalculoVista, ChaveVista, Condicao, OPERADORES, OperadorCsv, Ordem, calcular_vista};
