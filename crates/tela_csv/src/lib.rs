@@ -113,7 +113,8 @@
 //!   mesma `Arc`, com as alterações pendentes).
 //! - **Filtrar e ordenar** (o passo a mais; prancheta 16 b): a barra dos filtros (as peças da aba Dados,
 //!   `interface::pecas::filtros`: "Filtros", uma etiqueta por condição com o popover de Coluna, Operador e Valor, "+
-//!   Condição" e, filtrando, "236 de 1.180 linhas" e "Limpar filtros"; o verbo Filtrar abre o popover) e a seta do cabeçalho ordena (crescente →
+//!   Condição" e, filtrando, "Limpar filtros"; a contagem fica no rodapé, "Linhas 1–24 de 236 · filtradas de 1.180";
+//!   o verbo Filtrar abre o popover) e a seta do cabeçalho ordena (crescente →
 //!   decrescente → sem ordem; números pelo valor, texto sem diferença de caixa, vazias no fim). A **vista** (as
 //!   posições que passam, na ordem) é calculada numa tarefa com um instantâneo e uma passada pelo arquivo
 //!   (`Leitor::varrer`) e refeita a cada alteração; o número da linha continua a posição no arquivo, e os Colar por

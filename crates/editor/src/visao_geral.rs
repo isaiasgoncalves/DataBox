@@ -1,8 +1,9 @@
 //! Visão geral do banco (`#/banco`) no formato de documento da prancheta 1
 //! (`Main.dc.html`):
 //!
-//! - **faixa**: o cilindro de 20, o nome em 600/13, a pílula "só leitura" (com o motivo na dica) e o caminho em
-//!   `--t3` semilight, cortado do começo quando não cabe (`galley_caminho`);
+//! - **sem faixa** (U4 da revisão de UI de 22/10/2026): o nome do banco já está na aba e o caminho, nas
+//!   Propriedades e na dica da aba; o "só leitura" fica na Gravação das Propriedades e no cadeado do ícone. Até a
+//!   0.2.3, a faixa tinha o cilindro, o nome, a pílula "só leitura" e o caminho;
 //! - **conteúdo** (gap de 18): os contadores na dock (`interface::pecas::dock`, no singular com um: "1 Visão") e a
 //!   lista de Tabelas (o título 13/600 e a `.lista-t` na moldura `--b2`), filtrada pela busca da barra ("Buscar
 //!   tabelas", sem acento nem caixa);
@@ -42,11 +43,10 @@ use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::rotulos::{TipoPill, pill};
 use interface::pecas::tabela::{ColunaTabela, Tabela, moldura_lista};
-use interface::pecas::texto::{galley, galley_caminho, nome_abre, texto, titulo_lista, y_na_linha};
+use interface::pecas::texto::{galley_caminho, nome_abre, texto, titulo_lista, y_na_linha};
 use interface::pecas::toast::{AcaoToast, toast_atencao, toast_concluido, toast_concluido_com_acao, toast_erro};
 use interface::tema::paleta;
 
-use crate::casca::explorador::icone_do_banco;
 use crate::recursos::nome_base;
 
 /// A dica do contador "Linhas (contadas)".
@@ -91,8 +91,6 @@ const ESPACO_TITULO_LISTA: f32 = 8.0;
 /// largura do conteúdo (a lista não rola na janela estreita).
 const LARGURAS_LISTA: [f32; 4] = [110.0, 100.0, 150.0, 130.0];
 const NOME_MINIMO: f32 = 200.0;
-/// O cilindro da faixa (`.sk.s20`) e a ficha de cada tabela (`.sk.s16`, com o `gap:8px` do `.link`).
-const LADO_BANCO_FAIXA: f32 = 20.0;
 const LADO_FICHA: f32 = 16.0;
 const ESPACO_FICHA: f32 = 8.0;
 /// `.det` da Manutenção: `padding:2px 8px 12px; gap:2px`.
@@ -681,42 +679,10 @@ pub(crate) fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
     ui_botao.add(Botao::icone(Icone::CopiarCaminho).pequeno().dica("Copiar caminho")).clicked()
 }
 
-/// A faixa: o cilindro, o nome, a pílula "só leitura" e o caminho cortado do começo.
-fn faixa_do_banco(ui: &mut Ui, b: &BancoInfo, caminho: &str) {
-    let e = &paleta(ui).estudio;
-    let (r, _) = ui.allocate_exact_size(vec2(LADO_BANCO_FAIXA, LADO_BANCO_FAIXA), Sense::hover());
-    icones::pintar(ui.painter(), r, icone_do_banco(b), e.t2);
-    let g = galley(ui, &b.nome, fontes::fonte(13.0, Peso::Medio), e.t);
-    let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
-    ui.painter().galley(rect.min, g, e.t);
-    resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &b.nome));
-    if b.somente_leitura {
-        let r = pill(ui, "só leitura", TipoPill::Wait);
-        if let Some(motivo) = &b.motivo_somente_leitura {
-            r.on_hover_text(motivo);
-        }
-    }
-    let g = galley_caminho(ui, caminho, fontes::fonte(12.0, Peso::Leve), e.t3, ui.available_width());
-    let encurtado = g.text() != caminho;
-    let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
-    ui.painter().galley(rect.min, g, e.t3);
-    resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, caminho));
-    if encurtado {
-        resp.on_hover_text(caminho);
-    }
-}
-
 /// A Visão geral como documento da casca (veja o topo do módulo).
 impl estado::Documento for TelaBanco {
     fn anatomia(&self) -> Anatomia {
-        Anatomia::default().com_faixa()
-    }
-
-    fn faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
-        let Some(b) = ctx.estado.banco.as_ref() else { return };
-        self.atualizar_textos(ctx);
-        let caminho = self.textos.as_ref().map_or_else(|| b.caminho.display().to_string(), |t| t.caminho.clone());
-        faixa_do_banco(ui, b, &caminho);
+        Anatomia::default()
     }
 
     fn conteudo(&mut self, ui: &mut Ui, ctx: &mut Contexto) {

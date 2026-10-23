@@ -1,17 +1,16 @@
 //! A barra dos filtros do CSV (prancheta 7, revisão de UI de 19/10/2026), como a da aba Dados, no alto do documento (o
 //! CSV não tem mais a faixa desde a 0.2.3, item F: o formato foi para o rodapé): a `.barra-filtros` com as peças de
-//! `interface::pecas::filtros` ("Filtros", uma etiqueta por condição, "+ Condição" e, filtrando, "236 de 1.180 linhas"
-//! ou "contando…" e "Limpar filtros"; na ponta direita, a contagem da busca da barra, "3 de 41") e o popover da
-//! condição. E a vista: pedida numa tarefa quando as condições, a ordem ou o documento mudam.
+//! `interface::pecas::filtros` ("Filtros", uma etiqueta por condição, "+ Condição" e, filtrando, "Limpar filtros"; na
+//! ponta direita, a contagem da busca da barra, "3 de 41") e o popover da condição. A contagem das linhas fica no
+//! rodapé ("Linhas 1–24 de 236 · filtradas de 1.180", U3 da revisão de UI de 22/10/2026). E a vista: pedida numa tarefa quando as condições, a ordem ou o documento mudam.
 
 use std::sync::Arc;
 
 use egui::Ui;
 use estado::Promessa;
-use interface::formato::{contagem_filtrada, plural};
+use interface::formato::plural;
 use interface::pecas::filtros::{
-    CondicaoEmEdicao, ContagemFiltros, EtiquetaFiltro, FimCondicao, barra_filtros, filtros_com_direita,
-    popover_condicao,
+    CondicaoEmEdicao, EtiquetaFiltro, FimCondicao, barra_filtros, filtros_com_direita, popover_condicao,
 };
 
 use crate::filtro::{CalculoVista, ChaveVista, Condicao, OPERADORES, OperadorCsv, Ordem, calcular_vista};
@@ -118,8 +117,8 @@ impl TelaCsv {
 
     // ------------------------------------------------------------------ a faixa, os filtros e o popover
 
-    /// A `.barra-filtros` no alto do conteúdo: "Filtros", as etiquetas, "+ Condição" e, filtrando, a contagem e
-    /// "Limpar filtros"; e o popover da condição.
+    /// A `.barra-filtros` no alto do conteúdo: "Filtros", as etiquetas, "+ Condição" e, filtrando, "Limpar filtros";
+    /// e o popover da condição.
     pub(crate) fn desenhar_filtros(&mut self, ui: &mut Ui) {
         let etiquetas: Vec<EtiquetaFiltro<'_>> = self
             .filtros
@@ -131,21 +130,10 @@ impl TelaCsv {
                 valor: (!f.op.sem_valor()).then_some(f.valor.as_str()),
             })
             .collect();
-        let contagem = if self.calculo_vista.is_some() {
-            ContagemFiltros::Contando
-        } else {
-            match self.linhas_filtradas() {
-                Some(n) if !self.filtros.is_empty() => {
-                    let total = self.retrato.as_ref().map(|r| r.linhas);
-                    ContagemFiltros::Texto(contagem_filtrada(n, total, true))
-                }
-                _ => ContagemFiltros::Nada,
-            }
-        };
         // a contagem da busca da barra ("3 de 41") na ponta direita: o CSV não tem mais a faixa
         let busca = self.busca.rotulo();
         let r = barra_filtros(ui, |ui| {
-            filtros_com_direita(ui, &etiquetas, &contagem, |ui| {
+            filtros_com_direita(ui, &etiquetas, |ui| {
                 if let Some(rotulo) = &busca {
                     let cor = interface::tema::paleta(ui).estudio.t2;
                     estado::busca::rotulo_na_faixa(ui, rotulo, cor);

@@ -439,13 +439,20 @@ pub fn contagem_linhas(inicio: u64, fim: u64, total: u64) -> String {
     }
 }
 
-/// A contagem dos filtros das grades: filtrando, as linhas que passam de quantas há ("41 de 60 linhas"; sem o
+/// A contagem das linhas que a busca e os filtros deixam passar (a da barra dos filtros até a 0.2.3; hoje, só a dos
+/// retratos dos testes): filtrando, as linhas que passam de quantas há ("41 de 60 linhas"; sem o
 /// total, só as que passam); sem filtro, as linhas ("60 linhas").
 pub fn contagem_filtrada(linhas: u64, total: Option<u64>, filtrando: bool) -> String {
     match total {
         Some(t) if filtrando => format!("{} de {}", formatar_numero(linhas), plural(t, "linha", "linhas")),
         _ => plural(linhas, "linha", "linhas"),
     }
+}
+
+/// O que o rodapé das grades diz depois da contagem quando a busca ou os filtros escondem linhas: de quantas a tabela
+/// tem ("filtradas de 1.180"), U3 da revisão de UI de 22/10/2026.
+pub fn filtradas_de(total: u64) -> String {
+    format!("filtradas de {}", formatar_numero(total))
 }
 
 /// Nome do arquivo de um caminho do Windows (`"C:\\dados\\vendas.db"` → `"vendas.db"`).
@@ -513,6 +520,7 @@ mod testes {
         assert_eq!(contagem_filtrada(60, Some(60), false), "60 linhas");
         assert_eq!(contagem_filtrada(1, Some(1), true), "1 de 1 linha");
         assert_eq!(contagem_filtrada(2500, None, true), "2.500 linhas", "sem o total, só as que passam");
+        assert_eq!(filtradas_de(1180), "filtradas de 1.180");
     }
 
     #[test]

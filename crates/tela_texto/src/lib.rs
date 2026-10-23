@@ -28,16 +28,18 @@
 //!   plano, com a calha dos números); *Leitor* (acima disso e até 32 MiB: só leitura, sem `TextEdit`, desenhado por
 //!   linha, só as linhas da vista, com as mesmas cores); *Falhou* (acima de 32 MiB, UTF-16, arquivo sumido: o erro do
 //!   núcleo num aviso, com os botões da ficha).
-//! - **Faixa** (42 px): a folha do tipo e o nome; no JSON, a migalha do cursor (`conexoes › 0 › tempo_limite`) e, à
-//!   direita, o círculo de estado de 26 px (✓ verde e a dica "JSON válido", ou o ícone de erro com a frase na dica e no
-//!   rótulo; o clique leva o cursor ao erro) e o botão **Formatar** (desligado com o JSON inválido, com a dica
-//!   "Corrija o erro para formatar"). No leitor, a etiqueta "Somente leitura" no lugar do Formatar.
+//! - **Faixa** (42 px), só no JSON (U4 da revisão de UI de 22/10/2026: o nome já está na aba, e o TXT fica sem
+//!   faixa): a migalha do cursor a partir da raiz (`raiz › conexoes › 0 › tempo_limite`) e, à direita, o círculo de
+//!   estado de 26 px (✓ verde e a dica "JSON válido", ou o ícone de erro com a frase na dica e no rótulo; o clique leva
+//!   o cursor ao erro) e o botão **Formatar** (desligado com o JSON inválido, com a dica "Corrija o erro para
+//!   formatar"); no leitor, sem o Formatar.
 //! - **Faixa de erro** (JSON inválido, prancheta 15, revisão de UI de 19/10/2026): embaixo da faixa, enquanto o JSON
 //!   estiver inválido, a faixa de erro da Consulta SQL (`.erro`) com "Linha 14, coluna 7:" em `--perigo`, o motivo em
 //!   `--t2` e o botão [`IR_PARA_O_ERRO`], que põe o cursor no erro (no leitor, rola até a linha dele). O editor e o
 //!   leitor ficam com o que sobra embaixo dela.
 //! - **Rodapé** (34 px): "24 linhas", "· Espaços: 2" (JSON; "Tabulação", "Sem recuo"), "· Sem cores acima de 200 KB" e,
-//!   à direita, "Linha 9, coluna 25".
+//!   à direita, "Linha 9, coluna 25" e a contagem da busca da barra ("3 de 41"). No leitor, as linhas, o tamanho e a
+//!   etiqueta "Somente leitura".
 //! - **Propriedades**: no JSON, a *Estrutura do documento* (árvore sob demanda, 200 filhos por página, o nó ativo é o
 //!   do cursor; com o JSON inválido, a última versão válida esmaecida) e o *Arquivo* (com Codificação e Fim de linha);
 //!   no texto, *Texto* (Codificação, Fim de linha, Linhas, Caracteres) e *Arquivo*.
@@ -108,6 +110,8 @@ pub const MSG_MUDOU_NO_DISCO: &str =
 
 /// O botão da faixa de erro do JSON inválido, que leva o cursor ao erro.
 pub const IR_PARA_O_ERRO: &str = "Ir para o erro";
+/// O começo da migalha do JSON, o nome que a estrutura das Propriedades dá ao valor de cima.
+pub const RAIZ_DA_MIGALHA: &str = "raiz";
 /// A dica do Formatar desligado pelo JSON inválido.
 const DICA_FORMATAR_COM_ERRO: &str = "Corrija o erro para formatar";
 
@@ -658,13 +662,13 @@ impl TelaTexto {
 
     // ---------------------------------------------------------------------------------------- faixa e rodapé
 
+    /// A faixa do JSON (o TXT não tem faixa: o nome já está na aba, U4 da revisão de UI de 22/10/2026): a migalha do
+    /// ponto do cursor, a partir da raiz (`raiz › conexoes › 0 › tempo_limite`), e, na ponta direita, o círculo de
+    /// estado e o Formatar.
     fn faixa_do_arquivo(&mut self, ui: &mut Ui) {
         let egui = ui.ctx().clone();
         let cursor = self.cursor(&egui);
         let e = &paleta(ui).estudio;
-        let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
-        icones::pintar(ui.painter(), r, self.icone(), e.t2);
-        // a migalha: o nome, e no JSON o caminho do cursor (`conexoes › 0 › tempo_limite`)
         let nomes = match &mut self.corpo {
             Corpo::Editor(ed) if self.tipo == TipoDeTexto::Json => {
                 let caminho = ed.posicao(cursor).caminho.clone();
@@ -676,8 +680,8 @@ impl TelaTexto {
             ui.spacing_mut().item_spacing.x = 4.0;
             ui.add_space(-1.0);
             let ultimo = nomes.len();
-            let cor = if ultimo == 0 { e.t } else { e.t2 };
-            texto(ui, &self.nome, 12.0, cor);
+            let cor = if ultimo == 0 { e.t } else { e.t3 };
+            texto(ui, RAIZ_DA_MIGALHA, 12.0, cor);
             for (i, nome) in nomes.iter().enumerate() {
                 let (r, _) = ui.allocate_exact_size(vec2(11.0, 11.0), Sense::hover());
                 icones::pintar(ui.painter(), r, Icone::SetaDireita, e.t3);
@@ -687,20 +691,10 @@ impl TelaTexto {
                     ui.painter().galley(rect.min, g, e.t);
                     resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, nome));
                 } else {
-                    texto(ui, nome, 12.0, e.t2);
+                    texto(ui, nome, 12.0, e.t3);
                 }
             }
         });
-        let busca = self.busca.rotulo();
-        if self.tipo != TipoDeTexto::Json && !matches!(self.corpo, Corpo::Leitor(_)) {
-            // a contagem da busca da barra ("3 de 41"), na ponta direita
-            if let Some(rotulo) = &busca {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
-                });
-            }
-            return;
-        }
         let leitor = matches!(self.corpo, Corpo::Leitor(_));
         let veredito = match &self.corpo {
             Corpo::Editor(ed) => Some(ed.json.veredito()),
@@ -710,9 +704,7 @@ impl TelaTexto {
         let mut formatar_clicado = false;
         let mut ir_ao_erro = None;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if leitor {
-                pill(ui, "Somente leitura", TipoPill::Neutra);
-            } else if veredito.is_some() {
+            if !leitor && veredito.is_some() {
                 let pode = matches!(veredito, Some(json::Veredito::Valido));
                 let dica = match veredito {
                     Some(json::Veredito::Invalido(_)) => DICA_FORMATAR_COM_ERRO,
@@ -724,9 +716,6 @@ impl TelaTexto {
             if let Some(v) = &veredito {
                 ir_ao_erro = circulo_de_estado(ui, v);
             }
-            if let Some(rotulo) = &busca {
-                estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
-            }
         });
         if formatar_clicado {
             self.formatar_agora(&egui);
@@ -736,10 +725,14 @@ impl TelaTexto {
         }
     }
 
+    /// O rodapé: as linhas, o recuo do JSON e, na ponta direita, a posição do cursor e a contagem da busca da barra
+    /// ("3 de 41"); no leitor, as linhas, o tamanho e "Somente leitura" (a contagem e a posição moram no rodapé, U4
+    /// da revisão de UI de 22/10/2026).
     fn rodape_do_arquivo(&mut self, ui: &mut Ui) {
         let egui = ui.ctx().clone();
         let cursor = self.cursor(&egui);
         let tipo = self.tipo;
+        let busca = self.busca.rotulo();
         let e = &paleta(ui).estudio;
         match &mut self.corpo {
             Corpo::Editor(ed) => {
@@ -762,11 +755,20 @@ impl TelaTexto {
                 };
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     texto(ui, &format!("Linha {linha}, coluna {coluna}"), 12.0, e.t3);
+                    if let Some(rotulo) = &busca {
+                        estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
+                    }
                 });
             }
             Corpo::Leitor(l) => {
                 texto(ui, &linhas_em_texto(l.n_linhas()), 12.0, e.t2);
                 texto(ui, &format!("· {}", tamanho_em_texto(l.carregado.bytes)), 12.0, e.t3);
+                pill(ui, "Somente leitura", TipoPill::Neutra);
+                if let Some(rotulo) = &busca {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        estado::busca::rotulo_na_faixa(ui, rotulo, e.t2);
+                    });
+                }
             }
             _ => {}
         }
@@ -816,10 +818,12 @@ impl TelaTexto {
 }
 
 impl estado::Documento for TelaTexto {
+    /// Só o JSON tem faixa (a migalha, o estado e o Formatar); o TXT não tem nada nela que a aba não diga.
     fn anatomia(&self) -> Anatomia {
+        let base = if self.tipo == TipoDeTexto::Json { Anatomia::default().com_faixa() } else { Anatomia::default() };
         match self.corpo {
-            Corpo::Editor(_) | Corpo::Leitor(_) => Anatomia::default().com_faixa().com_rodape().rolagem_propria(),
-            Corpo::Inicial | Corpo::Lendo | Corpo::Falhou(_) => Anatomia::default().com_faixa(),
+            Corpo::Editor(_) | Corpo::Leitor(_) => base.com_rodape().rolagem_propria(),
+            Corpo::Inicial | Corpo::Lendo | Corpo::Falhou(_) => base,
         }
     }
 
