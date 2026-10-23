@@ -1187,7 +1187,8 @@ impl estado::Documento for TelaConsulta {
         }
         // com mais de uma célula selecionada, as contas da seleção à esquerda da posição (A.3)
         let executando = self.execucao.as_ref().is_some_and(|e| e.pedido == Pedido::Executar);
-        let resumo = if executando { None } else { self.cards.get_mut(self.escolhido).and_then(Card::resumo_da_selecao) };
+        let resumo =
+            if executando { None } else { self.cards.get_mut(self.escolhido).and_then(Card::resumo_da_selecao) };
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             texto(ui, &posicao, 12.0, t3);
             if let Some(resumo) = &resumo {

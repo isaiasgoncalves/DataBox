@@ -23,7 +23,8 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
     // sem faixa (U4 da revisão de UI de 22/10/2026): o caminho inteiro fica na dica da aba e nas Propriedades
     let aberto = h.state().estado().banco.as_ref().map(|b| b.caminho.display().to_string()).unwrap_or_default();
     let doc = documento(&h);
-    let no_alto = h.query_all_by_label(&aberto).any(|n| n.rect().top() > doc.top() && n.rect().bottom() < doc.top() + 42.0);
+    let no_alto =
+        h.query_all_by_label(&aberto).any(|n| n.rect().top() > doc.top() && n.rect().bottom() < doc.top() + 42.0);
     assert!(!no_alto, "nada de faixa com o caminho no alto do documento");
     // (as Propriedades já dizem o caminho: a dica é um nó a mais com ele)
     let antes = h.query_all_by_label(&aberto).count();
