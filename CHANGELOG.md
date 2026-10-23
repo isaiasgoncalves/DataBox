@@ -32,6 +32,10 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   "…/dados/vendas_2025.csv" no lugar de "/h…s/vendas_2025.csv", com as pastas mais perto do arquivo inteiras. O nome
   que não cabe sozinho é cortado no meio, com a extensão inteira ("vendas_20…25.csv"), e não mais no fim
   ("vendas_2025.c…"). O caminho inteiro continua na dica.
+- **A seta da ordenação do CSV fica junto do nome da coluna** (revisão de UI de 22/10/2026, U7), como nos Dados e na
+  Consulta: "quantidade ▲". Antes ela ia na outra ponta do cabeçalho, longe do nome nas colunas de números. Com o
+  ponteiro no cabeçalho, a seta aparece apagada no mesmo lugar, para mostrar onde clicar; o clique direito nela abre o
+  menu da coluna, como no resto do cabeçalho.
 
 ## [0.2.3] - 2026-10-22
 

@@ -143,7 +143,9 @@ impl GradeCsv {
         self.visivel.filter(|v| v.contains(pos)).map(|_| pos)
     }
 
-    /// O centro do `th` de uma coluna de dados (os testes clicam nele).
+    /// Um ponto do `th` de uma coluna de dados onde o clique é do `th` (os testes clicam nele): a 10px da ponta
+    /// esquerda, na altura do meio. O meio não serve: com a seta da ordem logo depois do nome (U7), ele pode cair
+    /// nela, conforme a largura do nome na fonte da máquina.
     pub(crate) fn centro_cabecalho(&self, coluna: usize) -> Option<Pos2> {
         let origem = self.origem?;
         let c = PRIMEIRA_DE_DADOS + coluna;
@@ -151,7 +153,7 @@ impl GradeCsv {
         let x0: f32 = larguras.iter().take(c).sum();
         let w = *larguras.get(c)?;
         let visivel = self.visivel?;
-        Some(pos2(origem.x + x0 + w / 2.0, visivel.top() + self.nucleo.altura_do_cabecalho() / 2.0))
+        Some(pos2(origem.x + x0 + 10.0_f32.min(w / 2.0), visivel.top() + self.nucleo.altura_do_cabecalho() / 2.0))
     }
 }
 
