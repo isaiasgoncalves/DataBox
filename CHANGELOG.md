@@ -22,6 +22,11 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   CSV mostravam "236 de 1.180 linhas" na barra dos filtros e "Linhas 1–24 de 236" no rodapé. Agora o rodapé diz tudo,
   "Linhas 1–24 de 236 · filtradas de 1.180" (no CSV, "contando…" enquanto a vista é calculada), e a barra dos filtros
   fica com as condições e o "Limpar filtros".
+- **O vazio da grade mostra as colunas** (revisão de UI de 22/10/2026, U5): uma tabela sem linhas, um CSV só com o
+  cabeçalho, um filtro que não acha nada e uma consulta que não devolve linhas mantêm o cabeçalho da grade (os nomes
+  e as pastilhas de tipo), com a frase embaixo dele. A ação vai num botão, em vez de mandar procurar na barra:
+  **Nova linha** na tabela e no CSV que gravam ("Nenhuma linha nesta tabela.", "Nenhuma linha neste arquivo.") e
+  **Limpar filtros** quando o filtro não acha nada.
 
 ## [0.2.3] - 2026-10-22
 
