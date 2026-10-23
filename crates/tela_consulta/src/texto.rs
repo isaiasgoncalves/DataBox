@@ -170,7 +170,7 @@ pub fn achar_sem_acento(texto: &str, termo: &str, desde: usize) -> Option<(usize
     (desde..=ultimo).chain(0..desde).find(|&i| t[i..i + p.len()] == p[..]).map(|i| (i, i + p.len()))
 }
 
-/// A linha e a coluna (do 1) do caractere `cursor` (a faixa da Consulta: "Linha 9, coluna 25").
+/// A linha e a coluna (do 1) do caractere `cursor` (o rodapé da Consulta: "Linha 9, coluna 25").
 pub(crate) fn linha_e_coluna(texto: &str, cursor: usize) -> (usize, usize) {
     let (mut linha, mut coluna) = (1, 1);
     for c in texto.chars().take(cursor) {
