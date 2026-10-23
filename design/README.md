@@ -40,6 +40,39 @@ fica na pasta: é a fonte que o `logo_final.py` lê.
 | Janelas e estados | `Colunas.dc.html` · `DadosArrastar.dc.html` | Copiar, colar e trazer colunas; arrastar a aba de um painel |
 | Telas futuras | `FuturoPerfil.dc.html` · `FuturoGrafico.dc.html` · `FuturoConexao.dc.html` | Do roadmap: perfil de colunas nas Propriedades, gráfico de uma consulta com Abrir no Python, conexão ao PostgreSQL |
 
+Revisão de UI de 22/10/2026 (debate do designer com o PO, depois da 0.2.3; o debate inteiro, os achados U1 a U11 e
+as capturas de antes estão em [`revisao-ui-0.3.md`](revisao-ui-0.3.md) e na página "Propostas 0.3" do canvas).
+Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
+
+- **Números na grade (U1):** os Dados e o resultado da Consulta mostram INTEGER e REAL no formato do idioma da
+  interface (milhar, vírgula, algarismos tabulares), **sem arredondar**: todas as casas gravadas aparecem. A edição,
+  a ficha da linha e o Copiar levam o valor gravado ("14542.56"). Preferências › Aparência ganha "Números na grade:
+  Formatados (padrão) · Como gravados". O CSV e o Excel não mudam (lá o dado é o texto do arquivo e o formato da
+  célula). Vai junto com a P7, que faz o `interface::formato` seguir o idioma.
+- **Rolagem contínua nos Dados (U2):** sai o "100 por página" e o "Página 1 de 1"; os Dados rolam como o CSV, o Excel
+  e a Consulta, com "Linhas a–b de n" no rodapé e Ctrl+Home/Ctrl+End até as bordas. Na 0.3, no marco M1, antes do
+  perfil.
+- **Uma 0.2.4 de acabamento**, antes da varredura da tradução, com um PR pequeno por assunto:
+  - **contagem num lugar só (U3):** no rodapé, "Linhas 1–24 de 236 · filtradas de 1.180"; a barra de filtros perde a
+    contagem e guarda na ponta o "Limpar filtros" e, na busca, o "3 de 41";
+  - **faixa do topo com uma regra só (U4):** a faixa existe só para controle ou contexto que a aba não diz (filtros,
+    a migalha do JSON, as fontes da Consulta); a posição do cursor e as contagens moram no rodapé, à direita. O JSON
+    troca o nome do arquivo pela migalha do ponto do cursor (raiz › conexoes › [0] › arquivo), com o sinal de válido e
+    o Formatar; o TXT e a Visão geral ficam sem faixa; a Consulta leva "Linha, coluna" para o rodapé. **Toda aba de
+    documento mostra o caminho inteiro na dica.** A faixa das fontes da Consulta (banco e arquivos da bancada, com
+    "+ Arquivo") vem com a P4, na 0.3;
+  - **vazio com as colunas à vista (U5):** a tabela sem linhas mantém o cabeçalho; o corpo diz "Nenhuma linha em
+    extra_03" com o botão principal "Nova linha"; o filtro que não acha nada diz "Nenhuma linha com estes filtros"
+    com "Limpar filtros". Vale para os Dados, o CSV e o resultado vazio da Consulta;
+  - **caminhos cortados (U6):** guardam o nome inteiro e a pasta-mãe e cortam do começo ("…/dados/vendas_2025.csv");
+    só um nome que não cabe sozinho corta no meio, guardando a extensão. O caminho inteiro na dica;
+  - **seta da ordenação (U7)** logo depois do nome da coluna, também nas numéricas;
+  - **Visão geral (U8):** a linha inteira abre a tabela (duplo clique e Enter); "Colunas" vira botão de ícone no hover
+    e no foco; VIRTUAL e SEM ROWID viram etiqueta ao lado do nome; a coluna Tipo sai e entra a de Índices;
+  - **rodapé da planilha (U9):** "Vendas › E6 · Somente leitura · 1.204 linhas · 6 colunas" (o intervalo e as
+    mescladas ficam nas Propriedades);
+  - **Consulta vazia (U10):** sem resultado, o editor ocupa a altura toda; a primeira execução abre o resultado.
+
 Revisão de UI de 19/10/2026 (uso do app pelo PO), já nas pranchetas; cada prancheta tocada ganhou blocos de CSS
 "revisão de UI de 19/10/2026" e de docas no fim do `<style>`:
 

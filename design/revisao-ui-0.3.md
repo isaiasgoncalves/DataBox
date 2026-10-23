@@ -178,10 +178,12 @@ desenho para três superfícies decididas em 21/10/2026:
 
 ## Decisões para o Isaías
 
-1. **U1 Números:** formatar INTEGER e REAL nos Dados e na Consulta (sem arredondar, cru no Copiar), com a opção
-   "Como gravados" nas Preferências? Ou manter cru em todo lugar e deixar só o rodapé formatado?
-2. **U2 Rolagem contínua nos Dados:** na 0.3 (M1, antes do perfil) ou depois da 0.3?
-3. **Onde entram os ganhos rápidos** (U3, U5, U6, U7, U8, U9, U10, e a parte da U4 sem a Consulta): numa **0.2.4 de
-   acabamento** antes da varredura da tradução (menos texto mexido depois do `t!`), ou dentro da 0.3?
-4. **U4 Visão geral:** sem faixa e com o caminho na dica de toda aba (conciliado), ou manter a faixa com o caminho?
-5. **U11:** registrar as quatro regras no guia (`design/README.md`)?
+Decididas em 22/10/2026 (registradas na "Revisão de UI de 22/10/2026" do [`README.md`](README.md)):
+
+1. ~~U1 Números~~ **Decidido:** formatar INTEGER e REAL nos Dados e na Consulta, sem arredondar, com o cru no Copiar,
+   na edição e na ficha, e a opção "Como gravados" nas Preferências; CSV e Excel como estão. Junto com a P7.
+2. ~~U2 Rolagem contínua nos Dados~~ **Decidido:** na 0.3, no marco M1, antes do perfil.
+3. ~~Ganhos rápidos~~ **Decidido:** numa 0.2.4 de acabamento, antes da varredura da tradução, um PR por assunto (U3,
+   U4 sem a faixa das fontes da Consulta, U5, U6, U7, U8, U9, U10).
+4. ~~U4 Visão geral~~ **Decidido:** sem faixa, e o caminho inteiro na dica de toda aba de documento.
+5. **U11 (em aberto):** registrar no guia a regra dos ícones nos menus e a de nada com largura fixa pelo texto.
