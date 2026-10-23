@@ -53,7 +53,7 @@ fn busca_filtro_e_marcadas() {
     tabela.rota =
         tabela.rota.com_dados(ConsultaDados { busca: "ana".into(), filtros: vec![filtro], ..Default::default() });
     let mut h = abrir_com(&amb, tabela, Tema::Claro, Ganchos::default());
-    assert_eq!(retrato(&h).faixa, "2 de 60 linhas");
+    assert_eq!(retrato(&h).total, "2 de 60 linhas");
     clicar_marca(&mut h, None);
     afastar_mouse(&mut h);
     assert_eq!(retrato(&h).marcadas, 2);
