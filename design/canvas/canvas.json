@@ -190,6 +190,87 @@
       "w": 1440,
       "x": 0,
       "y": 0
+    },
+    "Propostas03Hoje.dc.html": {
+      "expand": "fill",
+      "h": 1560,
+      "page": "propostas-03",
+      "title": "Hoje, na 0.2.3: onde estão os achados U1 a U8",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Propostas03Grade.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U1 U2 U3 · Uma grade só: números no formato do idioma, rolagem contínua, contagem no rodapé",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Propostas03Vazia.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U5 · Dados: o filtro que não acha nada, com o cabeçalho e Limpar filtros",
+      "w": 1440,
+      "x": 1520,
+      "y": 1020
+    },
+    "Propostas03Faixas.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U4 U6 · JSON: a migalha começa na raiz; o caminho perde o começo",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Propostas03Perfil.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "P1 · Perfil da tabela em aba, com a vista Perfil da coluna",
+      "w": 1440,
+      "x": 1520,
+      "y": 2040
+    },
+    "Propostas03Consulta.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U4 P4 · Consulta: as fontes na faixa, a posição do cursor no rodapé",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "Propostas03VaziaCsv.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U5 · CSV só com o cabeçalho: o vazio com Nova linha",
+      "w": 1440,
+      "x": 3040,
+      "y": 1020
+    },
+    "Propostas03Visao.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U4 U8 · Visão geral sem faixa; o tipo ao lado do nome, Colunas em ícone",
+      "w": 1440,
+      "x": 4560,
+      "y": 1020
+    },
+    "Propostas03Preferencias.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "P7 U1 · Preferências › Aparência: Idioma e Números na grade",
+      "w": 1440,
+      "x": 3040,
+      "y": 2040
     }
   },
   "createdOnFiles": {
@@ -236,6 +317,15 @@
       "w": 240,
       "x": 0,
       "y": -300
+    },
+    "propostas03": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "propostas-03",
+      "text": "Propostas de UI para a 0.3 (debate designer × PO, 22/10/2026)",
+      "w": 240,
+      "x": 0,
+      "y": -300
     }
   },
   "order": [
@@ -259,7 +349,16 @@
     "DadosArrastar.dc.html",
     "FuturoPerfil.dc.html",
     "FuturoGrafico.dc.html",
-    "FuturoConexao.dc.html"
+    "FuturoConexao.dc.html",
+    "Propostas03Hoje.dc.html",
+    "Propostas03Grade.dc.html",
+    "Propostas03Vazia.dc.html",
+    "Propostas03Faixas.dc.html",
+    "Propostas03Perfil.dc.html",
+    "Propostas03Consulta.dc.html",
+    "Propostas03VaziaCsv.dc.html",
+    "Propostas03Visao.dc.html",
+    "Propostas03Preferencias.dc.html"
   ],
   "pages": [
     {
@@ -277,6 +376,10 @@
     {
       "id": "futuro",
       "name": "Telas futuras"
+    },
+    {
+      "id": "propostas-03",
+      "name": "Propostas 0.3"
     }
   ],
   "title": "DataBox — design"

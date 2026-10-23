@@ -89,7 +89,7 @@ fn tabela_grande_com_busca_mostra_a_pagina_antes_da_contagem() {
     assert_eq!(r.linhas, 100);
     assert_eq!(r.contagem_linhas, "Linhas 1–100 de contando…");
     assert_eq!(r.pagina_atual, "Página 1");
-    assert_eq!(r.faixa, "contando…");
+    assert_eq!(r.total, "contando…");
     assert!(r.proxima_habilitada, "o › segue o tem_mais");
     afastar_mouse(&mut h);
     capturar(&mut h, "dados-contando-claro.png");
@@ -114,7 +114,7 @@ fn tabela_grande_com_busca_mostra_a_pagina_antes_da_contagem() {
     esperar_que(&mut h, |r| r.contagem_linhas == format!("Linhas 101–200 de {total}"));
     let r = retrato(&h);
     assert_eq!(r.pagina_atual, format!("Página 2 de {}", n.div_ceil(100)));
-    assert_eq!(r.faixa, format!("{total} linhas"), "sem o total da tabela, só as achadas");
+    assert_eq!(r.total, format!("{total} linhas"), "sem o total da tabela, só as achadas");
     // a contagem já conhecida vale para as outras páginas da mesma busca: a página vem sem contar e sem pedir
     // outra contagem
     let antes = contagens.lock().unwrap().iter().filter(|(b, _)| b.as_deref() == Some("login")).count();
@@ -137,7 +137,7 @@ fn tabela_grande_com_filtro_conta_a_parte_e_completa_o_total() {
     let filtro = FiltroDigitado { coluna: "tipo".into(), op: banco::Operador::Contem, valor: "login".into() };
     tabela.rota = tabela.rota.com_dados(ConsultaDados { filtros: vec![filtro.clone()], ..Default::default() });
     let mut h = abrir_com(&amb, tabela, Tema::Claro, Ganchos::default());
-    esperar_que(&mut h, |r| r.faixa.ends_with(" linhas"));
+    esperar_que(&mut h, |r| r.total.ends_with(" linhas"));
     let id = amb.estado.banco_id();
     let n = amb.servico.contagem(&id, "eventos", None, &[filtro.para_banco()], None).expect("contagem").linhas;
     assert_eq!(retrato(&h).pagina_atual, format!("Página 1 de {}", n.div_ceil(100)));
@@ -159,7 +159,7 @@ fn contagem_que_falha_deixa_as_linhas_nao_contadas() {
     tabela.completa.info.linhas = None;
     tabela.rota = tabela.rota.com_dados(ConsultaDados { busca: "login".into(), ..Default::default() });
     let mut h = abrir_com(&amb, tabela, Tema::Claro, ganchos);
-    esperar_que(&mut h, |r| r.faixa == "linhas não contadas");
+    esperar_que(&mut h, |r| r.total == "linhas não contadas");
     let r = retrato(&h);
     assert_eq!(r.contagem_linhas, "Linhas 1–100 de …");
     assert_eq!(r.pagina_atual, "Página 1");
@@ -197,7 +197,7 @@ fn leitura_substituida_e_ignorada_ao_digitar_rapido() {
     for letra in ["9", "9", "9", "9", "1"] {
         digitar(&mut h, letra);
     }
-    esperar_que(&mut h, |r| !r.carregando && r.faixa.ends_with("linhas") && r.linhas > 0);
+    esperar_que(&mut h, |r| !r.carregando && r.total.ends_with("linhas") && r.linhas > 0);
     let r = retrato(&h);
     assert_eq!(ultima_rota(&h).map(|c| c.busca), Some("99991".into()));
     assert!(r.erro.is_none(), "nada de erro na tela");
