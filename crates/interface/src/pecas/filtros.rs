@@ -2,9 +2,10 @@
 //! do documento, prancheta 7; revisão de UI de 19/10/2026; o CSV não tem faixa desde a 0.2.3):
 //!
 //! - [`filtros`]: "Filtros" (o `.tit` em `--t3`), uma etiqueta por condição ([`chip_filtro`]: o clique abre a condição
-//!   no popover, o × a tira), "+ Condição" e, à direita, a contagem ([`ContagemFiltros`]: "41 de 60 linhas",
-//!   "contando…", "linhas não contadas" com o motivo na dica) e "Limpar filtros" (só com condição);
-//!   [`filtros_com_direita`] põe mais alguma coisa na ponta direita (a contagem da busca do CSV, "3 de 41");
+//!   no popover, o × a tira), "+ Condição" e, à direita, "Limpar filtros" (só com condição);
+//!   [`filtros_com_direita`] põe mais alguma coisa na ponta direita (a contagem da busca do CSV, "3 de 41"). A
+//!   contagem das linhas não mora aqui: fica no rodapé da grade, "Linhas 1–24 de 236 · filtradas de 1.180" (U3 da
+//!   revisão de UI de 22/10/2026; até a 0.2.3, "236 de 1.180 linhas" na ponta direita desta barra);
 //! - [`barra_filtros`]: a `.barra-filtros` de 38px ([`ALTURA_BARRA_FILTROS`], `padding:0 10px 0 14px`, `gap:8px` e o
 //!   fio `--b` embaixo), para quem não põe os filtros na faixa de contexto;
 //! - [`popover_condicao`]: o popover de vidro da condição (sem prancheta): Coluna, Operador, Valor (fora nos
@@ -18,15 +19,14 @@ use std::hash::Hash;
 use egui::{Align, Id, Layout, Rect, Sense, Stroke, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, vec2};
 
 use crate::icones::Icone;
-use crate::pecas::avisos::carregando;
 use crate::pecas::botao::{Botao, LADO_PEQUENO};
 use crate::pecas::campos::{Entrada, Select, campo, enter_no_campo};
 use crate::pecas::popover::Popover;
 use crate::pecas::rotulos::chip_filtro;
-use crate::pecas::texto::{galley_tit, texto};
+use crate::pecas::texto::galley_tit;
 use crate::tema::paleta;
 
-/// A contagem à espera do total (a tabela grande com busca ou filtro, a vista do CSV em cálculo).
+/// A contagem do rodapé à espera do total (a tabela grande com busca ou filtro, a vista do CSV em cálculo).
 pub const CONTANDO: &str = "contando…";
 /// A contagem que falhou (o motivo vai na dica).
 pub const LINHAS_NAO_CONTADAS: &str = "linhas não contadas";
@@ -51,19 +51,6 @@ pub struct EtiquetaFiltro<'a> {
     pub valor: Option<&'a str>,
 }
 
-/// A contagem à direita dos filtros.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ContagemFiltros {
-    /// "41 de 60 linhas", "60 linhas".
-    Texto(String),
-    /// "contando…" com o ponto pulsante.
-    Contando,
-    /// "linhas não contadas", com o motivo na dica.
-    NaoContadas(String),
-    /// Nada (a página ainda não chegou; o CSV sem filtro).
-    Nada,
-}
-
 /// O que a pessoa fez nos filtros neste quadro.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RespostaFiltros {
@@ -77,10 +64,10 @@ pub struct RespostaFiltros {
     pub nova_condicao: Rect,
 }
 
-/// "Filtros", as etiquetas, "+ Condição" e, à direita, a contagem e "Limpar filtros" (só com etiqueta), num `Ui` em
-/// linha (a faixa de contexto ou a [`barra_filtros`]).
-pub fn filtros(ui: &mut Ui, etiquetas: &[EtiquetaFiltro<'_>], contagem: &ContagemFiltros) -> RespostaFiltros {
-    filtros_com_direita(ui, etiquetas, contagem, |_| {})
+/// "Filtros", as etiquetas, "+ Condição" e, à direita, "Limpar filtros" (só com etiqueta), num `Ui` em linha (a faixa
+/// de contexto ou a [`barra_filtros`]).
+pub fn filtros(ui: &mut Ui, etiquetas: &[EtiquetaFiltro<'_>]) -> RespostaFiltros {
+    filtros_com_direita(ui, etiquetas, |_| {})
 }
 
 /// Os [`filtros`] com mais alguma coisa na ponta direita, depois do "Limpar filtros" (a contagem da busca da barra do
@@ -88,7 +75,6 @@ pub fn filtros(ui: &mut Ui, etiquetas: &[EtiquetaFiltro<'_>], contagem: &Contage
 pub fn filtros_com_direita(
     ui: &mut Ui,
     etiquetas: &[EtiquetaFiltro<'_>],
-    contagem: &ContagemFiltros,
     direita: impl FnOnce(&mut Ui),
 ) -> RespostaFiltros {
     let p = paleta(ui);
@@ -126,18 +112,6 @@ pub fn filtros_com_direita(
         direita(ui);
         if !etiquetas.is_empty() && ui.add(Botao::ghost("Limpar filtros").pequeno()).clicked() {
             limpar = true;
-        }
-        match contagem {
-            ContagemFiltros::Texto(t) => {
-                texto(ui, t, 12.0, t3);
-            }
-            ContagemFiltros::Contando => {
-                carregando(ui, CONTANDO);
-            }
-            ContagemFiltros::NaoContadas(motivo) => {
-                texto(ui, LINHAS_NAO_CONTADAS, 12.0, t3).on_hover_text(motivo);
-            }
-            ContagemFiltros::Nada => {}
         }
     });
     RespostaFiltros { abrir, tirar, limpar, nova_condicao: b.rect }

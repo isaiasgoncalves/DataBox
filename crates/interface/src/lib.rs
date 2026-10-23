@@ -101,7 +101,7 @@
 //!   ("22/09/2026 10:31"), [`formato::formatar_ms`] ("320 ms", o `tempo()` da Consulta SQL),
 //!   [`formato::formatar_segundos`] ("4,6 s", o `segundos()` da aba Dados), [`formato::plural`]
 //!   ("60 linhas"), [`formato::contagem_linhas`] ("Linhas 1–41 de 41", o rodapé das grades),
-//!   [`formato::contagem_filtrada`] ("41 de 60 linhas", a contagem dos filtros), [`formato::nome_do_caminho`], [`formato::real_js`] (o `String(número)` do JavaScript:
+//!   [`formato::contagem_filtrada`] ("41 de 60 linhas"), [`formato::filtradas_de`] ("filtradas de 60", no rodapé), [`formato::nome_do_caminho`], [`formato::real_js`] (o `String(número)` do JavaScript:
 //!   `17051.0` → "17051", `1e-7` → "1e-7"); variantes `_opt` devolvem "—" para `None`; [`formato::sem_acento`] (a
 //!   chave das buscas e dos filtros: sem acento e em minúsculas) e [`formato::letra_sem_acento`] (uma letra, sem
 //!   mudar a caixa das outras).
@@ -211,8 +211,8 @@
 //!   - [`pecas::popover::Popover`]`::new(id, ancora).largura(…).mostrar(ctx, |ui| …)` (o vidro fosco preso embaixo de
 //!     uma âncora, por cima do documento; fecha com o Esc ou o clique fora: a condição de filtro dos Dados).
 //!   - [`pecas::filtros`]: os filtros das grades, iguais nos Dados e no CSV (revisão de UI de 19/10/2026) —
-//!     [`pecas::filtros::filtros`]`(ui, &[EtiquetaFiltro], &ContagemFiltros) -> RespostaFiltros { abrir, tirar,
-//!     limpar, nova_condicao }` ("Filtros", as etiquetas, "+ Condição", a contagem e "Limpar filtros"),
+//!     [`pecas::filtros::filtros`]`(ui, &[EtiquetaFiltro]) -> RespostaFiltros { abrir, tirar, limpar,
+//!     nova_condicao }` ("Filtros", as etiquetas, "+ Condição" e "Limpar filtros"; a contagem fica no rodapé),
 //!     [`pecas::filtros::filtros_com_direita`]`(…, |ui| …)` (o mesmo, com mais alguma coisa na ponta direita: a contagem
 //!     da busca do CSV), [`pecas::filtros::barra_filtros`] (a `.barra-filtros` de 38px do CSV) e
 //!     [`pecas::filtros::popover_condicao`]`(ctx, id, &mut CondicaoEmEdicao, colunas, operadores, sem_valor) ->
