@@ -72,6 +72,18 @@ Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
   - **rodapé da planilha (U9):** "Vendas › E6 · Somente leitura · 1.204 linhas · 6 colunas" (o intervalo e as
     mescladas ficam nas Propriedades);
   - **Consulta vazia (U10):** sem resultado, o editor ocupa a altura toda; a primeira execução abre o resultado.
+- **Regras do guia (U11)**, nas seções abaixo:
+  - **ícone em item de menu só quando o mesmo verbo tem botão na barra de ferramentas** (Abrir pasta, Abrir arquivo,
+    Salvar, Novo, Excluir, Filtrar, Nova consulta, Exportar…): o menu ensina a barra. Vale para os menus da barra e os
+    de contexto, e revê a de 20/10/2026 (silhueta em todo item que a biblioteca tem). Saem os ícones de Novo banco,
+    Colunas, Renomear a tabela, Propriedades em janela própria, Fazer cópia de segurança e as manutenções do menu
+    Banco; o texto deles fica alinhado com os outros. Ainda não implementado;
+  - **a faixa de cima é para controle e contexto que a aba não diz; contagens e a posição do cursor ficam no rodapé,
+    à direita** (U4);
+  - **toda aba de documento tem o caminho inteiro na dica** (U4);
+  - **nenhum botão, etiqueta, campo ou coluna com largura fixa pelo texto em português** (os três botões grandes do
+    Início, a busca de 250 px, a altura fixa das Preferências): a largura sai do texto, e o pseudoidioma da P7 confere
+    nas capturas.
 
 Revisão de UI de 19/10/2026 (uso do app pelo PO), já nas pranchetas; cada prancheta tocada ganhou blocos de CSS
 "revisão de UI de 19/10/2026" e de docas no fim do `<style>`:
@@ -147,7 +159,8 @@ Pedidos de 15/10/2026 que valem para a implementação, além das pranchetas 12 
 - **Menu Arquivo:** ícones sólidos de 24 px (prancheta 4), decidido em 16/10/2026. **Revisto em 20/10/2026:** todos os
   menus da barra usam as silhuetas de 14 px (item de menu é ação, como na barra de ferramentas); os sólidos ficam para
   os objetos, como os arquivos dos Abertos recentemente. Abertos recentemente e Preferências ficam sem silhueta até
-  haver o relógio e a engrenagem na biblioteca. A prancheta 4 ainda mostra os sólidos.
+  haver o relógio e a engrenagem na biblioteca. A prancheta 4 ainda mostra os sólidos. **Revisto em 22/10/2026
+  (U11):** a silhueta só vai no item cujo verbo tem botão na barra de ferramentas.
 
 Da revisão crítica de 15/10/2026, aplicada às pranchetas (as que se refazem inteiras saem de `janelas.py`,
 `preferencias.py` e `estados_novos.py`):
@@ -247,9 +260,13 @@ De cima para baixo:
     cabeçalhos de grade e de painel usam a mesma textura.
   - A aba ativa **não** tem barrinha colorida em cima.
 - **Todo documento tem a mesma anatomia:**
-  - em cima, a faixa de contexto: filtros como etiquetas, caminho no JSON, banco da consulta;
+  - em cima, a faixa de contexto, só para controle ou contexto que a aba não diz: filtros como etiquetas, a migalha
+    do JSON, as fontes da consulta (U4, 22/10/2026: o nome do arquivo e o caminho não entram, porque já estão na aba,
+    na dica dela e nas Propriedades; sem nada disso, o documento fica sem faixa);
   - no meio, o conteúdo;
-  - nas grades, um rodapé com contagem e páginas.
+  - embaixo, o rodapé: as contagens à esquerda ("Linhas 1–24 de 236 · filtradas de 1.180") e, à direita, a posição
+    do cursor, a contagem da busca e as contas da seleção.
+- **Abas:** a dica de toda aba de documento é o caminho inteiro do arquivo ou do banco (U4).
 - **Menus:** Exibir › Tema (Seguir o Windows, Claro, Escuro) e mostrar Explorador, Propriedades e Histórico;
   Ajuda › Atalhos do teclado; Exibir › Início (Alt+Home).
 - **Formato do CSV**: resumo no rodapé do documento, depois da contagem de linhas (separador, codificação, fim de linha; até a 0.2.2, em pílulas numa faixa que a 0.2.3 tirou); o detalhe e a troca ficam nas Propriedades: seção "Formato" (Separador,
@@ -257,6 +274,8 @@ De cima para baixo:
   modificado em).
 - **Textos:**
   - Nenhuma reticência em botões nem em itens de menu.
+  - Nenhuma largura fixa pelo texto em português (U11, 22/10/2026): botões, etiquetas, campos e colunas medem o
+    texto, para o inglês e os outros idiomas da P7 caberem.
   - Nada de legendas de uso redundantes, como "duplo clique numa célula para editar": ficam só as contagens, e as
     explicações vão para as dicas.
   - Caminhos, tipos, andamento da exportação e histórico de SQL usam a fonte da interface em peso semilight, não
