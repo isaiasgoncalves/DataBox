@@ -14,7 +14,7 @@
 //! TelaConsulta::soltar_execucao(&mut self) -> Option<Promessa<ResultadoConsulta>>
 //! TelaConsulta::interromper(&mut self, egui: &egui::Context, ctx: &mut Contexto)   // o Interromper (e o Esc)
 //! impl estado::Documento for TelaConsulta   // anatomia (faixa, rodapé, rolagem própria) · avisos (a transação) ·
-//!     faixa (o banco e a posição do cursor) · conteudo · rodape (linhas e tempo) · ofertas (Executar principal,
+//!     faixa (o banco) · conteudo · rodape (linhas e tempo; a posição do cursor) · ofertas (Executar principal,
 //!     Exportar, Buscar) · executar · busca ("Buscar no editor") · propriedades ("Execução" e "Tabelas") · status
 //!     ("SQL") · em_segundo_plano (o receber)
 //! ```
@@ -58,8 +58,8 @@
 //!
 //! # O que a tela faz
 //!
-//! - **Faixa** (42px): o cilindro de 16px e o nome do banco em `--t2`; na ponta direita, "Linha 9, coluna 25" em
-//!   `--t3`, do cursor do editor. Antes dela, com a transação aberta, o `.aviso` de atenção de ponta a ponta com "Há
+//! - **Faixa** (42px): o cilindro de 16px e o nome do banco em `--t2` ("Linha 9, coluna 25", do cursor do editor,
+//!   fica na ponta direita do rodapé, em `--t3`, desde a U4 da revisão de UI de 22/10/2026). Antes dela, com a transação aberta, o `.aviso` de atenção de ponta a ponta com "Há
 //!   uma transação aberta. As alterações só gravam no arquivo com COMMIT." e "Gravar (COMMIT)" / "Descartar
 //!   (ROLLBACK)" (este pergunta antes, na confirmação "Descartar a transação"); o fim mostra "Transação gravada." /
 //!   "Transação descartada." e recarrega os objetos. Erro do COMMIT/ROLLBACK vai para o toast de erro.
@@ -324,7 +324,7 @@ pub struct TelaConsulta {
     confirmacao: Option<Confirmacao>,
     /// (primeira tabela, sugestões do editor vazio), refeito só quando a primeira tabela muda.
     sugestoes: (Option<String>, Vec<String>),
-    /// A posição do cursor na faixa ("Linha 4, coluna 1"), com o cursor e a versão do texto de onde saiu.
+    /// A posição do cursor no rodapé ("Linha 4, coluna 1"), com o cursor e a versão do texto de onde saiu.
     posicao: Option<((usize, u64), (usize, usize))>,
     /// Quantos caracteres tem o texto, com a versão e o tamanho em bytes de onde saiu (contar é O(n): só quando o
     /// texto muda, não a cada quadro).
@@ -1158,7 +1158,7 @@ impl estado::Documento for TelaConsulta {
         }
     }
 
-    /// O cilindro e o nome do banco; na ponta direita, a posição do cursor.
+    /// O cilindro e o nome do banco (a posição do cursor foi para o rodapé, U4 da revisão de UI de 22/10/2026).
     fn faixa(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
         let e = paleta(ui).estudio;
         let banco = ctx.estado.banco.as_ref();
@@ -1168,10 +1168,6 @@ impl estado::Documento for TelaConsulta {
         if let Some(b) = banco {
             texto(ui, &b.nome, 12.0, e.t2);
         }
-        let (linha, coluna) = self.posicao(ui.ctx());
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            texto(ui, &format!("Linha {linha}, coluna {coluna}"), 12.0, e.t3);
-        });
     }
 
     fn conteudo(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
@@ -1180,9 +1176,13 @@ impl estado::Documento for TelaConsulta {
 
     /// O que o resultado à vista diz: "8 linhas · 0,5 ms"; executando, "Executando · 1,4 s", contado ao vivo (o
     /// quadro se renova a cada 250 ms só enquanto executa; com o arco do Executar girando, a cada ~33 ms); antes da
-    /// primeira execução, [`NADA_EXECUTADO`] em `--t3`.
+    /// primeira execução, [`NADA_EXECUTADO`] em `--t3`. Na ponta direita, a posição do cursor ("Linha 3, coluna
+    /// 37", como no JSON) e, à esquerda dela, as contas da seleção.
     fn rodape(&mut self, ui: &mut Ui, _ctx: &mut Contexto) {
         let t2 = paleta(ui).estudio.t2;
+        let t3 = paleta(ui).estudio.t3;
+        let (linha, coluna) = self.posicao(ui.ctx());
+        let posicao = format!("Linha {linha}, coluna {coluna}");
         if let Some(e) = self.execucao.as_ref().filter(|e| e.pedido == Pedido::Executar) {
             let agora = ui.input(|i| i.time);
             let decorrido = formatar_segundos(((agora - e.inicio).max(0.0) * 1000.0).floor());
@@ -1190,13 +1190,20 @@ impl estado::Documento for TelaConsulta {
             ui.ctx().request_repaint_after(REPINTURA_EXECUTANDO);
         } else if let Some(texto_rodape) = self.cards.get(self.escolhido).and_then(Card::rodape) {
             texto(ui, &texto_rodape, 12.0, t2);
-            // com mais de uma célula selecionada, as contas da seleção à direita (A.3)
-            if let Some(resumo) = self.cards.get_mut(self.escolhido).and_then(Card::resumo_da_selecao) {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| rodape_da_selecao(ui, &resumo));
-            }
         } else if self.cards.is_empty() && self.execucao.is_none() {
-            texto(ui, NADA_EXECUTADO, 12.0, paleta(ui).estudio.t3);
+            texto(ui, NADA_EXECUTADO, 12.0, t3);
         }
+        // com mais de uma célula selecionada, as contas da seleção à esquerda da posição (A.3)
+        let executando = self.execucao.as_ref().is_some_and(|e| e.pedido == Pedido::Executar);
+        let resumo =
+            if executando { None } else { self.cards.get_mut(self.escolhido).and_then(Card::resumo_da_selecao) };
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            texto(ui, &posicao, 12.0, t3);
+            if let Some(resumo) = &resumo {
+                ui.add_space(12.0);
+                rodape_da_selecao(ui, resumo);
+            }
+        });
     }
 
     fn ofertas(&self, _estado: &estado::Estado) -> estado::Ofertas {

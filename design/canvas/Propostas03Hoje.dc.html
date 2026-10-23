@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Hoje, na 0.2.3</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0f11}
+.est{--acc:#2c6fdc;--fundo0:#111214;--painel:#1e1f22;--c:#191a1d;--p:#212226;--t:#ececee;--t2:#b9bbc0;--t3:#9597a0;--bt1:#3b3c40;--bt2:#26272a;--btb:rgba(0,0,0,.6);--btluz:rgba(255,255,255,.13);--fb:rgba(255,255,255,.14);--fbc:rgba(255,255,255,.40);--b:rgba(255,255,255,.07);--perigo:#ff8a80;--ok:#5fd09a;--aviso:#f2b65e;--kw:#8ab4f8;--nu:#f2b65e;--st:#7fd1a8;--chave:#c9a0ff;--sel:rgba(44,111,220,.28);font-family:"Segoe UI Variable Text","Segoe UI","Noto Sans",system-ui,sans-serif;font-size:12px;color:var(--t);background:var(--fundo0);font-variant-numeric:tabular-nums}
+.est *{box-sizing:border-box}
+.janela{display:flex;flex-direction:column;overflow:hidden;background:var(--fundo0)}
+.titulo{height:30px;flex:none;display:flex;align-items:center;gap:2px;padding-left:10px;color:var(--t2)}
+.titulo .menu{padding:4px 10px;border-radius:999px}
+.titulo .nome{flex:1;text-align:center;color:var(--t3)}
+.titulo .jb{width:46px;text-align:center;color:var(--t2)}
+.logo{width:16px;height:16px;border-radius:4px;background:linear-gradient(#d9a95a,#8c5a22);margin-right:8px;flex:none}
+.barra{height:44px;flex:none;margin:6px 8px 8px;border-radius:10px;background:var(--painel);border:1px solid var(--b);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;gap:2px;padding:0 8px}
+.ib{width:30px;height:30px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--t2);display:inline-flex;align-items:center;justify-content:center;padding:0;font:inherit}
+.ib.off{opacity:.3}
+.sep{width:1px;height:18px;background:var(--fb);margin:0 6px}
+.busca{width:250px;height:28px;border-radius:10px;border:1px solid var(--fbc);background:#141518;display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;color:var(--t3);margin:0 6px}
+.kbd{border:1px solid var(--fb);border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--t3);line-height:16px}
+.corpo{flex:1;min-height:0;display:flex;gap:8px;padding:0 8px 8px}
+.coluna{display:flex;flex-direction:column;min-width:0;min-height:0}
+.doca{background:var(--painel);border:1px solid var(--b);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.abas{height:34px;flex:none;display:flex;align-items:flex-end;gap:4px;padding:0 6px}
+.aba{height:30px;display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:10px 10px 0 0;color:var(--t2);white-space:nowrap}
+.aba.on{background:linear-gradient(var(--bt1),var(--bt2));color:var(--t);box-shadow:inset 0 1px 0 var(--btluz)}
+.aba .x{color:var(--t3);margin-left:4px}
+.aba .sub{color:var(--t3)}
+.doc{flex:1;min-height:0;background:var(--c);border:1px solid var(--b);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.faixa{height:42px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 14px;background:var(--p);border-bottom:1px solid var(--b)}
+.rot{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.pilula{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;border:1px solid rgba(44,111,220,.6);background:rgba(44,111,220,.16);color:var(--t)}
+.pilula.neutra{border-color:var(--fb);background:rgba(255,255,255,.04)}
+.lnk{color:var(--t);font-weight:600}
+.rodape{height:34px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--p);border-top:1px solid var(--b);color:var(--t2);white-space:nowrap}
+.rodape .mais{margin-left:auto}
+.ponto{color:var(--t3)}
+.grade{flex:1;min-height:0;overflow:hidden;position:relative}
+.grade table{border-collapse:collapse;width:100%;table-layout:fixed}
+.grade th{height:30px;text-align:left;font-weight:600;color:var(--t);background:linear-gradient(var(--bt1),var(--bt2));border-right:1px solid var(--b);border-bottom:1px solid var(--btb);padding:0 8px;white-space:nowrap;overflow:hidden}
+.grade td{height:28px;padding:0 8px;border-right:1px solid var(--b);border-bottom:1px solid var(--b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grade td.n,.grade th.n{text-align:right}
+.grade td.nulo{color:var(--t3);font-style:italic;text-align:right}
+.grade td.pk{color:var(--kw);text-align:right}
+.grade td.ck,.grade th.ck{width:32px;padding:0;text-align:center}
+.grade td.ativa{outline:2px solid var(--acc);outline-offset:-2px}
+.grade td.sel{background:var(--sel)}
+.caixa{display:inline-block;width:16px;height:16px;border-radius:5px;border:1px solid rgba(255,255,255,.35);vertical-align:middle}
+.tp{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 2px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;margin-right:6px;vertical-align:-3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.t-int{background:#2c6fdc}.t-real{background:#1d8181}.t-txt{background:#5f6b7a}.t-pk{background:#927010}.t-data{background:#c8443b}
+.rolagem{position:absolute;right:2px;top:34px;width:6px;height:120px;border-radius:3px;background:rgba(255,255,255,.22)}
+.prop{padding:6px 0;overflow:hidden}
+.sec{display:flex;align-items:center;gap:6px;padding:8px 14px 6px;font-weight:600}
+.sec .sub{color:var(--t3);font-weight:400}
+.lin{display:flex;padding:3px 14px;gap:10px}
+.lin .k{width:110px;color:var(--t2);flex:none}
+.lin .v{color:var(--t);min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.div{height:1px;background:var(--b);margin:8px 0}
+.seg{display:flex;margin:4px 10px 6px;padding:2px;border-radius:999px;background:rgba(0,0,0,.25);border:1px solid var(--fb)}
+.seg span{flex:1;text-align:center;padding:4px 0;white-space:nowrap;border-radius:999px;color:var(--t2)}
+.seg span.on{background:linear-gradient(var(--bt1),var(--bt2));color:var(--t);box-shadow:inset 0 1px 0 var(--btluz)}
+.btn{height:28px;padding:0 15px;border-radius:999px;border:1px solid var(--btb);background:linear-gradient(var(--bt1),var(--bt2));color:var(--t);font:inherit;font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:inset 0 1px 0 var(--btluz),0 1px 2px rgba(0,0,0,.4)}
+.btn.pri{color:#fff;border-color:#1d4d9c;background:linear-gradient(#5b93ee,#2c6fdc 25%,#2459b5)}
+.u{display:inline-flex;align-items:center;justify-content:center;height:20px;min-width:30px;padding:0 6px;border-radius:999px;background:#f2b65e;color:#1b1c1f;font-size:11px;font-weight:800;box-shadow:0 0 0 2px #111214,0 2px 6px rgba(0,0,0,.5)}
+.nota{color:#f2d29a;font-size:12px;line-height:1.45}
+.legenda{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:rgba(242,182,94,.10);border:1px solid rgba(242,182,94,.35)}
+.cap{font-size:20px;font-weight:700;color:var(--t);margin:0}
+.capsub{color:var(--t2);margin:4px 0 0;font-size:13px;line-height:1.5;max-width:1100px}
+.cod{font-family:Consolas,"Cascadia Mono","DejaVu Sans Mono",monospace;font-size:12.5px}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.hist{display:flex;align-items:flex-end;gap:2px;height:22px}
+.hist i{display:block;width:7px;background:#5b93ee;border-radius:2px 2px 0 0}
+</style>
+</helmet>
+<div class="est" style="width:100%;min-height:1560px;height:1560px;overflow:hidden;position:relative;background:#111214">
+<div style="padding:40px 48px;display:flex;flex-direction:column;gap:28px"><div><p class="cap">Hoje, na 0.2.3: onde estão os achados</p><p class="capsub">Capturas dos testes de tela de 22/10/2026. Cada etiqueta âmbar é um achado de <span class="cod">design/revisao-ui-0.3.md</span>; as pranchetas ao lado mostram a proposta.</p></div><div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:36px 40px"><figure style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:660px;height:412px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.14)"><img src="/_blob/8e57f43c91a44114005ebeaaa4fb9551" alt="Dados (claro): a grade crua e o rodapé formatado, a paginação" style="width:660px;height:412px;display:block"><span class="u" style="position:absolute;left:324px;top:67px">U1</span><span class="u" style="position:absolute;left:246px;top:395px">U1</span><span class="u" style="position:absolute;left:420px;top:395px">U2</span></div><figcaption style="color:var(--t2);font-size:13px">Dados (claro): a grade crua e o rodapé formatado, a paginação</figcaption></figure><figure style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:660px;height:412px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.14)"><img src="/_blob/7ebaa9cddd67ebb51ce922feebe2477b" alt="CSV filtrado: contagem em cima e embaixo, a seta da ordenação, o caminho cortado" style="width:660px;height:412px;display:block"><span class="u" style="position:absolute;left:387px;top:28px">U3</span><span class="u" style="position:absolute;left:3px;top:394px">U3</span><span class="u" style="position:absolute;left:316px;top:45px">U7</span><span class="u" style="position:absolute;left:570px;top:166px">U6</span></div><figcaption style="color:var(--t2);font-size:13px">CSV filtrado: contagem em cima e embaixo, a seta da ordenação, o caminho cortado</figcaption></figure><figure style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:660px;height:412px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.14)"><img src="/_blob/2b45cd043d56129c7d656eeb24dea1f0" alt="Tabela vazia: sem cabeçalho, contagem dupla, paginação sem linhas" style="width:660px;height:412px;display:block"><span class="u" style="position:absolute;left:228px;top:49px">U5</span><span class="u" style="position:absolute;left:479px;top:25px">U3</span><span class="u" style="position:absolute;left:-11px;top:395px">U3</span></div><figcaption style="color:var(--t2);font-size:13px">Tabela vazia: sem cabeçalho, contagem dupla, paginação sem linhas</figcaption></figure><figure style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:660px;height:412px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.14)"><img src="/_blob/7599f2472987784866561d667c82f65d" alt="JSON: a faixa repete o nome da aba; o caminho cortado nas Propriedades" style="width:660px;height:412px;display:block"><span class="u" style="position:absolute;left:140px;top:65px">U4</span><span class="u" style="position:absolute;left:570px;top:184px">U6</span></div><figcaption style="color:var(--t2);font-size:13px">JSON: a faixa repete o nome da aba; o caminho cortado nas Propriedades</figcaption></figure><figure style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:660px;height:412px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.14)"><img src="/_blob/bd0908e7711b20161d15dd21d7678888" alt="Consulta: a posição do cursor em cima (no JSON, embaixo)" style="width:660px;height:412px;display:block"><span class="u" style="position:absolute;left:462px;top:57px">U4</span></div><figcaption style="color:var(--t2);font-size:13px">Consulta: a posição do cursor em cima (no JSON, embaixo)</figcaption></figure><figure style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:660px;height:412px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.14)"><img src="/_blob/63ba5c35dae00590a41fab1b2187acb6" alt="Visão geral: faixa com o caminho inteiro; dois cliques por linha; Tipo quase vazio" style="width:660px;height:412px;display:block"><span class="u" style="position:absolute;left:310px;top:57px">U4</span><span class="u" style="position:absolute;left:458px;top:166px">U8</span><span class="u" style="position:absolute;left:363px;top:151px">U8</span></div><figcaption style="color:var(--t2);font-size:13px">Visão geral: faixa com o caminho inteiro; dois cliques por linha; Tipo quase vazio</figcaption></figure></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

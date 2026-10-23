@@ -36,8 +36,9 @@
 //!
 //! - Formato de documento (etapa 3, prancheta 2; `ParteTabela::anatomia`: faixa, rodapé e rolagem própria). Faixa
 //!   (as peças de `interface::pecas::filtros`, que o CSV também usa): "Filtros", uma etiqueta `chip_filtro` por condição ("ativo igual a 1": o clique abre a condição no popover, o ×
-//!   a tira), "+ Condição" e, à direita, a contagem ("41 de 60 linhas", "60 linhas"; "contando…" e "linhas não
-//!   contadas", com o motivo na dica, na tabela grande) e "Limpar filtros" (só com condição). O popover de vidro
+//!   a tira), "+ Condição" e, à direita, "Limpar filtros" (só com condição). A contagem fica no rodapé: "Linhas
+//!   1–41 de 41" e, com busca ou filtro, "· filtradas de 60" (U3 da revisão de UI de 22/10/2026; até a 0.2.3, "41
+//!   de 60 linhas" na ponta direita da faixa). O popover de vidro
 //!   (`interface::pecas::popover`) tem Coluna, Operador (os 14 rótulos), Valor (fora nos operadores sem valor),
 //!   Cancelar e Aplicar; Enter aplica e Esc desiste.
 //! - Verbos da barra (`ParteTabela::ofertas`/`executar`): Nova linha; Duplicar com um alvo só (a marcada única ou a

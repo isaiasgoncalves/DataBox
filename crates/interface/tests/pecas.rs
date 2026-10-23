@@ -335,18 +335,16 @@ struct EstadoFiltros {
 
 #[test]
 fn filtros_da_grade_abrem_tiram_e_limpam() {
-    use interface::pecas::filtros::{ALTURA_BARRA_FILTROS, ContagemFiltros, EtiquetaFiltro, barra_filtros, filtros};
+    use interface::pecas::filtros::{ALTURA_BARRA_FILTROS, EtiquetaFiltro, barra_filtros, filtros};
     let mut h = harness(EstadoFiltros { etiquetas: vec![(7, "Sul")], ..Default::default() }, |ui, s| {
         let etiquetas: Vec<EtiquetaFiltro<'_>> = s
             .etiquetas
             .iter()
             .map(|&(id, v)| EtiquetaFiltro { id, coluna: "regiao", operador: "igual a", valor: Some(v) })
             .collect();
-        let contagem =
-            if etiquetas.is_empty() { ContagemFiltros::Nada } else { ContagemFiltros::Texto("4 de 20 linhas".into()) };
         ui.spacing_mut().item_spacing.y = 0.0;
         let topo = ui.cursor().top();
-        let r = barra_filtros(ui, |ui| filtros(ui, &etiquetas, &contagem));
+        let r = barra_filtros(ui, |ui| filtros(ui, &etiquetas));
         s.barra = Some(egui::Rect::from_x_y_ranges(ui.max_rect().x_range(), topo..=ui.cursor().top()));
         if let Some((alvo, _)) = r.abrir {
             s.abrir.push(alvo);
@@ -361,7 +359,7 @@ fn filtros_da_grade_abrem_tiram_e_limpam() {
         }
     });
     assert!(h.query_by_label("Filtros").is_some());
-    assert!(h.query_by_label("4 de 20 linhas").is_some(), "a contagem à direita");
+    assert!(h.query_by_label_contains("linhas").is_none(), "a contagem fica no rodapé da grade, não na barra");
     let barra = h.state().barra.unwrap();
     assert_eq!(barra.height(), ALTURA_BARRA_FILTROS, "`.barra-filtros{{height:38px}}`");
     h.get_by_label("Nova condição").click();

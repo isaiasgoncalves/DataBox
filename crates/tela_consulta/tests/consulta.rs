@@ -284,9 +284,10 @@ fn rodape<S>(h: &Harness<'static, Palco<S>>, inicio: &str) -> Option<String> {
 fn tela_tem_faixa_editor_e_tabelas() {
     let amb = Ambiente::exemplo("consulta_faixa_editor");
     let h = abrir(&amb, None, Tema::Claro);
-    // a faixa: o banco e a posição do cursor
+    // a faixa: o banco; a posição do cursor, no rodapé, à direita (U4 da revisão de UI de 22/10/2026)
     assert!(h.query_by_label("exemplo.db").is_some());
-    assert!(h.query_by_label("Linha 1, coluna 1").is_some());
+    let posicao = h.get_by_label("Linha 1, coluna 1").rect();
+    assert!(posicao.top() > h.get_by_label("exemplo.db").rect().bottom() + 200.0, "a posição embaixo: {posicao:?}");
     // saíram o cabeçalho, o card Comando, o select do Histórico e as tags
     assert!(h.query_by_label("Consulta SQL").is_none());
     assert!(h.query_by_role_and_label(Role::ComboBox, "Histórico").is_none());
@@ -307,11 +308,11 @@ fn tela_tem_faixa_editor_e_tabelas() {
     let area = tela(&h).area_editor();
     let rodape = h.get_by_label(tela_consulta::NADA_EXECUTADO).rect();
     assert!(area.height() > ALTURA_EDITOR && (rodape.top() - area.bottom()).abs() < 20.0, "{area:?} {rodape:?}");
-    assert!((area.top() - h.get_by_label("Linha 1, coluna 1").rect().bottom()).abs() < 20.0, "{area:?}");
+    assert!((area.top() - h.get_by_label("exemplo.db").rect().bottom()).abs() < 20.0, "{area:?}");
 }
 
 #[test]
-fn consulta_faixa_com_o_banco_e_a_posicao() {
+fn consulta_rodape_com_a_posicao() {
     let amb = Ambiente::exemplo("consulta_posicao");
     let mut h = abrir(&amb, None, Tema::Claro);
     escrever(&mut h, "SELECT 1;\nSELECT nome FROM clientes");

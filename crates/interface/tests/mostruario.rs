@@ -792,7 +792,7 @@ fn documento_faixa_aviso_rodape() {
                     m.depois_do_aviso = d.rect_conteudo().top();
                     d.faixa(&mut pagina, |ui| {
                         texto(ui, "Filtros", 12.0, tema::paleta(ui).estudio.t2);
-                        hint(ui, "41 de 60 linhas");
+                        hint(ui, "Limpar filtros");
                     });
                     m.depois_da_faixa = d.rect_conteudo().top();
                     m.fim_do_conteudo = d.rect_conteudo().bottom();
@@ -800,7 +800,7 @@ fn documento_faixa_aviso_rodape() {
                         texto(ui, "O conteúdo do documento rola aqui dentro.", 13.0, tema::paleta(ui).fg);
                     });
                     let _ = d.rodape(&mut pagina, |ui| {
-                        ui.label("Linhas 1–41 de 41");
+                        ui.label("Linhas 1–41 de 41 · filtradas de 60");
                     });
                     m.moldura = Some(d.rect());
                 },
@@ -818,7 +818,7 @@ fn documento_faixa_aviso_rodape() {
         assert_eq!(moldura.bottom() - 1.0 - m.fim_do_conteudo, ALTURA_RODAPE);
         assert!(m.depois_do_aviso > moldura.top() + 1.0 + 30.0, "o aviso ocupa o alto: {}", m.depois_do_aviso);
         let _ = h.get_by_label("Ir para a Consulta SQL");
-        let _ = h.get_by_label("Linhas 1–41 de 41");
+        let _ = h.get_by_label("Linhas 1–41 de 41 · filtradas de 60");
         let imagem = h.render().expect("renderizar com wgpu");
         imagem.save(pasta_capturas().join(nome)).expect("gravar png");
     }
