@@ -252,7 +252,7 @@
 //!   cabe), medida a partir das larguras das outras colunas no quadro anterior: as ações ficam dentro do card a
 //!   960px, com o Explorador ao lado.
 //! - **Visão geral** (prancheta 1, `visao_geral.rs`): desenha do `Estado` (o BancoInfo e os objetos que a casca já
-//!   mantém; o Atualizar pede os dois de novo). Na faixa, o cilindro, o nome, o caminho com a reticência no meio e a
+//!   mantém; o Atualizar pede os dois de novo). Na faixa, o cilindro, o nome, o caminho cortado do começo e a
 //!   pill "só leitura"; no conteúdo, os contadores na dock (`pecas::dock`: Tabelas, Visões, Índices, Gatilhos,
 //!   Tamanho e Linhas, com os ícones `-grande` de 48pt na prateleira, no singular com 1, "Linhas (contadas)" com a
 //!   dica "Tabelas grandes não são contadas ao abrir; a soma é das que foram contadas.") e a lista Tabelas (Nome com

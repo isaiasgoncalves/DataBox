@@ -563,8 +563,8 @@ fn iso_utc(quando: SystemTime) -> Option<String> {
     Some(format!("{ano:04}-{mes:02}-{dia:02}T{h:02}:{m:02}:{s:02}Z"))
 }
 
-/// O Caminho da ficha numa linha, com a reticência no meio quando não cabe (o `dd.caminho`: `.ini` cortado, `.fim`
-/// inteiro; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele foi
+/// O Caminho da ficha numa linha, cortado do começo quando não cabe, com o nome e a pasta-mãe inteiros (o
+/// `galley_caminho`; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele foi
 /// clicado.
 fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
     let e = &interface::tema::paleta(ui).estudio;
