@@ -67,7 +67,7 @@ fn layout_em_janela_estreita(largura: f32, altura: f32, sufixo: &str) {
 
     // Visão geral: a lista cabe na moldura, sem rolar na horizontal, e as seções das Propriedades vão para o fim do
     // documento, depois da lista, na largura dele
-    for b in h.query_all_by_label("Colunas") {
+    for b in h.query_all(by().label_contains("Colunas de ")) {
         assert!(b.rect().right() <= direita + 0.5, "{:?}", b.rect());
     }
     let ultima = rect_de(&h, Role::Button, "Tabela com espaço");
