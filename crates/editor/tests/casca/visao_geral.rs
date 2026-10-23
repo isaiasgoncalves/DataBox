@@ -33,9 +33,14 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
     for t in TABELAS {
         assert!(h.query(by().role(Role::Button).label(t)).is_some(), "{t} na tabela da visão geral");
     }
-    // o botão de cada linha abre a vista Colunas da tabela (revisão de UI de 19/10/2026)
-    assert_eq!(h.query_all(by().role(Role::Button).label("Colunas")).count(), 7);
+    // o botão de ícone de cada linha abre a vista Colunas da tabela (U8 da revisão de UI de 22/10/2026: escondido
+    // fora do hover e do foco, mas no lugar); o tipo especial fica ao lado do nome, e a coluna Tipo deu lugar à Índices
+    assert_eq!(h.query_all(by().role(Role::Button).label_contains("Colunas de ")).count(), 7);
     assert!(tem_texto(&h, "virtual") && tem_texto(&h, "sem rowid"));
+    let notas = rect_de(&h, Role::Button, "notas");
+    let virtual_ =
+        h.query_all_by_label("virtual").map(|n| n.rect()).find(|r| (r.center().y - notas.center().y).abs() < 4.0);
+    assert!(virtual_.is_some_and(|r| r.left() > notas.right()), "a etiqueta logo depois do nome: {virtual_:?}");
     // o cabeçalho de antes saiu: a Nova tabela e o Exportar são os da barra
     assert!(h.query(by().role(Role::Button).label("Exportar o banco")).is_none());
     assert!(h.query(by().role(Role::Button).label("+ Nova tabela")).is_none());
@@ -87,11 +92,39 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
     assert_eq!(h.state().rota(), &Rota::objeto("pedidos", false));
     h.state_mut().ir(Rota::Banco);
     assentar(&mut h);
-    h.query_all(by().role(Role::Button).label("Colunas")).next().expect("Colunas").click();
+    h.get(by().role(Role::Button).label("Colunas de clientes")).click();
     h.run_steps(2);
     assentar(&mut h);
     assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
     assert_eq!(h.state().vista_da_tabela(), Some("Colunas"));
+    // o clique duplo na linha, fora do nome e do botão, abre a tabela (como a árvore do Explorador)
+    h.state_mut().ir(Rota::Banco);
+    assentar(&mut h);
+    let linha = rect_de(&h, Role::Button, "eventos");
+    let fora = egui::pos2(linha.right() + 160.0, linha.center().y);
+    for _ in 0..2 {
+        h.input_mut().events.push(egui::Event::PointerMoved(fora));
+        for pressed in [true, false] {
+            h.input_mut().events.push(egui::Event::PointerButton {
+                pos: fora,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            });
+        }
+        h.step();
+    }
+    h.run_steps(2);
+    assert_eq!(h.state().rota(), &Rota::objeto("eventos", false));
+    // com o ponteiro na linha, o botão de ícone aparece na ponta dela
+    h.state_mut().ir(Rota::Banco);
+    assentar(&mut h);
+    let linha = rect_de(&h, Role::Button, "pedidos");
+    h.input_mut().events.push(egui::Event::PointerMoved(egui::pos2(linha.right() + 300.0, linha.center().y)));
+    h.run_steps(3);
+    // (o capturar tira o ponteiro: aqui a imagem sai com ele na linha)
+    let imagem = renderizar(&mut h);
+    imagem.save(estado::apoio_testes::pasta_capturas().join("banco-visao-geral-linha-claro.png")).expect("gravar png");
 }
 
 #[test]

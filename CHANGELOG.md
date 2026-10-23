@@ -5,6 +5,14 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- **A lista de Tabelas da Visão geral** (revisão de UI de 22/10/2026, U8): o clique duplo em qualquer ponto da linha
+  abre a tabela, como na árvore do Explorador (o nome continua abrindo no clique). O "Colunas" de cada linha vira um
+  botão de ícone que aparece com o ponteiro na linha e no foco do teclado (escondido, ele continua no lugar, e o Tab
+  chega nele), com a dica "Colunas de clientes". As etiquetas VIRTUAL e SEM ROWID ficam ao lado do nome, e a coluna
+  Tipo, quase sempre vazia, dá lugar à **Índices**, com quantos índices cada tabela tem.
+
 ## [0.2.3] - 2026-10-22
 
 ### Adicionado
