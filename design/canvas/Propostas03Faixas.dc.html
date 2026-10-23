@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Faixas e rodapés</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0f11}
+.est{--acc:#2c6fdc;--fundo0:#111214;--painel:#1e1f22;--c:#191a1d;--p:#212226;--t:#ececee;--t2:#b9bbc0;--t3:#9597a0;--bt1:#3b3c40;--bt2:#26272a;--btb:rgba(0,0,0,.6);--btluz:rgba(255,255,255,.13);--fb:rgba(255,255,255,.14);--fbc:rgba(255,255,255,.40);--b:rgba(255,255,255,.07);--perigo:#ff8a80;--ok:#5fd09a;--aviso:#f2b65e;--kw:#8ab4f8;--nu:#f2b65e;--st:#7fd1a8;--chave:#c9a0ff;--sel:rgba(44,111,220,.28);font-family:"Segoe UI Variable Text","Segoe UI","Noto Sans",system-ui,sans-serif;font-size:12px;color:var(--t);background:var(--fundo0);font-variant-numeric:tabular-nums}
+.est *{box-sizing:border-box}
+.janela{display:flex;flex-direction:column;overflow:hidden;background:var(--fundo0)}
+.titulo{height:30px;flex:none;display:flex;align-items:center;gap:2px;padding-left:10px;color:var(--t2)}
+.titulo .menu{padding:4px 10px;border-radius:999px}
+.titulo .nome{flex:1;text-align:center;color:var(--t3)}
+.titulo .jb{width:46px;text-align:center;color:var(--t2)}
+.logo{width:16px;height:16px;border-radius:4px;background:linear-gradient(#d9a95a,#8c5a22);margin-right:8px;flex:none}
+.barra{height:44px;flex:none;margin:6px 8px 8px;border-radius:10px;background:var(--painel);border:1px solid var(--b);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;gap:2px;padding:0 8px}
+.ib{width:30px;height:30px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--t2);display:inline-flex;align-items:center;justify-content:center;padding:0;font:inherit}
+.ib.off{opacity:.3}
+.sep{width:1px;height:18px;background:var(--fb);margin:0 6px}
+.busca{width:250px;height:28px;border-radius:10px;border:1px solid var(--fbc);background:#141518;display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;color:var(--t3);margin:0 6px}
+.kbd{border:1px solid var(--fb);border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--t3);line-height:16px}
+.corpo{flex:1;min-height:0;display:flex;gap:8px;padding:0 8px 8px}
+.coluna{display:flex;flex-direction:column;min-width:0;min-height:0}
+.doca{background:var(--painel);border:1px solid var(--b);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.abas{height:34px;flex:none;display:flex;align-items:flex-end;gap:4px;padding:0 6px}
+.aba{height:30px;display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:10px 10px 0 0;color:var(--t2);white-space:nowrap}
+.aba.on{background:linear-gradient(var(--bt1),var(--bt2));color:var(--t);box-shadow:inset 0 1px 0 var(--btluz)}
+.aba .x{color:var(--t3);margin-left:4px}
+.aba .sub{color:var(--t3)}
+.doc{flex:1;min-height:0;background:var(--c);border:1px solid var(--b);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.faixa{height:42px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 14px;background:var(--p);border-bottom:1px solid var(--b)}
+.rot{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.pilula{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;border:1px solid rgba(44,111,220,.6);background:rgba(44,111,220,.16);color:var(--t)}
+.pilula.neutra{border-color:var(--fb);background:rgba(255,255,255,.04)}
+.lnk{color:var(--t);font-weight:600}
+.rodape{height:34px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--p);border-top:1px solid var(--b);color:var(--t2);white-space:nowrap}
+.rodape .mais{margin-left:auto}
+.ponto{color:var(--t3)}
+.grade{flex:1;min-height:0;overflow:hidden;position:relative}
+.grade table{border-collapse:collapse;width:100%;table-layout:fixed}
+.grade th{height:30px;text-align:left;font-weight:600;color:var(--t);background:linear-gradient(var(--bt1),var(--bt2));border-right:1px solid var(--b);border-bottom:1px solid var(--btb);padding:0 8px;white-space:nowrap;overflow:hidden}
+.grade td{height:28px;padding:0 8px;border-right:1px solid var(--b);border-bottom:1px solid var(--b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grade td.n,.grade th.n{text-align:right}
+.grade td.nulo{color:var(--t3);font-style:italic;text-align:right}
+.grade td.pk{color:var(--kw);text-align:right}
+.grade td.ck,.grade th.ck{width:32px;padding:0;text-align:center}
+.grade td.ativa{outline:2px solid var(--acc);outline-offset:-2px}
+.grade td.sel{background:var(--sel)}
+.caixa{display:inline-block;width:16px;height:16px;border-radius:5px;border:1px solid rgba(255,255,255,.35);vertical-align:middle}
+.tp{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 2px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;margin-right:6px;vertical-align:-3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.t-int{background:#2c6fdc}.t-real{background:#1d8181}.t-txt{background:#5f6b7a}.t-pk{background:#927010}.t-data{background:#c8443b}
+.rolagem{position:absolute;right:2px;top:34px;width:6px;height:120px;border-radius:3px;background:rgba(255,255,255,.22)}
+.prop{padding:6px 0;overflow:hidden}
+.sec{display:flex;align-items:center;gap:6px;padding:8px 14px 6px;font-weight:600}
+.sec .sub{color:var(--t3);font-weight:400}
+.lin{display:flex;padding:3px 14px;gap:10px}
+.lin .k{width:110px;color:var(--t2);flex:none}
+.lin .v{color:var(--t);min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.div{height:1px;background:var(--b);margin:8px 0}
+.seg{display:flex;margin:4px 10px 6px;padding:2px;border-radius:999px;background:rgba(0,0,0,.25);border:1px solid var(--fb)}
+.seg span{flex:1;text-align:center;padding:4px 0;white-space:nowrap;border-radius:999px;color:var(--t2)}
+.seg span.on{background:linear-gradient(var(--bt1),var(--bt2));color:var(--t);box-shadow:inset 0 1px 0 var(--btluz)}
+.btn{height:28px;padding:0 15px;border-radius:999px;border:1px solid var(--btb);background:linear-gradient(var(--bt1),var(--bt2));color:var(--t);font:inherit;font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:inset 0 1px 0 var(--btluz),0 1px 2px rgba(0,0,0,.4)}
+.btn.pri{color:#fff;border-color:#1d4d9c;background:linear-gradient(#5b93ee,#2c6fdc 25%,#2459b5)}
+.u{display:inline-flex;align-items:center;justify-content:center;height:20px;min-width:30px;padding:0 6px;border-radius:999px;background:#f2b65e;color:#1b1c1f;font-size:11px;font-weight:800;box-shadow:0 0 0 2px #111214,0 2px 6px rgba(0,0,0,.5)}
+.nota{color:#f2d29a;font-size:12px;line-height:1.45}
+.legenda{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:rgba(242,182,94,.10);border:1px solid rgba(242,182,94,.35)}
+.cap{font-size:20px;font-weight:700;color:var(--t);margin:0}
+.capsub{color:var(--t2);margin:4px 0 0;font-size:13px;line-height:1.5;max-width:1100px}
+.cod{font-family:Consolas,"Cascadia Mono","DejaVu Sans Mono",monospace;font-size:12.5px}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.hist{display:flex;align-items:flex-end;gap:2px;height:22px}
+.hist i{display:block;width:7px;background:#5b93ee;border-radius:2px 2px 0 0}
+</style>
+</helmet>
+<div class="est" style="width:100%;min-height:900px;height:900px;overflow:hidden;position:relative;background:#111214">
+<div style="padding:36px 48px;display:flex;flex-direction:column;gap:20px"><div><p class="cap">Faixas e rodapés com uma regra só</p><p class="capsub">À esquerda, o JSON sem o nome repetido: a faixa é a migalha do ponto do cursor. À direita, a Consulta da P4 (bancada com ATTACH): a faixa mostra as fontes, com "+ Arquivo"; "Linha, coluna" desce para o rodapé, como no JSON.</p></div><div class="legenda"><span class="u">U4</span><div class="nota"><b>Regra proposta para o guia.</b> A faixa de cima só existe para controle ou contexto que a aba não diz (filtros, a migalha do JSON, as fontes da consulta). Posição do cursor e contagens moram no rodapé, à direita. O TXT e a Visão geral ficam sem faixa; o caminho inteiro vai na dica de toda aba.</div></div><div style="display:flex;gap:40px"><div class="coluna" style="flex:1"><div class="abas" role="tablist"><div class="aba on" role="tab" aria-selected="true">config.json<span class="x">×</span></div><span class="aba" style="padding:0 8px;color:var(--t3)">+</span><span style="flex:1"></span></div><div class="doc" style="height:560px;flex:none"><div class="faixa"><span class="u">U4</span><span style="color:var(--t3)">raiz</span><span class="ponto">›</span><span style="color:var(--t3)">conexoes</span><span class="ponto">›</span><span style="color:var(--t3)">[0]</span><span class="ponto">›</span><b>arquivo</b><span style="flex:1"></span><span style="color:var(--ok)" title="JSON válido"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10"></path></svg></span><button class="btn" style="height:26px">Formatar</button></div><div class="cod" style="flex:1;min-height:0;display:flex;line-height:20px"><div style="width:44px;text-align:right;padding:8px 10px 0 0;color:var(--t3);background:rgba(0,0,0,.12)"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div><div>13</div></div><div style="flex:1;padding:8px 0 0 14px"><div style="white-space:pre">{</div><div style="white-space:pre">  <span style="color:var(--chave)">"nome"</span>: <span style="color:var(--st)">"Painel de vendas"</span>,</div><div style="white-space:pre">  <span style="color:var(--chave)">"versao"</span>: <span style="color:var(--st)">"2.4.1"</span>,</div><div style="white-space:pre">  <span style="color:var(--chave)">"conexoes"</span>: [</div><div style="white-space:pre">    {</div><div style="white-space:pre">      <span style="color:var(--chave)">"nome"</span>: <span style="color:var(--st)">"principal"</span>,</div><div style="background:rgba(255,255,255,.05);white-space:pre">      <span style="color:var(--chave)">"arquivo"</span>: <span style="color:var(--st)">"C:\\dados\\vendas.db"</span>,</div><div style="white-space:pre">      <span style="color:var(--chave)">"somente_leitura"</span>: <span style="color:var(--kw)">false</span>,</div><div style="white-space:pre">      <span style="color:var(--chave)">"tempo_limite"</span>: <span style="color:var(--nu)">30</span></div><div style="white-space:pre">    }</div><div style="white-space:pre">  ],</div><div style="white-space:pre">  <span style="color:var(--chave)">"atalhos"</span>: <span style="color:var(--kw)">null</span></div><div style="white-space:pre">}</div></div></div><div class="rodape"><span>13 linhas</span><span class="ponto">·</span><span>Espaços: 2</span><span class="mais">Linha 7, coluna 18</span></div></div></div><div class="coluna" style="flex:1"><div class="abas" role="tablist"><div class="aba on" role="tab" aria-selected="true">Consulta 1<span class="x">×</span></div><span class="aba" style="padding:0 8px;color:var(--t3)">+</span><span style="flex:1"></span></div><div class="doc" style="height:560px;flex:none"><div class="faixa"><span class="u">U4</span><span class="rot">Fontes</span><span class="pilula neutra">▦ exemplo.db</span><span class="pilula neutra"><span class="tp" style="background:#27854c">CSV</span>vendas_2025.csv <span style="color:var(--t3)">· arquivos.vendas_2025</span> ×</span><span style="color:var(--t2)">+ <b style="color:var(--t)">Arquivo</b></span></div><div style="height:150px;display:flex"><div class="cod" style="flex:1;min-height:0;display:flex;line-height:20px"><div style="width:44px;text-align:right;padding:8px 10px 0 0;color:var(--t3);background:rgba(0,0,0,.12)"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div></div><div style="flex:1;padding:8px 0 0 14px"><div style="white-space:pre"><span style="color:var(--kw)">SELECT</span> v.vendedor, <span style="color:var(--kw)">sum</span>(v.valor) <span style="color:var(--kw)">AS</span> total, c.cidade</div><div style="white-space:pre"><span style="color:var(--kw)">FROM</span> arquivos.vendas_2025 v</div><div style="white-space:pre"><span style="color:var(--kw)">JOIN</span> clientes c <span style="color:var(--kw)">ON</span> c.nome = v.vendedor</div><div style="white-space:pre"><span style="color:var(--kw)">GROUP BY</span> v.vendedor, c.cidade</div><div style="background:rgba(255,255,255,.05);white-space:pre"><span style="color:var(--kw)">ORDER BY</span> total <span style="color:var(--kw)">DESC</span>;</div></div></div></div><div class="grade" style="flex:none;border-top:1px solid var(--b)"><table><tr><th><span class="tp t-txt">Aa</span>vendedor</th><th class="n"><span class="tp t-real">,5</span>total</th><th><span class="tp t-txt">Aa</span>cidade</th></tr><tr><td>Ana Coutinho</td><td class="n">48.211,40</td><td>Rio de Janeiro</td></tr><tr><td>Bruno Brandão</td><td class="n">41.907,15</td><td>Recife</td></tr><tr><td>Carla Ibiapina</td><td class="n">39.554,80</td><td>Recife</td></tr><tr><td>João Esteves</td><td class="n">33.120,05</td><td>Belo Horizonte</td></tr></table></div><div style="flex:1"></div><div class="rodape"><span>4 linhas · 38 ms</span><span class="mais">Linha 5, coluna 22</span></div></div></div></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

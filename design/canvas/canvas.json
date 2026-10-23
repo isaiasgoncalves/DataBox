@@ -190,6 +190,60 @@
       "w": 1440,
       "x": 0,
       "y": 0
+    },
+    "Propostas03Hoje.dc.html": {
+      "expand": "fill",
+      "h": 1560,
+      "page": "propostas-03",
+      "title": "Hoje, na 0.2.3: onde estão os achados U1 a U8",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Propostas03Grade.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U1 U2 U3 · Uma grade só: números formatados, rolagem contínua, contagem no rodapé",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Propostas03Vazia.dc.html": {
+      "expand": "fill",
+      "h": 620,
+      "page": "propostas-03",
+      "title": "U5 · Vazio com as colunas à vista",
+      "w": 1440,
+      "x": 1520,
+      "y": 1020
+    },
+    "Propostas03Faixas.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "U4 · Faixas e rodapés: JSON com migalha, Consulta com as fontes da bancada (P4)",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Propostas03Perfil.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "page": "propostas-03",
+      "title": "P1 · Perfil da tabela em aba, com a vista Perfil da coluna",
+      "w": 1440,
+      "x": 3040,
+      "y": 1020
+    },
+    "Propostas03Detalhes.dc.html": {
+      "expand": "fill",
+      "h": 880,
+      "page": "propostas-03",
+      "title": "U6 a U11 e P7 · Detalhes: ganhos rápidos e regras",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
     }
   },
   "createdOnFiles": {
@@ -236,6 +290,15 @@
       "w": 240,
       "x": 0,
       "y": -300
+    },
+    "propostas03": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "propostas-03",
+      "text": "Propostas de UI para a 0.3 (debate designer × PO, 22/10/2026)",
+      "w": 240,
+      "x": 0,
+      "y": -300
     }
   },
   "order": [
@@ -259,7 +322,13 @@
     "DadosArrastar.dc.html",
     "FuturoPerfil.dc.html",
     "FuturoGrafico.dc.html",
-    "FuturoConexao.dc.html"
+    "FuturoConexao.dc.html",
+    "Propostas03Hoje.dc.html",
+    "Propostas03Grade.dc.html",
+    "Propostas03Vazia.dc.html",
+    "Propostas03Faixas.dc.html",
+    "Propostas03Perfil.dc.html",
+    "Propostas03Detalhes.dc.html"
   ],
   "pages": [
     {
@@ -277,6 +346,10 @@
     {
       "id": "futuro",
       "name": "Telas futuras"
+    },
+    {
+      "id": "propostas-03",
+      "name": "Propostas 0.3"
     }
   ],
   "title": "DataBox — design"
