@@ -29,7 +29,7 @@
 //! Trabalho e no Menu Iniciar (para o próprio executável, com o ícone dele) e sai.
 //!
 //! O build.rs embute no executável, pelo windres, o `recursos/databox.rc`: o ícone (`databox.ico`, montado por
-//! `design/ferramentas/ico.py` com os PNG do logo), a versão (DataBox 0.2.3) e o manifesto (`databox.manifest`:
+//! `design/ferramentas/ico.py` com os PNG do logo), a versão (DataBox 0.2.4) e o manifesto (`databox.manifest`:
 //! controles comuns 6, DPI por monitor, caminhos longos). Com a variável `DATABOX_DIAGNOSTICO_REPINTURA` (ou a
 //! antiga, `EDITOR_DIAGNOSTICO_REPINTURA`), o executável registra no log, por segundo, os quadros pintados e por
 //! quê.

@@ -35,7 +35,7 @@
 **DataBox** is a free, open-source data toolbox for data scientists, data engineers and developers. It is a Windows
 desktop app (with a Linux AppImage) that opens, shows and edits everyday data files: **SQLite** databases, whole folders
 with their data files, **CSV**, **JSON** and text files, and **Excel workbooks** (read-only). The UI is drawn straight
-on the GPU with [egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.3**.
+on the GPU with [egui](https://github.com/emilk/egui), in Rust. Current version: **0.2.4**.
 
 > The interface, the code and the in-depth docs are in **Brazilian Portuguese** for now (the full guide is
 > [README.pt-BR.md](README.pt-BR.md)). An English UI is on the roadmap; contributions are welcome.
@@ -111,7 +111,8 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 
 1. **File › Open folder** (Ctrl+Shift+O) and pick the database's folder, or drag the `.db` onto the window. To look
    without risk, tick **Open databases read-only** on the Home screen.
-2. The **Overview** shows how many tables, views, indexes and triggers the database has. Click a table in the Explorer.
+2. The **Overview** shows how many tables, views, indexes and triggers the database has, and lists the tables (rows,
+   columns and indexes of each; double-click a row to open it). Click a table in the Explorer.
 3. The table's tab shows its data: use search, **filters** and the header arrow to sort. Double-click a cell to edit
    it; it is saved right away, and the notice says where and offers **Undo** (or Ctrl+Z). The row form shows BLOB,
    NULL and generated columns.
@@ -161,7 +162,8 @@ The labels below are translated; the app shows them in Portuguese (the main ones
 
 **Everywhere**
 - Document tabs with a single **Back/Forward** history across tabs (Alt+←/→ or the mouse side buttons); drag a tab
-  to reorder it (or Ctrl+Shift+PageUp/PageDown), and "All tabs" lists them.
+  to reorder it (or Ctrl+Shift+PageUp/PageDown), and "All tabs" lists them; each tab's tooltip shows the full path of
+  the file or database.
 - Custom window on Windows and Linux: title bar with the File, Edit, View, Database, Table and Help menus, one
   toolbar for every tab, Explorer and query History docked on the left, Properties on the right; optional status bar
   (View › Status bar).

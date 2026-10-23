@@ -5,48 +5,52 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+## [0.2.4] - 2026-10-23
+
+Acabamento da interface, da revisão de UI de 22/10/2026 (o debate do designer com o PO, em
+[`design/revisao-ui-0.3.md`](design/revisao-ui-0.3.md)): as contagens e a posição do cursor no rodapé, a faixa de
+cima só para o que a aba não diz, o vazio com as colunas à vista e cortes e lugares mais claros. Os números U3 a U10
+são os achados da revisão.
+
 ### Alterado
 
-- **A faixa do topo segue uma regra só** (revisão de UI de 22/10/2026, U4): ela existe para o que a aba não diz, e a
-  posição do cursor e as contagens moram no rodapé, à direita.
-  - **JSON:** a faixa não repete mais o nome do arquivo; mostra a migalha do ponto do cursor a partir da raiz
-    ("raiz › conexoes › 0 › arquivo"), com o sinal de válido e o Formatar.
-  - **Texto (TXT, MD, LOG):** sem faixa. A contagem da busca ("3 de 41") e, no arquivo grande, o "Somente leitura"
-    vão para o rodapé (também no JSON).
-  - **Consulta SQL:** "Linha 3, coluna 37" desce para a ponta direita do rodapé, como no JSON; a faixa fica com o
-    banco.
+- **A contagem das linhas fica só no rodapé** (U3): com busca ou filtro, os Dados e o CSV mostravam "236 de 1.180
+  linhas" na barra dos filtros e "Linhas 1–24 de 236" no rodapé. Agora o rodapé diz tudo, "Linhas 1–24 de 236 ·
+  filtradas de 1.180" (no CSV, "contando…" enquanto a vista é calculada), e a barra dos filtros fica com as condições e
+  o "Limpar filtros".
+- **A faixa do topo segue uma regra só** (U4): ela existe para o que a aba não diz, e a posição do cursor e as contagens
+  moram no rodapé, à direita.
+  - **JSON:** a faixa não repete mais o nome do arquivo; mostra a migalha do ponto do cursor a partir da raiz ("raiz ›
+    conexoes › 0 › arquivo"), com o sinal de válido e o Formatar.
+  - **Texto (TXT, MD, LOG):** sem faixa. A contagem da busca ("3 de 41") e, no arquivo grande, o "Somente leitura" vão
+    para o rodapé (também no JSON).
+  - **Consulta SQL:** "Linha 3, coluna 37" desce para a ponta direita do rodapé, como no JSON; a faixa fica com o banco.
   - **Visão geral:** sem faixa. O caminho do banco continua nas Propriedades, e o "só leitura", na Gravação delas.
 - **A dica de cada aba de documento mostra o caminho inteiro** do arquivo ou do banco (nas abas da Visão geral, das
   tabelas e das Consultas).
-- **A contagem das linhas fica só no rodapé** (revisão de UI de 22/10/2026, U3): com busca ou filtro, os Dados e o
-  CSV mostravam "236 de 1.180 linhas" na barra dos filtros e "Linhas 1–24 de 236" no rodapé. Agora o rodapé diz tudo,
-  "Linhas 1–24 de 236 · filtradas de 1.180" (no CSV, "contando…" enquanto a vista é calculada), e a barra dos filtros
-  fica com as condições e o "Limpar filtros".
-- **O vazio da grade mostra as colunas** (revisão de UI de 22/10/2026, U5): uma tabela sem linhas, um CSV só com o
-  cabeçalho, um filtro que não acha nada e uma consulta que não devolve linhas mantêm o cabeçalho da grade (os nomes
-  e as pastilhas de tipo), com a frase embaixo dele. A ação vai num botão, em vez de mandar procurar na barra:
-  **Nova linha** na tabela e no CSV que gravam ("Nenhuma linha nesta tabela.", "Nenhuma linha neste arquivo.") e
-  **Limpar filtros** quando o filtro não acha nada.
-- **Caminhos cortados guardam o nome e a pasta-mãe** (revisão de UI de 22/10/2026, U6): quando não cabem, o Caminho
-  das Propriedades, da ficha e das faixas, e a pasta dos Abertos recentemente no Início, perdem o começo, não o meio:
-  "…/dados/vendas_2025.csv" no lugar de "/h…s/vendas_2025.csv", com as pastas mais perto do arquivo inteiras. O nome
-  que não cabe sozinho é cortado no meio, com a extensão inteira ("vendas_20…25.csv"), e não mais no fim
-  ("vendas_2025.c…"). O caminho inteiro continua na dica.
-- **A seta da ordenação do CSV fica junto do nome da coluna** (revisão de UI de 22/10/2026, U7), como nos Dados e na
-  Consulta: "quantidade ▲". Antes ela ia na outra ponta do cabeçalho, longe do nome nas colunas de números. Com o
-  ponteiro no cabeçalho, a seta aparece apagada no mesmo lugar, para mostrar onde clicar; o clique direito nela abre o
-  menu da coluna, como no resto do cabeçalho.
-- **A lista de Tabelas da Visão geral** (revisão de UI de 22/10/2026, U8): o clique duplo em qualquer ponto da linha
-  abre a tabela, como na árvore do Explorador (o nome continua abrindo no clique). O "Colunas" de cada linha vira um
-  botão de ícone que aparece com o ponteiro na linha e no foco do teclado (escondido, ele continua no lugar, e o Tab
-  chega nele), com a dica "Colunas de clientes". As etiquetas VIRTUAL e SEM ROWID ficam ao lado do nome, e a coluna
-  Tipo, quase sempre vazia, dá lugar à **Índices**, com quantos índices cada tabela tem.
-- **O rodapé da planilha do Excel fica mais curto** (revisão de UI de 22/10/2026, U9): "Vendas › E6 · Somente
-  leitura · 1.204 linhas · 6 colunas". A dimensão ("A1:F1204") e as mescladas saem dele: continuam na seção Planilha
-  das Propriedades.
-- **A Consulta SQL vazia usa a altura toda** (revisão de UI de 22/10/2026, U10): antes da primeira execução, o editor
-  desce até o rodapé, em vez de ocupar um terço do documento e deixar o resto vazio. A primeira execução abre a área
-  do resultado, e o editor volta à altura de sempre (ou à que a pessoa deu arrastando a borda de baixo).
+- **O vazio da grade mostra as colunas** (U5): uma tabela sem linhas, um CSV só com o cabeçalho, um filtro que não acha
+  nada e uma consulta que não devolve linhas mantêm o cabeçalho da grade (os nomes e as pastilhas de tipo), com a frase
+  embaixo dele. A ação vai num botão, em vez de mandar procurar na barra: **Nova linha** na tabela e no CSV que gravam
+  ("Nenhuma linha nesta tabela.", "Nenhuma linha neste arquivo.") e **Limpar filtros** quando o filtro não acha nada.
+- **Caminhos cortados guardam o nome e a pasta-mãe** (U6): quando não cabem, o Caminho das Propriedades, da ficha e das
+  faixas, e a pasta dos Abertos recentemente no Início, perdem o começo, não o meio: "…/dados/vendas_2025.csv" no lugar
+  de "/h…s/vendas_2025.csv", com as pastas mais perto do arquivo inteiras. O nome que não cabe sozinho é cortado no
+  meio, com a extensão inteira ("vendas_20…25.csv"), e não mais no fim ("vendas_2025.c…"). O caminho inteiro continua na
+  dica.
+- **A seta da ordenação do CSV fica junto do nome da coluna** (U7), como nos Dados e na Consulta: "quantidade ▲". Antes
+  ela ia na outra ponta do cabeçalho, longe do nome nas colunas de números. Com o ponteiro no cabeçalho, a seta aparece
+  apagada no mesmo lugar, para mostrar onde clicar; o clique direito nela abre o menu da coluna, como no resto do
+  cabeçalho.
+- **A lista de Tabelas da Visão geral** (U8): o clique duplo em qualquer ponto da linha abre a tabela, como na árvore do
+  Explorador (o nome continua abrindo no clique). O "Colunas" de cada linha vira um botão de ícone que aparece com o
+  ponteiro na linha e no foco do teclado (escondido, ele continua no lugar, e o Tab chega nele), com a dica "Colunas de
+  clientes". As etiquetas VIRTUAL e SEM ROWID ficam ao lado do nome, e a coluna Tipo, quase sempre vazia, dá lugar à
+  **Índices**, com quantos índices cada tabela tem.
+- **O rodapé da planilha do Excel fica mais curto** (U9): "Vendas › E6 · Somente leitura · 1.204 linhas · 6 colunas". A
+  dimensão ("A1:F1204") e as mescladas saem dele: continuam na seção Planilha das Propriedades.
+- **A Consulta SQL vazia usa a altura toda** (U10): antes da primeira execução, o editor desce até o rodapé, em vez de
+  ocupar um terço do documento e deixar o resto vazio. A primeira execução abre a área do resultado, e o editor volta à
+  altura de sempre (ou à que a pessoa deu arrastando a borda de baixo).
 
 ## [0.2.3] - 2026-10-22
 
@@ -274,7 +278,8 @@ Primeira versão pública.
   painéis redimensionáveis, Preferências, atalhos do teclado e acessibilidade (AccessKit).
 - Executável único, `DataBox.exe`, sem instalação; `--criar-atalho` para os atalhos do Windows.
 
-[Não lançado]: ../../compare/v0.2.3...HEAD
+[Não lançado]: ../../compare/v0.2.4...HEAD
+[0.2.4]: ../../compare/v0.2.3...v0.2.4
 [0.2.3]: ../../compare/v0.2.2...v0.2.3
 [0.2.2]: ../../compare/v0.2.1...v0.2.2
 [0.2.1]: ../../compare/v0.2.0...v0.2.1

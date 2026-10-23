@@ -36,7 +36,7 @@ O **DataBox** é uma caixa de ferramentas de dados, gratuita e de código aberto
 dados e desenvolvedores. É um programa de mesa para Windows (e Linux, em AppImage) que abre, mostra e edita os arquivos
 do dia a dia: bancos **SQLite**, pastas inteiras com os arquivos de dados delas, **CSV**, **JSON** e textos, e
 **planilhas do Excel** (só leitura). A interface é desenhada direto na placa de vídeo com
-[egui](https://github.com/emilk/egui), em Rust. Versão atual: **0.2.3**.
+[egui](https://github.com/emilk/egui), em Rust. Versão atual: **0.2.4**.
 
 **Sumário:** [Por que o DataBox](#por-que-o-databox) · [Galeria](#galeria) · [Baixar](#baixar) ·
 [Guias rápidos](#guias-rápidos) · [Recursos](#recursos) · [Primeiro uso](#primeiro-uso) ·
@@ -115,7 +115,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 
 1. **Arquivo › Abrir pasta** (Ctrl+Shift+O) e escolha a pasta do banco, ou arraste o `.db` para a janela. Para olhar
    sem risco, marque **Abrir bancos só para leitura** no Início.
-2. A **Visão geral** mostra quantas tabelas, visões, índices e gatilhos o banco tem. Clique numa tabela no Explorador.
+2. A **Visão geral** mostra quantas tabelas, visões, índices e gatilhos o banco tem, e a lista das tabelas. Clique
+   numa tabela no Explorador (ou dê um duplo clique na linha dela na lista).
 3. A aba da tabela mostra os dados: use a busca, os **filtros** e a seta do cabeçalho para ordenar. Duplo clique numa
    célula edita, e grava na hora; o aviso diz onde gravou e oferece **Desfazer** (ou Ctrl+Z). A ficha da linha mostra
    BLOB, NULL e colunas geradas.
@@ -169,7 +170,7 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 - **Abas de documento:** cada coisa aberta fica numa aba ("clientes", "Consulta 1", "vendas.csv"…), com
   **Voltar e Avançar** num histórico só, que atravessa as abas (Alt+← e Alt+→, ou os botões laterais do mouse).
   Arraste uma aba para mudar o lugar dela (ou Ctrl+Shift+PageUp e PageDown); "Todas as abas", na ponta da faixa, lista
-  todas.
+  todas; a dica de cada aba mostra o caminho inteiro do arquivo ou do banco.
 - **Janela própria**, no Windows e no Linux: barra de título com os menus Arquivo, Editar, Exibir, Banco, Tabela e
   Ajuda e os botões da janela; barra de ferramentas que é sempre a mesma (cada aba liga só os botões que fazem sentido
   nela); Explorador e Histórico de consultas numa doca à esquerda; Propriedades numa doca à direita. A barra de status
@@ -211,7 +212,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 
 ### Banco SQLite
 
-- **Visão geral** do banco, com os contadores de tabelas, visões, índices e gatilhos.
+- **Visão geral** do banco, com os contadores de tabelas, visões, índices e gatilhos e a lista de tabelas (linhas,
+  colunas e índices de cada uma; o clique duplo na linha abre a tabela).
 - **Dados:** grade com busca, filtros, ordenação, edição no lugar (a última edição tem **Desfazer**), linhas
   marcadas, a ficha da linha (com BLOB, NULL e colunas geradas), Nova linha, Duplicar e Excluir. Colar e Limpar um
   intervalo gravam numa transação só (perguntam antes acima de 100 células) e se desfazem de uma vez.
