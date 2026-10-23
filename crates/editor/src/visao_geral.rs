@@ -2,7 +2,7 @@
 //! (`Main.dc.html`):
 //!
 //! - **faixa**: o cilindro de 20, o nome em 600/13, a pílula "só leitura" (com o motivo na dica) e o caminho em
-//!   `--t3` semilight, com a reticência no meio quando não cabe;
+//!   `--t3` semilight, cortado do começo quando não cabe (`galley_caminho`);
 //! - **conteúdo** (gap de 18): os contadores na dock (`interface::pecas::dock`, no singular com um: "1 Visão") e a
 //!   lista de Tabelas (o título 13/600 e a `.lista-t` na moldura `--b2`), filtrada pela busca da barra ("Buscar
 //!   tabelas", sem acento nem caixa);
@@ -659,8 +659,8 @@ fn com_recuo(ui: &mut Ui, [cima, lados, baixo]: [f32; 3], conteudo: impl FnOnce(
     ui.allocate_space(vec2(ui.available_width(), altura));
 }
 
-/// O Caminho das Propriedades numa linha, com a reticência no meio quando não cabe (o `dd.caminho`: `.ini` cortado,
-/// `.fim` inteiro; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele
+/// O Caminho das Propriedades numa linha, cortado do começo quando não cabe, com o nome e a pasta-mãe inteiros (o
+/// `galley_caminho`; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele
 /// foi clicado. A ficha do arquivo de dados usa a mesma.
 pub(crate) fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
     let e = &paleta(ui).estudio;
@@ -681,7 +681,7 @@ pub(crate) fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
     ui_botao.add(Botao::icone(Icone::CopiarCaminho).pequeno().dica("Copiar caminho")).clicked()
 }
 
-/// A faixa: o cilindro, o nome, a pílula "só leitura" e o caminho com a reticência no meio.
+/// A faixa: o cilindro, o nome, a pílula "só leitura" e o caminho cortado do começo.
 fn faixa_do_banco(ui: &mut Ui, b: &BancoInfo, caminho: &str) {
     let e = &paleta(ui).estudio;
     let (r, _) = ui.allocate_exact_size(vec2(LADO_BANCO_FAIXA, LADO_BANCO_FAIXA), Sense::hover());

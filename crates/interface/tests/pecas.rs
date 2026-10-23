@@ -3657,17 +3657,25 @@ fn etiqueta_mais_tem_a_lista_na_dica() {
 }
 
 #[test]
-fn caminho_corta_no_meio_e_guarda_o_nome_do_arquivo() {
-    use interface::pecas::texto::encurtar_caminho;
+fn caminho_corta_do_comeco_e_guarda_o_nome_e_a_pasta_mae() {
+    use interface::pecas::texto::{encurtar_caminho, encurtar_nome};
     let caminho = "C:\\Users\\ana\\dados\\arquivo\\2026\\vendas.db";
     let cabe = |n: usize| move |s: &str| s.chars().count() <= n;
     assert_eq!(encurtar_caminho(caminho, cabe(200)).as_deref(), Some(caminho), "cabe inteiro");
-    let curto = encurtar_caminho(caminho, cabe(24)).expect("cabe com a reticência");
-    assert!(curto.ends_with("\\vendas.db") && curto.contains('…') && curto.starts_with("C:\\"), "{curto}");
-    assert_eq!(curto.chars().count(), 24, "o maior que cabe: {curto}");
+    // as pastas mais perto do nome, inteiras, quantas couberem (U6 da revisão de UI de 22/10/2026)
+    assert_eq!(encurtar_caminho(caminho, cabe(24)).as_deref(), Some("…\\arquivo\\2026\\vendas.db"));
+    assert_eq!(encurtar_caminho(caminho, cabe(16)).as_deref(), Some("…\\2026\\vendas.db"));
     assert_eq!(encurtar_caminho(caminho, cabe(11)).as_deref(), Some("…\\vendas.db"));
+    assert_eq!(encurtar_caminho("/home/ana/dados/vendas.csv", cabe(18)).as_deref(), Some("…/dados/vendas.csv"));
     assert_eq!(encurtar_caminho(caminho, cabe(5)), None, "nem o nome cabe");
     assert_eq!(encurtar_caminho("vendas.db", cabe(3)), None, "sem pasta");
+    // o nome que não cabe: cortado no meio, com a extensão inteira
+    assert_eq!(encurtar_nome("vendas_2025.csv", cabe(200)).as_deref(), Some("vendas_2025.csv"));
+    let nome = encurtar_nome("vendas_2025.csv", cabe(10)).expect("cabe cortado");
+    assert!(nome.ends_with(".csv") && nome.contains('…') && nome.starts_with("ven"), "{nome}");
+    assert_eq!(nome.chars().count(), 10, "o maior que cabe: {nome}");
+    assert_eq!(encurtar_nome("vendas_2025.csv", cabe(4)), None, "nem ….csv cabe");
+    assert_eq!(encurtar_nome("LEIAME", cabe(4)).as_deref(), Some("LE…E"), "sem extensão, no meio");
 }
 
 #[test]

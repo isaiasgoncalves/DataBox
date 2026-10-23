@@ -238,8 +238,8 @@
 //!     fundo delas; `altura_max`, `apagado`, `cores`; selecionável e copiável).
 //!   - [`pecas::zona_risco::ZonaRisco`] (recolhida por padrão, no vermelho `--perigo`; `hint`, `no_card_tabela`).
 //!   - [`pecas::texto`]: `h2` (20/600), `h3` (14/600), `h4` / `eyebrow` / `rotulo_caps` (o `.tit`: 11/600 em caixa
-//!     alta, `--t3`), `hint`, `texto`, `galley_caminho` / `encurtar_caminho` (a reticência no meio da pasta, o
-//!     nome do arquivo inteiro), `texto_cortado` (uma linha com "…" e a dica do texto inteiro: o
+//!     alta, `--t3`), `hint`, `texto`, `galley_caminho` / `encurtar_caminho` / `encurtar_nome` (cortado do
+//!     começo, com o nome e a pasta-mãe inteiros; o nome que não cabe, no meio, com a extensão), `texto_cortado` (uma linha com "…" e a dica do texto inteiro: o
 //!     `td.caminho-curto`), `paragrafo`, `forte`, `link` e `nome_abre` (o `.link`: `--acct` 600), `codigo` (a fonte
 //!     da interface em 350 sobre `--h`), `texto_rico(ui, &[Trecho::{Normal, Forte, Codigo, Fraco, Quebra, Link,
 //!     Ajuda}], …) -> RespostaTexto` (`{resposta, link: Option<índice do trecho>}`; selecionável),
