@@ -29,7 +29,7 @@ use interface::pecas::rotulos::{TipoPill, pill};
 use interface::pecas::tabela::PADDING_TABELA;
 use interface::pecas::tabela::{ColunaTabela, LARGURA_MIN_ESTICA, LarguraColuna, Tabela, moldura_lista};
 use interface::pecas::texto::{
-    ALTURA_TIT, Trecho, galley, galley_cortado, galley_quebrado, h4, mostrar_paragrafo, texto, titulo_lista,
+    ALTURA_TIT, Trecho, galley, galley_caminho, galley_quebrado, h4, mostrar_paragrafo, texto, titulo_lista,
 };
 use interface::pecas::toast::toast_erro;
 use interface::pintura;
@@ -218,14 +218,15 @@ fn nome_do_recente(ui: &mut Ui, icone: Icone, nome: &str, existe: bool) -> Respo
     resp
 }
 
-/// O `td.mono` da pasta dos recentes: a pasta numa linha (12px / 350 em `--t3`), encurtada com "…", e a dica com o
-/// caminho completo, encurtada ou não.
+/// O `td.mono` da pasta dos recentes: a pasta numa linha (12px / 350 em `--t3`), encurtada do começo, com as pastas
+/// mais perto do arquivo inteiras ("…/dados/2026", U6 da revisão de UI de 22/10/2026), e a dica com o caminho
+/// completo, encurtada ou não.
 fn pasta_curta(ui: &mut Ui, pasta: &str, caminho: &str, cortar: bool) -> Response {
     let cor = paleta(ui).estudio.t3;
     let fonte = fontes::fonte(TAMANHO_CELULA, Peso::Leve);
     // a coluna automática mede o conteúdo: a pasta vai inteira (ela só é automática quando todas cabem)
     let g = if cortar {
-        galley_cortado(ui, pasta, fonte, cor, ui.available_width())
+        galley_caminho(ui, pasta, fonte, cor, ui.available_width())
     } else {
         galley(ui, pasta, fonte, cor)
     };

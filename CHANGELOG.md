@@ -27,6 +27,11 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   e as pastilhas de tipo), com a frase embaixo dele. A ação vai num botão, em vez de mandar procurar na barra:
   **Nova linha** na tabela e no CSV que gravam ("Nenhuma linha nesta tabela.", "Nenhuma linha neste arquivo.") e
   **Limpar filtros** quando o filtro não acha nada.
+- **Caminhos cortados guardam o nome e a pasta-mãe** (revisão de UI de 22/10/2026, U6): quando não cabem, o Caminho
+  das Propriedades, da ficha e das faixas, e a pasta dos Abertos recentemente no Início, perdem o começo, não o meio:
+  "…/dados/vendas_2025.csv" no lugar de "/h…s/vendas_2025.csv", com as pastas mais perto do arquivo inteiras. O nome
+  que não cabe sozinho é cortado no meio, com a extensão inteira ("vendas_20…25.csv"), e não mais no fim
+  ("vendas_2025.c…"). O caminho inteiro continua na dica.
 
 ## [0.2.3] - 2026-10-22
 
