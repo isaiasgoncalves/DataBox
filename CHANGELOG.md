@@ -5,6 +5,13 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- **A seta da ordenação do CSV fica junto do nome da coluna** (revisão de UI de 22/10/2026, U7), como nos Dados e na
+  Consulta: "quantidade ▲". Antes ela ia na outra ponta do cabeçalho, longe do nome nas colunas de números. Com o
+  ponteiro no cabeçalho, a seta aparece apagada no mesmo lugar, para mostrar onde clicar; o clique direito nela abre o
+  menu da coluna, como no resto do cabeçalho.
+
 ## [0.2.3] - 2026-10-22
 
 ### Adicionado

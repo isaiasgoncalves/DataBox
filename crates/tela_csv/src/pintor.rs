@@ -11,8 +11,8 @@ use egui::{
     WidgetInfo, WidgetType, pos2, vec2,
 };
 use interface::grade::{
-    ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, LADO_SETA_ORDEM, Ordem, Th, pintar_cabecalho_coluna,
-    pintar_celula_alterada, pintar_numero_linha, pintar_seta_ordem, pintar_texto_de_celula,
+    ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, Ordem, Th, pintar_cabecalho_coluna,
+    pintar_celula_alterada, pintar_numero_linha, pintar_texto_de_celula, rect_seta_ordem,
 };
 use interface::icones::Icone;
 use interface::pecas::botao::{Botao, LADO_PEQUENO};
@@ -38,9 +38,8 @@ const ALTURA_TH_EDIT: f32 = 22.0;
 const PADDING_TH_EDIT: f32 = 6.0;
 const RAIO_TH_EDIT: f32 = 4.0;
 const RECUO_TH_EDIT: f32 = 4.0;
-/// A seta da ordem no `th` (o alvo do clique) e o espaço até o nome.
+/// O alvo do clique em volta da seta da ordem no `th`.
 const LADO_SETA: f32 = 16.0;
-const ESPACO_SETA: f32 = 2.0;
 
 /// Uma edição no lugar (linha da vista, coluna de dados), com o texto do campo.
 #[derive(Debug, Clone)]
@@ -373,32 +372,29 @@ impl Pintor<'_> {
         }
     }
 
-    /// A seta da ordem no `th` (o clique ordena: crescente → decrescente → sem ordem): a `.seta-ord` desenhada de 9px
-    /// (`pintar_seta_ordem`) no meio de um alvo de 16, no lado oposto ao do texto (à direita nas colunas de texto, à
-    /// esquerda nas de números), em `--acct` com a ordem e em `--t3` no hover. Devolve
-    /// o conteúdo que sobra para a pastilha e o nome.
-    fn seta_da_ordem(&mut self, ui: &mut Ui, h: &CabecalhoVisivel, d: usize, nome: &str, numerica: bool) -> Rect {
+    /// A seta da ordem no `th` (o clique ordena: crescente → decrescente → sem ordem): a `.seta-ord` de 9px logo
+    /// depois do nome, dos dois lados do alinhamento (U7 da revisão de UI de 22/10/2026; até a 0.2.3, na outra ponta
+    /// do `th`), em `--acct` com a ordem e, sem ordem, em `--t3` com o ponteiro no `th` (`--t` em cima dela). Devolve a
+    /// ordem e a cor da seta a desenhar, ou `None` sem ordem e sem o ponteiro.
+    fn seta_da_ordem(&self, ui: &Ui, h: &CabecalhoVisivel, d: usize) -> Option<(Ordem, Option<Color32>)> {
         let ordenada = self.ordem.filter(|(c, _)| *c == d).map(|(_, desc)| desc);
         let sobre = ui.rect_contains_pointer(h.recorte);
-        if ordenada.is_none() && !sobre {
-            return h.conteudo;
-        }
-        let c = h.conteudo;
-        let x = if numerica { c.left() } else { c.right() - LADO_SETA };
-        let r = Rect::from_min_size(pos2(x, c.center().y - LADO_SETA / 2.0), vec2(LADO_SETA, LADO_SETA));
-        let resp = ui.interact(r.intersect(h.recorte), Id::new(("tela_csv::seta", self.id_doc, d)), Sense::click());
-        let p = self.p;
-        let cor = if ordenada.is_some() {
-            p.estudio.acct
-        } else if resp.hovered() {
-            p.estudio.t
-        } else {
-            p.estudio.t3
+        let ordem = match ordenada {
+            Some(true) => Ordem::Decrescente,
+            Some(false) => Ordem::Crescente,
+            None if sobre => Ordem::Crescente,
+            None => return None,
         };
-        let ordem = if ordenada == Some(true) { Ordem::Decrescente } else { Ordem::Crescente };
-        let seta = Rect::from_center_size(r.center(), vec2(LADO_SETA_ORDEM, LADO_SETA_ORDEM));
-        pintar_seta_ordem(&ui.painter().with_clip_rect(h.recorte), seta, ordem, cor);
-        let proxima = match ordenada {
+        let cor = ordenada.is_none().then_some(self.p.estudio.t3);
+        Some((ordem, cor))
+    }
+
+    /// O alvo do clique da seta (16px em volta dela) e a dica: "Ordenar por regiao (decrescente)". Devolve se o
+    /// ponteiro está em cima dele.
+    fn alvo_da_seta(&mut self, ui: &mut Ui, h: &CabecalhoVisivel, d: usize, nome: &str, seta: Rect) -> bool {
+        let r = Rect::from_center_size(seta.center(), vec2(LADO_SETA, LADO_SETA));
+        let resp = ui.interact(r.intersect(h.recorte), Id::new(("tela_csv::seta", self.id_doc, d)), Sense::click());
+        let proxima = match self.ordem.filter(|(c, _)| *c == d).map(|(_, desc)| desc) {
             None => "crescente",
             Some(false) => "decrescente",
             Some(true) => "sem ordem",
@@ -408,15 +404,20 @@ impl Pintor<'_> {
         if resp.clicked() {
             self.ordenar = Some(d);
         }
-        if resp.hovered() {
+        // a seta fica no meio do `th`, junto do nome: o clique direito nela é o do `th` (o menu da coluna, com ela
+        // como dono neste quadro)
+        if resp.secondary_clicked() {
+            self.menu_th = Some(d);
+            if let Some(th) = self.ths.iter_mut().find(|(c, _)| *c == d) {
+                th.1 = resp.clone();
+            }
+        }
+        let em_cima = resp.hovered();
+        if em_cima {
             ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
             resp.on_hover_text(format!("Ordenar por {nome} ({proxima})"));
         }
-        if numerica {
-            Rect::from_min_max(pos2(c.left() + LADO_SETA + ESPACO_SETA, c.top()), c.max)
-        } else {
-            Rect::from_min_max(c.min, pos2(c.right() - LADO_SETA - ESPACO_SETA, c.bottom()))
-        }
+        em_cima
     }
 
     /// A paleta das células de uma linha marcada: o terciário do número passa a `--t2` (contraste sobre `--sel`).
@@ -563,9 +564,23 @@ impl DesenhoGrade for Pintor<'_> {
         self.ths.push((d, resp));
         let tipo = self.retrato.tipos.get(d).copied().unwrap_or(tabular::numero::TipoDetectado::Texto);
         let numerica = self.numerica(coluna);
-        let conteudo = self.seta_da_ordem(ui, h, d, nome, numerica);
-        let th = Th { numerica, pastilha: Some(textos::pastilha(tipo)), selecionada, ..Th::new(nome) };
-        if let Some(rp) = pintar_cabecalho_coluna(&pintor, self.p, conteudo, &th) {
+        let seta = self.seta_da_ordem(ui, h, d);
+        let mut th = Th {
+            numerica,
+            pastilha: Some(textos::pastilha(tipo)),
+            selecionada,
+            ordem: seta.map(|(o, _)| o),
+            cor_seta: seta.and_then(|(_, c)| c),
+            ..Th::new(nome)
+        };
+        // a seta logo depois do nome: o alvo antes de pintar, para a cor do hover já valer neste quadro
+        if let Some(r) = rect_seta_ordem(&pintor, h.conteudo, &th)
+            && self.alvo_da_seta(ui, h, d, nome, r)
+            && th.cor_seta.is_some()
+        {
+            th.cor_seta = Some(self.p.estudio.t);
+        }
+        if let Some(rp) = pintar_cabecalho_coluna(&pintor, self.p, h.conteudo, &th) {
             let resp = ui.interact(rp.intersect(h.recorte), ui.id().with(("tela_csv::tipo", d)), Sense::hover());
             let dica = textos::dica_do_tipo(tipo);
             resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &dica));

@@ -637,8 +637,11 @@ pub struct Th<'a> {
     pub tipo: Option<&'a str>,
     /// Coluna numérica: alinha à direita.
     pub numerica: bool,
-    /// Seta de ordenação depois do nome ([`pintar_seta_ordem`], em `--acct`).
+    /// Seta de ordenação depois do nome ([`pintar_seta_ordem`], em `--acct`), dos dois lados do alinhamento (U7 da
+    /// revisão de UI de 22/10/2026: no CSV ela ficava na outra ponta do `th`, longe do nome).
     pub ordem: Option<Ordem>,
+    /// A cor da seta, quando não é a `--acct` da coluna ordenada: a seta do hover, que mostra onde clicar (o CSV).
+    pub cor_seta: Option<Color32>,
     /// O nome é clicável (o `th` que ordena). O desenho é o mesmo do `th` comum (o Estúdio não tem o pontilhado
     /// embaixo do nome); o hover vem por [`Th::realce`].
     pub clicavel: bool,
@@ -667,8 +670,39 @@ impl<'a> Th<'a> {
             pastilha: None,
             selecionada: false,
             centrada: false,
+            cor_seta: None,
         }
     }
+}
+
+/// Onde vão as peças de um `th` no conteúdo: o começo da linha (a pastilha), o nome (x e y) e a linha de base dele.
+fn medidas_do_th(conteudo: Rect, th: &Th<'_>, g: &Galley, gt: Option<&Galley>) -> (f32, f32, f32, f32) {
+    let antes = if th.pastilha.is_some() { LARGURA_PASTILHA_TH } else { 0.0 };
+    let seta = if th.ordem.is_some() { ESPACO_SETA_ORDEM + LADO_SETA_ORDEM } else { 0.0 };
+    let largura = antes + g.size().x + seta + gt.map_or(0.0, |gt| ESPACO_TIPO + gt.size().x);
+    let x0 = if th.numerica {
+        (conteudo.right() - largura).max(conteudo.left())
+    } else if th.centrada {
+        (conteudo.center().x - largura / 2.0).max(conteudo.left())
+    } else {
+        conteudo.left()
+    };
+    let y = conteudo.center().y - g.size().y / 2.0;
+    // o tipo e a seta na linha de base do nome (`vertical-align:baseline`; a seta é o `svg` com `vertical-align:0`)
+    (x0, x0 + antes, y, y + linha_de_base(g))
+}
+
+/// Onde [`pintar_cabecalho_coluna`] põe a seta da ordem de `th` (com [`Th::ordem`]): logo depois do nome, para o
+/// alvo do clique de quem ordena pela seta (o CSV).
+pub fn rect_seta_ordem(painter: &Painter, conteudo: Rect, th: &Th<'_>) -> Option<Rect> {
+    th.ordem?;
+    let g = galley_nome_th(painter, th.nome, Color32::WHITE);
+    let gt = th.tipo.map(|t| galley_tipo_th(painter, t, Color32::WHITE));
+    let (_, x, _, base) = medidas_do_th(conteudo, th, &g, gt.as_deref());
+    Some(Rect::from_min_size(
+        pos2(x + g.size().x + ESPACO_SETA_ORDEM, base - LADO_SETA_ORDEM),
+        vec2(LADO_SETA_ORDEM, LADO_SETA_ORDEM),
+    ))
 }
 
 /// Lado da pastilha do `th` ([`Th::pastilha`]).
@@ -685,20 +719,8 @@ pub fn pintar_cabecalho_coluna(painter: &Painter, p: &Paleta, conteudo: Rect, th
     let cor = if th.realce || th.selecionada { e.t } else { e.t2 };
     let g = galley_nome_th(painter, th.nome, cor);
     let gt = th.tipo.map(|t| galley_tipo_th(painter, t, e.t3));
-    let antes = if th.pastilha.is_some() { LARGURA_PASTILHA_TH } else { 0.0 };
+    let (x0, x, y, base) = medidas_do_th(conteudo, th, &g, gt.as_deref());
     let seta = if th.ordem.is_some() { ESPACO_SETA_ORDEM + LADO_SETA_ORDEM } else { 0.0 };
-    let largura = antes + g.size().x + seta + gt.as_ref().map_or(0.0, |gt| ESPACO_TIPO + gt.size().x);
-    let x0 = if th.numerica {
-        (conteudo.right() - largura).max(conteudo.left())
-    } else if th.centrada {
-        (conteudo.center().x - largura / 2.0).max(conteudo.left())
-    } else {
-        conteudo.left()
-    };
-    let x = x0 + antes;
-    let y = conteudo.center().y - g.size().y / 2.0;
-    // o tipo e a seta na linha de base do nome (`vertical-align:baseline`; a seta é o `svg` com `vertical-align:0`)
-    let base = y + linha_de_base(&g);
     let x_tipo = x + g.size().x + seta + ESPACO_TIPO;
     let pastilha = th.pastilha.map(|tipo| {
         let r = Rect::from_center_size(
@@ -713,7 +735,7 @@ pub fn pintar_cabecalho_coluna(painter: &Painter, p: &Paleta, conteudo: Rect, th
             pos2(x + g.size().x + ESPACO_SETA_ORDEM, base - LADO_SETA_ORDEM),
             vec2(LADO_SETA_ORDEM, LADO_SETA_ORDEM),
         );
-        pintar_seta_ordem(painter, r, ordem, e.acct);
+        pintar_seta_ordem(painter, r, ordem, th.cor_seta.unwrap_or(e.acct));
     }
     painter.galley(pos2(x, y), g, cor);
     if let Some(gt) = gt {
