@@ -86,10 +86,10 @@ pub(crate) const PERGUNTA_VACUUM: &str =
 /// O `gap:18px` entre os blocos do conteúdo e o título da lista (`h2` 13/600 com `margin-bottom:8px`).
 const ESPACO_BLOCOS: f32 = 18.0;
 const ESPACO_TITULO_LISTA: f32 = 8.0;
-/// As colunas da lista de Tabelas (`th style="width:…"`): Linhas, Colunas, Tipo e a do botão "Colunas" (a vista das
-/// Propriedades, revisão de UI de 19/10/2026). Com menos de [`NOME_MINIMO`] para o nome, as quatro ficam com a
-/// largura do conteúdo (a lista não rola na janela estreita).
-const LARGURAS_LISTA: [f32; 4] = [110.0, 100.0, 150.0, 130.0];
+/// As colunas da lista de Tabelas (`th style="width:…"`): Linhas, Colunas, Índices e a do botão de ícone "Colunas"
+/// (a vista das Propriedades; U8 da revisão de UI de 22/10/2026: o tipo foi para o lado do nome). Com menos de
+/// [`NOME_MINIMO`] para o nome, as quatro ficam com a largura do conteúdo (a lista não rola na janela estreita).
+const LARGURAS_LISTA: [f32; 4] = [110.0, 100.0, 100.0, 56.0];
 const NOME_MINIMO: f32 = 200.0;
 const LADO_FICHA: f32 = 16.0;
 const ESPACO_FICHA: f32 = 8.0;
@@ -232,6 +232,8 @@ struct Textos {
     dock: Vec<ItemDock>,
     linhas_tabela: Vec<String>,
     colunas_tabela: Vec<String>,
+    /// Os índices de cada tabela (os do SQLite também, como a dock conta).
+    indices_tabela: Vec<String>,
     /// O nome de cada tabela sem acento e em minúsculas, para a busca da barra.
     chaves_tabelas: Vec<String>,
     tamanho_arquivo: String,
@@ -280,6 +282,13 @@ impl Textos {
             ],
             linhas_tabela: tabelas.iter().map(|t| formatar_numero_opt(t.linhas)).collect(),
             colunas_tabela: tabelas.iter().map(|t| formatar_numero_opt(t.colunas)).collect(),
+            indices_tabela: tabelas
+                .iter()
+                .map(|t| {
+                    let n = objetos.map_or(0, |o| o.indices.iter().filter(|i| i.tabela == t.nome).count());
+                    formatar_numero(n as u64)
+                })
+                .collect(),
             chaves_tabelas: tabelas.iter().map(|t| sem_acento(&t.nome)).collect(),
             tamanho_arquivo: formatar_bytes(b.tamanho),
             modificado: formatar_data_opt(b.modificado_em.as_deref()),
@@ -306,6 +315,10 @@ pub(crate) struct TelaBanco {
     busca: String,
     /// O que o menu Banco pediu (uma manutenção ou a cópia), à espera do próximo quadro.
     pedido_do_menu: Option<PedidoDoMenu>,
+    /// A linha da lista de Tabelas sob o ponteiro e a do botão "Colunas" com o foco, no quadro anterior: o botão
+    /// de ícone só aparece nelas.
+    linha_sob_ponteiro: Option<usize>,
+    linha_com_foco: Option<usize>,
 }
 
 /// O que o menu Banco pede à Visão geral (revisão de UI de 19/10/2026): o mesmo dos botões da Manutenção.
@@ -345,6 +358,8 @@ impl TelaBanco {
             textos: None,
             busca: String::new(),
             pedido_do_menu: None,
+            linha_sob_ponteiro: None,
+            linha_com_foco: None,
         }
     }
 
@@ -522,11 +537,13 @@ impl TelaBanco {
                 ColunaTabela::new("Nome"),
                 largura(ColunaTabela::new("Linhas").direita(), 0),
                 largura(ColunaTabela::new("Colunas").direita(), 1),
-                largura(ColunaTabela::new("Tipo"), 2),
+                largura(ColunaTabela::new("Índices").direita(), 2),
                 largura(ColunaTabela::new("").direita(), 3),
             ];
-            Tabela::new("tabelas-banco", &colunas, visiveis.len()).mostrar(ui, |ui, l, coluna| {
-                let Some(&l) = visiveis.get(l) else { return };
+            let (sob, com_foco) = (self.linha_sob_ponteiro, self.linha_com_foco);
+            let mut foco_agora = None;
+            let r = Tabela::new("tabelas-banco", &colunas, visiveis.len()).clicavel().mostrar(ui, |ui, v, coluna| {
+                let Some(&l) = visiveis.get(v) else { return };
                 let Some(t) = tabelas.get(l) else { return };
                 let e = &paleta(ui).estudio;
                 match coluna {
@@ -537,6 +554,14 @@ impl TelaBanco {
                         if nome_abre(ui, &t.nome, false).on_hover_text(&t.nome).clicked() {
                             ir = Some(Rota::objeto(t.nome.clone(), false));
                         }
+                        // o tipo especial ao lado do nome (U8 da revisão de UI de 22/10/2026; antes, numa coluna
+                        // Tipo quase sempre vazia)
+                        if t.tipo == TipoObjeto::Virtual {
+                            pill(ui, "virtual", TipoPill::Mute);
+                        }
+                        if t.sem_rowid {
+                            pill(ui, "sem rowid", TipoPill::Mute);
+                        }
                     }
                     1 => {
                         texto(ui, textos.linhas_tabela.get(l).map_or("—", String::as_str), 12.0, e.t);
@@ -545,20 +570,37 @@ impl TelaBanco {
                         texto(ui, textos.colunas_tabela.get(l).map_or("—", String::as_str), 12.0, e.t);
                     }
                     3 => {
-                        if t.tipo == TipoObjeto::Virtual {
-                            pill(ui, "virtual", TipoPill::Mute);
-                        }
-                        if t.sem_rowid {
-                            pill(ui, "sem rowid", TipoPill::Mute);
-                        }
+                        texto(ui, textos.indices_tabela.get(l).map_or("—", String::as_str), 12.0, e.t);
                     }
                     _ => {
-                        if ui.add(Botao::ghost("Colunas").pequeno()).clicked() {
+                        // o botão de ícone só aparece na linha do ponteiro e no foco do teclado; escondido, ele
+                        // continua no lugar (o Tab chega nele)
+                        let visivel = sob == Some(v) || com_foco == Some(v);
+                        let dica = format!("Colunas de {}", t.nome);
+                        let resp = ui
+                            .scope(|ui| {
+                                ui.set_opacity(if visivel { 1.0 } else { 0.0 });
+                                ui.add(Botao::icone(Icone::Editar).pequeno().rotulo(&dica).dica(&dica))
+                            })
+                            .inner;
+                        if resp.has_focus() {
+                            foco_agora = Some(v);
+                        }
+                        if resp.clicked() {
                             ir = Some(Rota::objeto_na_aba(t.nome.clone(), false, Aba::Estrutura));
                         }
                     }
                 }
             });
+            // a linha inteira abre a tabela no clique duplo, como a árvore do Explorador
+            if let Some(t) = r.linha_dupla.and_then(|v| visiveis.get(v)).and_then(|&l| tabelas.get(l)) {
+                ir = Some(Rota::objeto(t.nome.clone(), false));
+            }
+            if (r.linha_sob_ponteiro, foco_agora) != (sob, com_foco) {
+                ui.ctx().request_repaint();
+            }
+            self.linha_sob_ponteiro = r.linha_sob_ponteiro;
+            self.linha_com_foco = foco_agora;
         });
         if let Some(rota) = ir {
             ctx.navegar(rota);

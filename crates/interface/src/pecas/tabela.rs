@@ -8,7 +8,8 @@
 //!   `padding:0 12px`, fio `--b` entre as linhas (a última sem), conteúdo centrado na vertical; conteúdo mais alto
 //!   que a linha a estica.
 //! - Hover da linha: `--selh`; `tr.sel`: `--sel` ([`Tabela::marcadas`], no lugar do hover; o clique na linha que a
-//!   seleciona vem em [`RespostaTabela::linha_clicada`], com [`Tabela::clicavel`]); `tr.inativo`: o texto
+//!   seleciona vem em [`RespostaTabela::linha_clicada`], e o clique duplo que abre em
+//!   [`RespostaTabela::linha_dupla`], com [`Tabela::clicavel`]); `tr.inativo`: o texto
 //!   em `--t3` ([`Tabela::inativas`]: como o conteúdo é livre, a célula toda fica na opacidade que leva o `--t` ao
 //!   `--t3` sobre o documento; o `nome_abre` da linha usa `inativo = true`).
 //! - `td.num` / `th.num` e `td.acoes` à direita ([`ColunaTabela::direita`]); a coluna que fica com a sobra da
@@ -100,6 +101,8 @@ pub struct RespostaTabela {
     pub linha_sob_ponteiro: Option<usize>,
     /// A linha clicada fora dos controles dela ([`Tabela::clicavel`]: o `tr` que seleciona).
     pub linha_clicada: Option<usize>,
+    /// A linha com o clique duplo fora dos controles dela ([`Tabela::clicavel`]: o `tr` que abre, como na árvore).
+    pub linha_dupla: Option<usize>,
     /// Onde a tabela ficou.
     pub rect: Rect,
 }
@@ -259,6 +262,7 @@ impl<'a> Tabela<'a> {
         let mut medidas = Medidas { naturais: vec![0.0; n], alturas: Vec::with_capacity(self.linhas) };
         let mut sob_ponteiro = None;
         let mut clicada = None;
+        let mut dupla = None;
 
         let saida = ScrollArea::horizontal().id_salt(id.with("rolagem")).auto_shrink([false, true]).show(ui, |ui| {
             let topo = ui.cursor().min;
@@ -306,8 +310,14 @@ impl<'a> Tabela<'a> {
                     sob_ponteiro = Some(l);
                 }
                 // antes das células: os controles delas ficam por cima e ganham o clique
-                if self.clicavel && ui.interact(faixa, id.with(("linha", l)), Sense::CLICK).clicked() {
-                    clicada = Some(l);
+                if self.clicavel {
+                    let r = ui.interact(faixa, id.with(("linha", l)), Sense::CLICK);
+                    if r.clicked() {
+                        clicada = Some(l);
+                    }
+                    if r.double_clicked() {
+                        dupla = Some(l);
+                    }
                 }
                 if self.marcada.as_ref().is_some_and(|f| f(l)) {
                     ui.painter().rect_filled(faixa, 0.0, p.estudio.sel);
@@ -373,7 +383,12 @@ impl<'a> Tabela<'a> {
             ui.ctx().data_mut(|d| d.insert_temp(id_medidas, medidas));
             ui.ctx().request_discard("medidas da tabela");
         }
-        RespostaTabela { linha_sob_ponteiro: sob_ponteiro, linha_clicada: clicada, rect: saida.inner }
+        RespostaTabela {
+            linha_sob_ponteiro: sob_ponteiro,
+            linha_clicada: clicada,
+            linha_dupla: dupla,
+            rect: saida.inner,
+        }
     }
 }
 
