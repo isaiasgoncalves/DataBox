@@ -24,7 +24,7 @@ fn linhas(n: u64) -> String {
     interface::formato::plural(n, "linha", "linhas")
 }
 
-/// A contagem da faixa com busca ou filtro ("41 de 60 linhas").
+/// As linhas que passam com busca ou filtro, de quantas a tabela tem ("41 de 60 linhas", o `Retrato::total`).
 fn linhas_de(n: u64, total: u64) -> String {
     format!("{} de {}", interface::formato::formatar_numero(n), linhas(total))
 }
@@ -46,7 +46,7 @@ fn paginacao_e_contagem_de_eventos() {
     let amb = Ambiente::exemplo("dados_paginacao");
     let mut h = abrir(&amb, "eventos");
     let r = retrato(&h);
-    assert_eq!(r.faixa, linhas(N_EVENTOS as u64));
+    assert_eq!(r.total, linhas(N_EVENTOS as u64));
     assert_eq!(r.linhas, 100);
     assert_eq!(r.contagem_linhas, "Linhas 1–100 de 5.000");
     assert_eq!(r.pagina_atual, "Página 1 de 50");
@@ -124,14 +124,18 @@ fn busca_e_filtros_no_endereco() {
         digitar(&mut h, letra);
     }
     let total = N_CLIENTES as u64;
-    esperar_que(&mut h, |r| r.faixa == linhas_de(n_recife, total) && !r.carregando);
+    esperar_que(&mut h, |r| r.total == linhas_de(n_recife, total) && !r.carregando);
+    let r = retrato(&h);
+    assert_eq!(r.contagem_linhas, format!("Linhas 1–{n_recife} de {n_recife}"), "a contagem só no rodapé (U3)");
+    assert_eq!(r.filtradas, format!("filtradas de {total}"), "com busca, de quantas a tabela tem");
+    assert!(h.query_by_label_contains(" de 60 linhas").is_none(), "a faixa não conta mais");
     assert_eq!(ultima_rota(&h).map(|r| r.busca), Some("Recife".to_string()));
     assert!(sem_entrada_no_historico(&h), "a busca também troca o endereço sem entrar no histórico");
     assert!(com_foco(&h, id_busca), "só a grade redesenha: a busca continua com o foco");
 
     condicao_pelo_popover(&mut h, "ativo", "igual a", Some("1"));
     let n_ativos = contar_busca(&h, "Recife", " AND ativo = 1");
-    esperar_que(&mut h, |r| r.faixa == linhas_de(n_ativos, total) && !r.carregando);
+    esperar_que(&mut h, |r| r.total == linhas_de(n_ativos, total) && !r.carregando);
     assert_eq!(ultima_rota(&h).map(|r| r.filtros.len()), Some(1));
     assert!(
         h.query_by_role_and_label(Role::Button, "Editar o filtro ativo igual a 1").is_some(),
@@ -146,7 +150,7 @@ fn busca_e_filtros_no_endereco() {
     assert!(h.query_by_role_and_label(Role::TextInput, "Valor da condição").is_none());
     clicar_botao(&mut h, "Aplicar");
     let n_final = contar_busca(&h, "Recife", " AND ativo = 1 AND limite IS NOT NULL");
-    esperar_que(&mut h, |r| r.faixa == linhas_de(n_final, total) && !r.carregando);
+    esperar_que(&mut h, |r| r.total == linhas_de(n_final, total) && !r.carregando);
     assert!(h.query_by_role_and_label(Role::Button, "Editar o filtro limite não é nulo").is_some());
 
     // o "Exportar…" do cabeçalho enxerga a busca e os filtros da aba
@@ -162,13 +166,13 @@ fn busca_e_filtros_no_endereco() {
     // recarregar volta à mesma busca e aos mesmos filtros
     let mut h = recarregar(&amb, h);
     assert_eq!(retrato(&h).filtros, 2);
-    assert_eq!(retrato(&h).faixa, linhas_de(n_final, total));
+    assert_eq!(retrato(&h).total, linhas_de(n_final, total));
     let rota = h.state().tela.doc.tabela.rota.dados().cloned().expect("rota");
     assert_eq!(rota.filtros[0], FiltroDigitado { coluna: "ativo".into(), op: Operador::Igual, valor: "1".into() });
     assert_eq!(rota.filtros[1].op, Operador::NaoNulo);
 
     clicar_botao(&mut h, "Limpar filtros");
-    esperar_que(&mut h, |r| r.filtros == 0 && r.faixa == linhas_de(n_recife, total) && !r.carregando);
+    esperar_que(&mut h, |r| r.filtros == 0 && r.total == linhas_de(n_recife, total) && !r.carregando);
     assert_eq!(ultima_rota(&h).map(|r| r.filtros.len()), Some(0));
 
     let id_busca = campo_busca();
@@ -177,7 +181,8 @@ fn busca_e_filtros_no_endereco() {
     let r = retrato(&h);
     assert_eq!(r.vazio.as_deref(), Some("Nenhuma linha corresponde à busca ou aos filtros."));
     assert_eq!(r.contagem_linhas, "Nenhuma linha");
-    assert_eq!(r.faixa, linhas_de(0, total));
+    assert_eq!(r.filtradas, format!("filtradas de {total}"));
+    assert_eq!(r.total, linhas_de(0, total));
 }
 
 #[test]
@@ -330,7 +335,7 @@ fn nova_linha_com_padrao_e_nulo() {
 
     // a tela é refeita pela casca: a aba nova mostra a contagem nova
     let mut h = recarregar(&amb, h);
-    assert_eq!(retrato(&h).faixa, linhas(N_CLIENTES as u64 + 1));
+    assert_eq!(retrato(&h).total, linhas(N_CLIENTES as u64 + 1));
 
     // a linha nova abre na janela; a caixa "NULL" grava NULL e "Usar o padrão" não existe na edição
     // a linha 61 fica abaixo da parte visível da grade: rola até ela
@@ -510,7 +515,7 @@ fn excluir_marcadas_com_confirmacao() {
         vec![vec![Celula::Inteiro(N_EVENTOS - 3), Celula::Inteiro(4)]]
     );
     let mut h = recarregar(&amb, h);
-    assert_eq!(retrato(&h).faixa, linhas(N_EVENTOS as u64 - 3));
+    assert_eq!(retrato(&h).total, linhas(N_EVENTOS as u64 - 3));
 
     // a caixa do cabeçalho marca a página inteira
     let estado_da_caixa = |h: &H| {
@@ -545,7 +550,7 @@ fn excluir_linha_pela_janela() {
 fn visao_so_leitura() {
     let amb = Ambiente::exemplo("dados_visao");
     let mut h = abrir(&amb, "v_pedidos_por_cliente");
-    assert_eq!(retrato(&h).faixa, linhas(N_CLIENTES as u64));
+    assert_eq!(retrato(&h).total, linhas(N_CLIENTES as u64));
     assert_eq!(h.state().tela.doc.parte.tem_caixas(), Some(false));
     // visão: só Filtrar e Buscar (a tela de tabela junta Atualizar e Exportar)
     let o = ofertas(&h);
@@ -655,7 +660,7 @@ fn casca_que_mantem_a_aba_ve_a_pagina_relida() {
     assert!(h.state().tela.doc.tabela.recarregar, "pede à casca que releia a tabela");
     // a casca releu a tabela sem refazer a aba: a própria aba relê a página
     h.state_mut().tela.doc.tabela.recarregar = false;
-    esperar_que(&mut h, |r| r.faixa == linhas(N_CLIENTES as u64 + 1));
+    esperar_que(&mut h, |r| r.total == linhas(N_CLIENTES as u64 + 1));
     assert!(grade_com_foco(&h), "o foco vai para a linha nova");
     let ativa = retrato(&h).ativa.expect("célula ativa");
     assert_eq!(h.state().tela.doc.parte.rotulo_da_linha(ativa.0), Some((N_CLIENTES + 1).to_string()));
@@ -832,7 +837,7 @@ fn hint_sem_linhas() {
     tabela.rota =
         tabela.rota.com_dados(ConsultaDados { busca: "nada-assim@example.test".into(), ..Default::default() });
     let h = abrir_com(&amb, tabela, Tema::Claro, Ganchos::default());
-    assert_eq!(retrato(&h).faixa, linhas_de(0, N_CLIENTES as u64));
+    assert_eq!(retrato(&h).total, linhas_de(0, N_CLIENTES as u64));
 }
 
 #[test]
@@ -842,14 +847,14 @@ fn esc_na_busca_limpa_e_enter_aplica_na_hora() {
     tabela.rota =
         tabela.rota.com_dados(ConsultaDados { busca: "nada-assim@example.test".into(), ..Default::default() });
     let mut h = abrir_com(&amb, tabela, Tema::Claro, Ganchos::default());
-    assert_eq!(retrato(&h).faixa, linhas_de(0, N_CLIENTES as u64));
+    assert_eq!(retrato(&h).total, linhas_de(0, N_CLIENTES as u64));
     let id_busca = campo_busca();
     h.ctx.memory_mut(|m| m.request_focus(id_busca));
     h.step();
     h.step();
     // o Esc do campo de busca limpa a busca (como o `input[type=search]`)
     tecla(&mut h, Key::Escape);
-    esperar_que(&mut h, |r| r.faixa == linhas(N_CLIENTES as u64) && !r.carregando);
+    esperar_que(&mut h, |r| r.total == linhas(N_CLIENTES as u64) && !r.carregando);
     assert_eq!(ultima_rota(&h).map(|c| c.busca), Some(String::new()));
     // Enter aplica sem esperar os 300 ms
     h.ctx.memory_mut(|m| m.request_focus(id_busca));
@@ -883,7 +888,7 @@ fn pagina_que_falha_mostra_o_aviso_na_grade() {
     clicar_botao(&mut h, "Próxima página");
     esperar_que(&mut h, |r| r.erro.is_some());
     let r = retrato(&h);
-    assert_eq!(r.faixa, "", "a faixa fica sem contagem; o aviso fica no conteúdo");
+    assert_eq!(r.total, "", "a faixa fica sem contagem; o aviso fica no conteúdo");
     assert_eq!(r.erro.as_deref(), Some(estado::MSG_INESPERADO));
     assert!(r.contagem_linhas.is_empty() && r.pagina_atual.is_empty(), "o rodapé fica vazio");
     assert!(h.query_by_label_contains(estado::MSG_INESPERADO).is_some(), "o aviso de perigo na grade");
@@ -905,7 +910,7 @@ fn tabela_vazia_mostra_o_estado_vazio() {
         Some("Nenhuma linha. Use Nova linha, na barra de ferramentas, para incluir a primeira.")
     );
     assert_eq!(r.contagem_linhas, "Nenhuma linha");
-    assert_eq!(r.faixa, "0 linhas");
+    assert_eq!(r.total, "0 linhas");
 }
 
 // ---- correções da segunda revisão ---------------------------------------------------------------------------
@@ -1071,7 +1076,7 @@ fn faixa_mostra_as_condicoes_e_a_contagem() {
     let amb = Ambiente::exemplo("dados_faixa");
     let h = abrir_com(&amb, clientes_ativos(&amb), Tema::Claro, Ganchos::default());
     let n = contar(&h, "SELECT count(*) FROM clientes WHERE ativo = 1");
-    assert_eq!(retrato(&h).faixa, linhas_de(n, N_CLIENTES as u64), "\"41 de 60 linhas\"");
+    assert_eq!(retrato(&h).total, linhas_de(n, N_CLIENTES as u64), "\"41 de 60 linhas\"");
     assert!(h.query_by_label("Filtros").is_some());
     assert!(h.query_by_role_and_label(Role::Button, "Editar o filtro ativo igual a 1").is_some());
     assert!(h.query_by_role_and_label(Role::Button, "Tirar o filtro ativo igual a 1").is_some());
@@ -1079,7 +1084,7 @@ fn faixa_mostra_as_condicoes_e_a_contagem() {
     assert!(h.query_by_role_and_label(Role::Button, "Limpar filtros").is_some());
     // sem condição, só "Filtros", "+ Condição" e a contagem
     let h = abrir(&amb, "clientes");
-    assert_eq!(retrato(&h).faixa, "60 linhas");
+    assert_eq!(retrato(&h).total, "60 linhas");
     assert!(h.query_by_role_and_label(Role::Button, "Limpar filtros").is_none());
     assert!(h.query_by_role_and_label(Role::Button, "Tirar o filtro ativo igual a 1").is_none());
 }
@@ -1091,7 +1096,7 @@ fn condicao_pelo_popover_vira_etiqueta() {
     condicao_pelo_popover(&mut h, "cidade", "igual a", Some("Recife"));
     let n = contar(&h, "SELECT count(*) FROM clientes WHERE cidade = 'Recife'");
     esperar_que(&mut h, |r| !r.carregando && !r.condicao_aberta && r.filtros == 1);
-    assert_eq!(retrato(&h).faixa, linhas_de(n, N_CLIENTES as u64));
+    assert_eq!(retrato(&h).total, linhas_de(n, N_CLIENTES as u64));
     assert!(h.query_by_role_and_label(Role::Button, "Editar o filtro cidade igual a Recife").is_some());
     let rota = ultima_rota(&h).expect("rota");
     assert_eq!(
@@ -1134,7 +1139,7 @@ fn tirar_a_etiqueta_tira_o_filtro() {
     let mut h = abrir_com(&amb, clientes_ativos(&amb), Tema::Claro, Ganchos::default());
     clicar_botao(&mut h, "Tirar o filtro ativo igual a 1");
     esperar_que(&mut h, |r| r.filtros == 0 && !r.carregando);
-    assert_eq!(retrato(&h).faixa, "60 linhas");
+    assert_eq!(retrato(&h).total, "60 linhas");
     assert_eq!(ultima_rota(&h).map(|c| c.filtros.len()), Some(0));
     assert!(h.query_by_role_and_label(Role::Button, "Editar o filtro ativo igual a 1").is_none());
 }
@@ -1147,7 +1152,7 @@ fn limpar_filtros_pela_faixa() {
     esperar_que(&mut h, |r| r.filtros == 2 && !r.carregando);
     clicar_botao(&mut h, "Limpar filtros");
     esperar_que(&mut h, |r| r.filtros == 0 && !r.carregando);
-    assert_eq!(retrato(&h).faixa, "60 linhas");
+    assert_eq!(retrato(&h).total, "60 linhas");
     assert!(h.query_by_role_and_label(Role::Button, "Limpar filtros").is_none());
 }
 

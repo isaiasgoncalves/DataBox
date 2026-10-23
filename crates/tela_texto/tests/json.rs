@@ -68,7 +68,8 @@ fn analisa_o_json_da_prancheta_8_e_mostra_a_estrutura() {
     assert!(doc.erro_de_json().is_none());
     // os cinco nomes da raiz (aberta sozinha); `conexoes` e `exportacao` abrem pela seta
     for nome in ["raiz", "versao", "tema", "idioma", "conexoes", "exportacao"] {
-        assert!(t.query_by_label(nome).is_some(), "{nome}");
+        // a "raiz" também está na migalha da faixa
+        assert!(t.query_all_by_label(nome).next().is_some(), "{nome}");
     }
     assert!(t.query_by_label("2 itens").is_none(), "a contagem é pintada, não é um nó");
 }
@@ -265,7 +266,7 @@ fn estrutura_mostra_a_ultima_versao_valida_em_t3() {
     esperar_ate(&mut t, |h| h.state().tela.doc.erro_de_json().is_some());
     assert!(t.state().tela.doc.estrutura_e_a_ultima_valida());
     assert!(
-        t.query_by_label("raiz").is_some() && t.query_by_label("conexoes").is_some(),
+        t.query_all_by_label("raiz").count() == 2 && t.query_by_label("conexoes").is_some(),
         "a árvore velha continua à vista"
     );
 }
@@ -310,12 +311,13 @@ fn na_faixa(t: &H, rotulo: &str) -> bool {
 #[test]
 fn migalha_acompanha_o_cursor() {
     let mut t = abrir("migalha", "config.json", JSON_DA_PRANCHETA.as_bytes());
-    // no começo do documento (na raiz) só há o nome do arquivo
-    assert!(na_faixa(&t, "config.json"));
+    // no começo do documento só há a raiz; o nome do arquivo, que já está na aba, não (U4)
+    assert!(na_faixa(&t, "raiz"));
+    assert!(!na_faixa(&t, "config.json"));
     assert!(!na_faixa(&t, "conexoes"));
     // com o cursor no `30` do tempo_limite: conexoes › 0 › tempo_limite
     cursor_depois_de(&mut t, "\"tempo_limite\": 30");
-    for nome in ["config.json", "conexoes", "0", "tempo_limite"] {
+    for nome in ["raiz", "conexoes", "0", "tempo_limite"] {
         assert!(na_faixa(&t, nome), "{nome}");
     }
     // com o cursor no nome do segundo item: conexoes › 1 › nome
@@ -396,8 +398,8 @@ fn leitor_mostra_o_estado_do_json_uma_vez_ao_abrir() {
     assert_eq!(t.state().tela.doc.modo(), Modo::Leitor);
     assert!(t.query_by_label("JSON válido").is_some());
     assert!(t.query_by_label_contains("Somente leitura").is_some());
-    assert!(t.query_by_label("Formatar").is_none(), "o leitor tem a etiqueta no lugar do Formatar");
-    assert!(t.query_by_label("raiz").is_some(), "a estrutura sai da análise feita ao abrir");
+    assert!(t.query_by_label("Formatar").is_none(), "o leitor não formata; a etiqueta fica no rodapé");
+    assert!(t.query_all_by_label("raiz").count() == 2, "a estrutura sai da análise feita ao abrir (e a migalha)");
     assert_eq!(t.state().tela.doc.contas_da_validacao(), (0, 0), "nenhuma análise nova depois de abrir");
     // o mesmo arquivo com o erro: o círculo de erro, também feito uma vez
     let quebrado = json.replace("\"fim\": true", "\"fim\" true");

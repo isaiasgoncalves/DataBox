@@ -1,5 +1,5 @@
 //! A busca da barra (Ctrl+F) no texto e no leitor de arquivos grandes: no texto inteiro; o trecho achado fica
-//! pintado e à vista; Enter e Shift+Enter andam; a faixa diz "3 de 41"; Esc volta ao cursor (ou à linha) de antes.
+//! pintado e à vista; Enter e Shift+Enter andam; o rodapé diz "3 de 41"; Esc volta ao cursor (ou à linha) de antes.
 
 // teste ou exemplo: unwrap/expect valem também nas funções de apoio (fora dos #[test])
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -73,7 +73,7 @@ fn busca_no_editor_anda_e_volta_ao_cursor_de_antes() {
     buscar(&mut t, "Buscar em notas.txt", "sao luis");
     // o primeiro achado depois do cursor: o da linha 13, o terceiro dos 41
     assert_eq!(rotulo(&t).as_deref(), Some("3 de 41"));
-    assert!(t.query_by_label("3 de 41").is_some(), "a contagem na faixa");
+    assert!(t.query_by_label("3 de 41").is_some(), "a contagem no rodapé");
     let inicio = byte_da_linha(&conteudo, 13) + "linha 13: ".len();
     assert_eq!(t.state().tela.doc.trecho_achado(), Some(inicio..inicio + "SAO LUIS".len()));
     assert_eq!(achado(&t).as_deref(), Some("SAO LUIS"));

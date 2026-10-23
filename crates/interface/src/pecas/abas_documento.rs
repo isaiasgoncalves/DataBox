@@ -90,17 +90,25 @@ pub struct AbaDocumento<'a> {
     pub chave: Option<u64>,
     /// Tem alteração não salva: o ponto de 7px em `--acct` (`.aba .mod`) no lugar do ×, que volta no hover e no foco.
     pub alterada: bool,
+    /// A dica da aba: o caminho inteiro do arquivo ou do banco (U4 da revisão de UI de 22/10/2026).
+    pub dica: Option<&'a str>,
 }
 
 impl<'a> AbaDocumento<'a> {
     /// Uma aba fechável, sem sub ("Consulta 2").
     pub fn new(icone: Icone, nome: &'a str) -> Self {
-        AbaDocumento { icone, nome, sub: None, fechavel: true, chave: None, alterada: false }
+        AbaDocumento { icone, nome, sub: None, fechavel: true, chave: None, alterada: false, dica: None }
     }
 
     /// A aba tem alteração não salva (o ponto no lugar do ×; o leitor de tela ouve ", alterada").
     pub fn alterada(mut self, sim: bool) -> Self {
         self.alterada = sim;
+        self
+    }
+
+    /// A dica da aba (o caminho inteiro; ver [`AbaDocumento::dica`]).
+    pub fn dica(mut self, dica: &'a str) -> Self {
+        self.dica = Some(dica);
         self
     }
 
@@ -442,6 +450,9 @@ impl<'a> FaixaAbas<'a> {
                 no.set_role(Role::Tab);
                 no.set_selected(e_ativa);
             });
+            if let Some(dica) = aba.dica.filter(|_| arrastada.is_none()) {
+                resp.on_hover_text(dica);
+            }
         }
 
         // o fio `--acct` de 2px no vão onde a arrastada vai cair
