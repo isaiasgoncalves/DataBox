@@ -6,6 +6,8 @@
 //! mostra o ponto `--acct` no lugar do ×, que volta no hover e no foco; o × dela passa pela fila de perguntas ao
 //! fechar da casca ("Salvar as alterações em…?").
 //!
+//! A dica de cada aba é o caminho inteiro do arquivo ou do banco (U4 da revisão de UI de 22/10/2026).
+//!
 //! Na ponta direita, o "Todas as abas" (revisão de UI de 19/10/2026): o menu com cada aba aberta, a ativa marcada.
 //!
 //! O clique numa aba (ou no item dela no "Todas as abas"), no × dela, o clique do meio e o "+" viram [`Acao`]
@@ -42,6 +44,18 @@ fn icone(documento: &Documento, rota: &Rota, estado: &Estado) -> Icone {
     }
 }
 
+/// A dica da aba: o caminho inteiro do arquivo, ou o do banco nas abas dele (a Visão geral, as tabelas e as
+/// Consultas); o Início não tem (U4 da revisão de UI de 22/10/2026: o caminho saiu da faixa da Visão geral).
+fn dica(documento: &Documento, estado: &Estado) -> Option<String> {
+    match documento {
+        Documento::Inicio(_) => None,
+        Documento::Banco(_) | Documento::Tabela(_) | Documento::Consulta(_) => {
+            estado.banco.as_ref().map(|b| b.caminho.display().to_string())
+        }
+        Documento::Arquivo(t) => Some(t.caminho().display().to_string()),
+    }
+}
+
 /// O nome e o sub de cada aba aberta, na ordem da faixa, e se ela é a ativa.
 pub(crate) fn titulos(abas: &Abas<Documento>, estado: &Estado) -> Vec<(String, Option<String>, bool)> {
     let ativa = abas.id_ativa();
@@ -57,12 +71,14 @@ pub(crate) fn titulos(abas: &Abas<Documento>, estado: &Estado) -> Vec<(String, O
 /// (a junção).
 pub(crate) fn faixa(ui: &mut Ui, abas: &Abas<Documento>, estado: &Estado) -> (Option<Acao>, Option<Rangef>) {
     let titulos = titulos(abas, estado);
+    let dicas: Vec<Option<String>> = abas.iter().map(|a| dica(&a.conteudo, estado)).collect();
     // o Início sozinho não fecha
     let so_o_inicio = abas.len() == 1 && abas.ativa().chave() == Some(&ChaveAba::Inicio);
     let itens: Vec<AbaDocumento<'_>> = abas
         .iter()
         .zip(&titulos)
-        .map(|(a, (nome, sub, _))| {
+        .zip(&dicas)
+        .map(|((a, (nome, sub, _)), dica)| {
             // o ponto de alterada (etapa 5): o documento diz, a cada quadro (barato)
             let mut item = AbaDocumento::new(icone(&a.conteudo, a.rota(), estado), nome)
                 .fechavel(!so_o_inicio)
@@ -70,6 +86,9 @@ pub(crate) fn faixa(ui: &mut Ui, abas: &Abas<Documento>, estado: &Estado) -> (Op
                 .com_chave(a.id().0);
             if let Some(s) = sub {
                 item = item.sub(s);
+            }
+            if let Some(d) = dica {
+                item = item.dica(d);
             }
             item
         })

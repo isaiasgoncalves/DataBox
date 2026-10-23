@@ -5,6 +5,20 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Alterado
+
+- **A faixa do topo segue uma regra só** (revisão de UI de 22/10/2026, U4): ela existe para o que a aba não diz, e a
+  posição do cursor e as contagens moram no rodapé, à direita.
+  - **JSON:** a faixa não repete mais o nome do arquivo; mostra a migalha do ponto do cursor a partir da raiz
+    ("raiz › conexoes › 0 › arquivo"), com o sinal de válido e o Formatar.
+  - **Texto (TXT, MD, LOG):** sem faixa. A contagem da busca ("3 de 41") e, no arquivo grande, o "Somente leitura"
+    vão para o rodapé (também no JSON).
+  - **Consulta SQL:** "Linha 3, coluna 37" desce para a ponta direita do rodapé, como no JSON; a faixa fica com o
+    banco.
+  - **Visão geral:** sem faixa. O caminho do banco continua nas Propriedades, e o "só leitura", na Gravação delas.
+- **A dica de cada aba de documento mostra o caminho inteiro** do arquivo ou do banco (nas abas da Visão geral, das
+  tabelas e das Consultas).
+
 ## [0.2.3] - 2026-10-22
 
 ### Adicionado

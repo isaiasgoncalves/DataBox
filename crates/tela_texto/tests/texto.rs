@@ -37,8 +37,8 @@ fn abre_txt_e_mostra_o_texto() {
     assert_eq!(doc.tipo(), TipoDeTexto::Texto);
     assert_eq!(doc.texto(), Some("primeira linha\nsegunda linha com ação\n"));
     assert!(!doc.alterado() && !doc.salvando());
-    // a faixa só com a folha e o nome (sem estado e sem Formatar), o rodapé e as Propriedades do texto
-    assert!(t.query_by_label("notas.txt").is_some());
+    // sem faixa (o nome já está na aba; U4 da revisão de UI de 22/10/2026), o rodapé e as Propriedades do texto
+    assert!(!estado::Documento::anatomia(doc).faixa, "o TXT não tem faixa");
     assert!(t.query_by_label("Texto de notas.txt").is_some());
     assert!(t.query_by_label("2 linhas").is_some());
     assert!(t.query_by_label("Linha 1, coluna 1").is_some());
@@ -205,7 +205,7 @@ fn arquivo_acima_de_1_mib_abre_no_leitor_so_leitura() {
     assert!(!doc.alterado());
     let status = doc.status_do_arquivo(&t.state().estado).expect("status");
     assert_eq!(status.situacao, estado::Situacao::SoLeitura);
-    // a faixa com a etiqueta e o aviso de topo com os botões da ficha
+    // a etiqueta no rodapé e o aviso de topo com os botões da ficha
     assert!(t.query_by_label_contains("Somente leitura").is_some());
     assert!(t.query_by_label_contains("e abre só para leitura. Para editar, use um programa de texto.").is_some());
     assert!(t.query_by_label("Abrir no programa padrão").is_some() && t.query_by_label("Mostrar na pasta").is_some());

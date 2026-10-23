@@ -1,4 +1,4 @@
-//! A Visão geral: a faixa, os cartões e as tabelas, a só leitura, a manutenção nas Propriedades, a busca, o
+//! A Visão geral: sem faixa (o caminho na dica da aba), os cartões e as tabelas, a só leitura, a manutenção nas Propriedades, a busca, o
 //! caminho copiado e as seções no fim do documento sem o painel.
 
 use super::*;
@@ -20,11 +20,18 @@ fn visao_geral_faixa_cartoes_e_tabelas() {
         _ => None,
     });
     assert_eq!(h.state().rota(), &Rota::Banco);
-    // a faixa: o nome e o caminho inteiro (no leitor de tela), logo abaixo da faixa de abas
+    // sem faixa (U4 da revisão de UI de 22/10/2026): o caminho inteiro fica na dica da aba e nas Propriedades
     let aberto = h.state().estado().banco.as_ref().map(|b| b.caminho.display().to_string()).unwrap_or_default();
-    let caminho = h.query_all_by_label(&aberto).map(|n| n.rect()).min_by(|a, b| a.top().total_cmp(&b.top()));
     let doc = documento(&h);
-    assert!(caminho.is_some_and(|r| r.top() > doc.top() && r.bottom() < doc.top() + 42.0), "na faixa: {caminho:?}");
+    let no_alto = h.query_all_by_label(&aberto).any(|n| n.rect().top() > doc.top() && n.rect().bottom() < doc.top() + 42.0);
+    assert!(!no_alto, "nada de faixa com o caminho no alto do documento");
+    // (as Propriedades já dizem o caminho: a dica é um nó a mais com ele)
+    let antes = h.query_all_by_label(&aberto).count();
+    h.get(by().role(Role::Tab).label("exemplo.db · Visão geral")).hover();
+    h.run_steps(3);
+    assert_eq!(h.query_all_by_label(&aberto).count(), antes + 1, "o caminho inteiro na dica da aba");
+    h.remove_cursor();
+    h.run_steps(2);
     // os contadores na dock, no singular com um, e a lista de Tabelas (sem o "7 tabelas" do título)
     for c in DOCK_DO_EXEMPLO {
         assert!(tem_texto(&h, c), "{c} na dock: {:?}", textos(&h));
@@ -128,14 +135,12 @@ fn visao_geral_so_leitura_so_tem_verificacoes_e_copia() {
     let caminho = amostras::criar_banco_exemplo(amb.pasta().join("exemplo.db")).expect("exemplo");
     let partida = Partida { caminho: Some(caminho), somente_leitura: true };
     let mut h = harness_com(&amb, Tema::Claro, TAMANHO, partida, |_| None);
-    // a pílula "só leitura" na faixa, logo depois do nome
-    assert!(tem_texto(&h, "só leitura"));
-    // (e outra na linha "Gravação" das Propriedades, revisão de 20/10/2026)
+    // a pílula "só leitura" na linha "Gravação" das Propriedades (revisão de 20/10/2026); a da faixa saiu com a
+    // faixa (U4 da revisão de UI de 22/10/2026)
     let doc = documento(&h);
     let pilulas: Vec<egui::Rect> = h.query_all(by().label("só leitura")).map(|n| n.rect()).collect();
-    assert_eq!(pilulas.len(), 2, "{pilulas:?}");
-    let pilula = pilulas.iter().find(|r| doc.contains_rect(**r)).copied().expect("a pílula da faixa");
-    assert!(pilula.top() > doc.top() && pilula.bottom() < doc.top() + 42.0, "{pilula:?}");
+    assert_eq!(pilulas.len(), 1, "{pilulas:?}");
+    assert!(!doc.contains_rect(pilulas[0]), "a pílula nas Propriedades, fora do documento: {pilulas:?}");
     // a Manutenção nas Propriedades: só as verificações e a cópia
     let t = textos_das_propriedades(&h);
     for item in
