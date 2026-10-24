@@ -29,7 +29,7 @@ ao mesmo tempo.
 
 | Onda | PRs | Sessões | Entra quando |
 |---|---|---|---|
-| **0** | **U11** dos ícones; revisão da prancheta dos gráficos (**PR 7**) e a do SSH; o documento do contrato de fonte de dados (0.4, sem código) | 2–3 | já. A U11 antes da varredura, porque mexe em menus |
+| **0** | **U11** dos ícones; **Q1** (**PR 15**), as colunas na doca "Tabelas" da Consulta; revisão da prancheta dos gráficos (**PR 7**) e a do SSH; o documento do contrato de fonte de dados (0.4, sem código) | 3–4 | já. A U11 e a Q1 antes da varredura, porque mexem em menus e na `tela_consulta` |
 | **1** | **I1**: o crate `idioma`, `t!`/`tn!`, o `.po`, o extrator no CI, o seletor nas Preferências, `interface::formato` | 1 | depois da U11 |
 | **2** | **I2** núcleos ‖ **I3a** `tela_*` ‖ **I3b** `interface`/`estado`/`editor` | 3 | depois da I1; crates disjuntos |
 | **2b** | **PR 1** `FonteDeLinhas` → **PR 2** gravadores de SQLite e de JSON Lines | 1 | depois que a I2 entrar; só toca crates de núcleo, então corre junto com a I3 |
@@ -53,9 +53,10 @@ O que **bloqueia** o quê:
 | **B · Levar** | PR 4 (Salvar como e Salvar tudo) → PR 5 (a bancada e "Consultar com SQL") | PR 1, PR 2 | o PR 5 depende do 4 só pela janela de prévia dos tipos |
 | **C · Ver** | PR 8 (gráficos, `egui_plot` 0.37) → PR 9 (Abrir no Python) | PR 1, PR 7 | o PR 9 reaproveita a escolha de colunas do 8 |
 | **D · Formatos** | PR 10 (JSON Lines como tabela; `.sql` na Consulta) | PR 1 | pequeno: entra quando liberar uma sessão |
+| **F · Consultar (Q2)** | PR 16 (o autocompletar no editor da Consulta) | PR 15, I3a | pequeno e sem dependência nova; não toca a casca. Entra um de cada vez com a parte `.sql` do PR 10, que também mexe na `tela_consulta` |
 | **E · Conectar (S1)** | PR 11 (spike) → PR 12 (`remoto`) → PR 13 (pasta remota e cache) → PR 14 (a interface) | S0 passar; PR 14 depende também da I3 | só o PR 14 toca a casca |
 
-Com 4 sessões e 5 trilhas, começam A, B, C e E (a de maior risco de build); a D entra quando uma delas fechar. Os PRs
+Com 4 sessões e 6 trilhas, começam A, B, C e E (a de maior risco de build); a F e a D entram quando uma delas fechar, a F primeiro (a pessoa sente a diferença no dia a dia). Os PRs
 11 a 13 são crates novos ou de núcleo e correm desde a onda 3.
 
 ### A casca em fila
@@ -131,9 +132,10 @@ Do que a 0.2.x e a 0.2.3 mostraram:
 2. **Fim da trilha B:** testar o Salvar como e a bancada com um CSV de verdade no AppImage. Os tipos e os zeros à
    esquerda são o maior risco.
 3. **Fim da trilha C:** conferir os gráficos nos dois temas.
-4. **Fim da trilha E:** conectar a um servidor de verdade, aceitar a chave, abrir um CSV e um banco; recusar uma chave
+4. **Fim da trilha F:** escrever consultas de verdade com o autocompletar: apelidos, `JOIN` com o `ON` sugerido, o Enter que só aceita depois das setas, os dois temas.
+5. **Fim da trilha E:** conectar a um servidor de verdade, aceitar a chave, abrir um CSV e um banco; recusar uma chave
    mudada.
-5. **Antes da tag:** rodar a lista "O que testar à mão" do `RELEASE.md`, com os itens novos (o diálogo do Salvar como
+6. **Antes da tag:** rodar a lista "O que testar à mão" do `RELEASE.md`, com os itens novos (o diálogo do Salvar como
    pelo portal, rodar o Python, o SSH).
 
 ---
@@ -141,5 +143,6 @@ Do que a 0.2.x e a 0.2.3 mostraram:
 ## 7. Depois da 0.3.0
 
 - **0.3.1:** subir para o egui 0.37 e o `egui_plot` 0.38 (PR só disso, com as capturas conferidas).
+- **0.3.2 — "Entender o banco":** o diagrama relacional em aba (Q3), gerado a partir do banco, com mover, ampliar, o segmentado Tabelas · Chaves · Colunas e a busca. Detalhe em `planos-0.3.md`, P8.
 - **0.4 — "Conectar":** o S2 e o S3 do SSH (salvar de volta, "Lembrar", recentes, o banco remoto editável), depois o
   PostgreSQL só leitura, com o túnel SSH e as senhas no cofre do sistema.
