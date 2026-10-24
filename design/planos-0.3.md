@@ -8,7 +8,10 @@ plano conciliado e as decisões que ficam com o Isaías. Nada aqui está impleme
 **Decidido em 21/10/2026** (a lista completa na seção 5): (1) antes da 0.3 sai uma 0.2.3 só de refinamentos e correções — o menu da seleção, o
 Ctrl+F nos arquivos, as contas do CSV em fluxo, o CI confiável e o `app.rs` fatiado —, descrita em
 [`planos-0.2.3.md`](planos-0.2.3.md); (2) os gráficos no app (P6b) sobem para a 0.3.0; (3) a 0.3.0 traz a tradução
-oficial para o inglês, com a interface pronta para receber outros idiomas (P7).
+oficial para o inglês, com a interface pronta para receber outros idiomas (P7); (4) a primeira etapa do SSH (S1:
+conectar, o Explorador remoto e abrir pelo cache, só leitura) sobe para a 0.3.0 como trilha E, e o resto do SSH fica
+na 0.4 (decidido em 23/10/2026; ver [`planos-ssh.md`](planos-ssh.md)). A ordem de construção, as ondas e as
+trilhas estão em [`execucao-0.3.md`](execucao-0.3.md).
 
 Fontes: o Roadmap e o "Na fila" do [`README.pt-BR.md`](../README.pt-BR.md), o [`CHANGELOG.md`](../CHANGELOG.md) da
 0.1.0 à 0.2.2, o [`ARQUITETURA.md`](../ARQUITETURA.md), as revisões de UI de 15 e 19/10/2026 neste
@@ -195,6 +198,7 @@ Tamanhos: **P** cabe num PR pequeno, **M** num PR normal, **G** em dois ou mais.
 | P6a Abrir no Python | P | `servico::arquivos` (achar `python`/`py`, rodar), `estado` | Gerar texto e rodar um processo. Detecção do Python e do pandas com prazo curto; se faltar o pandas, o script diz como instalar. |
 | P6b Gráficos no app | G | `egui_plot` 0.37 (MIT/Apache, compatível com o egui 0.36), tela nova | Dependência nova, prancheta nova (os 21 ícones de gráfico já estão no canvas) e testes de captura novos. Não cabe na 0.3.0 sem atrasar o resto. |
 | P7 Inglês e idiomas | G | crate novo `idioma` (sem dependências do projeto, na base do grafo), **todos** os crates com texto, `prefs`, `interface::formato` | Medido em 21/10/2026: ~2.300 textos para a pessoa em `src/` (~1.700 diferentes), quase metade no `interface` (465) e no `editor` (396), e também nos núcleos (`esquema` 210, `banco` 128): as frases de erro nascem lá. O mecanismo e a ordem estão em 3.5. |
+| SSH (S1) | G | crate novo `remoto` (← `comum`; `russh` + `russh-sftp`, dependências aprovadas), `servico::pasta`, `prefs`, `estado`, `editor` | Só leitura: conectar (chaves, agente, senha digitada), conferir a chave da máquina, listar, trazer o arquivo para um cache local e abrir o caminho do cache com os editores de sempre, que não mudam. O Perfil, o Salvar como, o SQL sobre CSV e os gráficos funcionam num arquivo remoto sem trabalho extra, porque leem o cache. Começa com o spike da biblioteca (compila com a MinGW e no Ubuntu 22.04? quanto soma ao executável?); se falhar no Windows, o plano B é o `ssh`/`sftp` do sistema. O detalhe está em [`planos-ssh.md`](planos-ssh.md). |
 | PostgreSQL | G+ | `banco`, `esquema`, `servico` e telas | O contrato inteiro é do `rusqlite`: `Banco::com_conexao(&Connection)`, o `esquema` recebe `&rusqlite::Connection`, o `ddl` lê o `CREATE TABLE` do SQLite. Antes do primeiro byte de Postgres vem o contrato de fonte de dados, mais TLS, cofre de senhas e um Postgres de teste no CI (no Windows não há contêiner Linux). Concordo que é 0.4. |
 
 ### 3.3 Onde o TL contesta o PO
@@ -232,6 +236,8 @@ Tamanhos: **P** cabe num PR pequeno, **M** num PR normal, **G** em dois ou mais.
 | A varredura da tradução toca todo crate e briga com todo PR aberto | alta | alto | fazer a varredura no começo da 0.3, crate a crate, antes dos recursos; depois dela, texto novo já nasce com `t!` (o CI recusa texto solto) |
 | Texto em inglês que não cabe (botões, colunas fixas, a busca de 250 px, a altura fixa das Preferências) | média | médio | um pseudoidioma de teste ("[Ábrír pástá·····]", 40% mais longo) com capturas de cada tela; o inglês costuma ser mais curto, o alemão de amanhã não |
 | Os 1.116 `label(…)` dos testes de tela procuram o texto em português | certa | médio | os testes fixam o português (o padrão do `apoio_testes`); um teste de fumaça por tela em inglês e no pseudoidioma |
+| `russh` não compila com a MinGW, ou o `tokio` pesa demais no executável e no tempo de build | média | alto | o spike (S0) vem primeiro e decide; se falhar no Windows, o plano B é o `ssh`/`sftp` do sistema, e a trilha E sai da 0.3.0 sem atrasar o resto |
+| O CI não tem servidor SSH no Windows | certa | médio | os testes do `remoto` com servidor rodam no Linux (o `sshd` do Ubuntu num usuário temporário); no Windows, só os que não precisam dele; a conexão real entra na lista "O que testar à mão" |
 | Linux/AppImage pouco testado em áreas de trabalho de verdade | média | médio | a lista "O que testar à mão" do `RELEASE.md` ganha os itens novos (diálogo do Salvar como pelo portal, rodar o Python) |
 
 ### 3.5 A tradução (P7): mecanismo e ordem
@@ -290,12 +296,17 @@ Os PRs de base (CI, `app.rs` fatiado), a busca nos arquivos e o menu da seleçã
    a imagem e Salvar como PNG; a prévia nas Propriedades e o "Abrir em aba".
 9. `feat`: Abrir no Python (o script com pandas e Seaborn/Matplotlib, a mesma escolha de colunas do gráfico).
 10. `feat(texto)`: JSON Lines como tabela; `.sql` na Consulta.
+11. `spike(remoto)`: o S0 do SSH: `russh` + `russh-sftp` compilam com a MinGW e no Ubuntu 22.04, o tamanho que somam, listar e ler de um servidor de teste. O resultado vai para o [`planos-ssh.md`](planos-ssh.md).
+12. `feat(remoto)`: o crate: conectar (chaves, agente, senha digitada), a chave da máquina no `known_hosts` (nova, igual, mudada), listar, metadados e trazer com progresso e `parar`; testes com o `sshd` no CI do Linux.
+13. `feat(servico, prefs)`: a pasta remota no `servico::pasta` (a mesma `Listagem`, os mesmos limites), o cache `pasta_de_estado/remoto/` e as conexões no `prefs`, sem senha.
+14. `feat(estado, editor)`: Arquivo › Conectar por SSH…, a janela da conexão e a da impressão digital, o Explorador remoto, a aba com a máquina ("saida.csv · servidor"), o progresso do trazer com Interromper; só leitura, e o banco remoto abre a cópia em só leitura.
 
 Antes deles, os PRs da tradução, I1 a I4 (seção 3.5); os de recurso já nascem com o `t!` e com a linha em inglês no
 `.po`. O 1 e o 2 vêm primeiro. O 10 só depende do 1 (o JSON Lines é mais uma `FonteDeLinhas`) e pode correr em paralelo com
 o 3 e o 7. Depois, o 3 e o 7 podem correr em paralelo (crates e arquivos diferentes). O 4 e o 5 dependem
 do 1 e do 2; o 5 depende do 4 só pela janela de prévia dos tipos. O 8 depende do 1 e do 7; o 9 reaproveita a escolha
-de colunas do 8.
+de colunas do 8. A trilha E (11 a 14) é uma cadeia: o 12 depende do 11 passar, o 13 do 12, o 14 do 13 e da varredura da
+tradução (I3). Só o 14 toca a casca; o 11 a 13 são crates novos ou de núcleo, e o 11 pode correr desde a onda 3.
 
 ---
 
@@ -323,15 +334,16 @@ fatiado, o menu da seleção, o Ctrl+F nos arquivos e as contas do CSV em fluxo.
 | **M3 · Levar** | Salvar como (CSV, Excel, JSON, JSON Lines, SQLite) e Salvar tudo; SQL sobre CSV e planilha pela bancada | 4, 5 |
 | **M4 · Ver** | Gráficos no app (barras, linhas, histograma, dispersão); Abrir no Python | 7, 8, 9 |
 | **M5 · Formatos** | JSON Lines como tabela; `.sql` na Consulta | 10 |
-| **0.3.0** | M0 a M5, o CHANGELOG, o README (Roadmap e guias rápidos novos: "Converter uma planilha em banco", "Perguntar com SQL a um CSV", "Um gráfico de uma consulta") e capturas novas | |
+| **M6 · Conectar (S1)** | SSH só leitura: conectar, chave da máquina, Explorador remoto, abrir pelo cache | 11 a 14 |
+| **0.3.0** | M0 a M6, o CHANGELOG, o README (Roadmap e guias rápidos novos: "Converter uma planilha em banco", "Perguntar com SQL a um CSV", "Um gráfico de uma consulta", "Abrir um arquivo de outra máquina por SSH") e capturas novas | |
 
 **Depois da 0.3.0:**
 
 - **0.3.1:** subir para o egui 0.37 e o `egui_plot` 0.38 (PR só disso).
-- **0.4 — "Conectar":** abre pelo **SSH** (ver arquivos e bancos de outras máquinas; decidido em 21/10/2026, plano em
-  [`planos-ssh.md`](planos-ssh.md), com o spike da biblioteca no fim da 0.3); depois, o contrato de fonte de dados
-  (um documento de decisão escrito ainda durante a 0.3, sem código), PostgreSQL só leitura por padrão, com o túnel
-  SSH, senhas no cofre do sistema.
+- **0.4 — "Conectar":** continua o **SSH** (a 0.3.0 já traz o S1, só leitura; a 0.4 traz salvar de volta, "Lembrar" no
+  cofre do sistema, recentes e o banco remoto como cópia local editável; plano em [`planos-ssh.md`](planos-ssh.md));
+  depois, o contrato de fonte de dados (um documento de decisão escrito ainda durante a 0.3, sem código), PostgreSQL
+  só leitura por padrão, com o túnel SSH, senhas no cofre do sistema.
 
 **Fora da 0.3:** PostgreSQL e outros bancos, DuckDB e Parquet, `.xls`/`.xlsb`, outros idiomas além do inglês (a
 porta fica aberta), macOS, editar texto acima de
@@ -375,4 +387,11 @@ Decididas em 21/10/2026, além destas: a 0.2.3 de refinamentos e correções ant
     telas principais pelas capturas em inglês.
 15. ~~Idioma do sistema~~ **Decidido em 21/10/2026:** a dependência `sys-locale` (aprovada).
 
-Todas as decisões da 0.3, inclusive as da tradução, estão tomadas.
+**Do SSH (pedida em 23/10/2026):**
+
+16. ~~S1 na 0.3.0~~ **Decidido em 23/10/2026:** a primeira etapa do SSH (conectar, a chave da máquina, o Explorador
+    remoto e abrir pelo cache, só leitura) entra na 0.3.0 como a trilha E (marco M6, PRs 11 a 14), com o spike da
+    biblioteca no começo dela. O salvar de volta, "Lembrar" no cofre, os recentes e o banco remoto editável ficam na
+    0.4. Se o spike falhar no Windows, a trilha E sai da 0.3.0 (ou usa o `ssh`/`sftp` do sistema, se o Isaías preferir).
+
+Todas as decisões da 0.3, inclusive as da tradução e a do SSH, estão tomadas.
