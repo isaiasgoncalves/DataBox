@@ -145,4 +145,7 @@ Do que a 0.2.x e a 0.2.3 mostraram:
 - **0.3.1:** subir para o egui 0.37 e o `egui_plot` 0.38 (PR só disso, com as capturas conferidas).
 - **0.3.2 — "Entender o banco":** o diagrama relacional em aba (Q3), gerado a partir do banco, com mover, ampliar, o segmentado Tabelas · Chaves · Colunas e a busca. Detalhe em `planos-0.3.md`, P8.
 - **0.4 — "Conectar":** o S2 e o S3 do SSH (salvar de volta, "Lembrar", recentes, o banco remoto editável), depois o
-  PostgreSQL só leitura, com o túnel SSH e as senhas no cofre do sistema.
+  PostgreSQL só leitura, com o túnel SSH e as senhas no cofre do sistema. O contrato de fonte de dados, a ordem dos
+  PRs (C1 a C3, o spike P0 e P1 a P4) e as decisões estão em
+  [`contrato-fonte-de-dados.md`](contrato-fonte-de-dados.md); a seção 4.1 dele lista o que os PRs 1, 2, 5 e 12, a U2,
+  a Q1/Q2 e a I2 desta versão precisam respeitar.
