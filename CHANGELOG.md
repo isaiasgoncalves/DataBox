@@ -22,6 +22,16 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   as manutenções do Banco (Verificar integridade, Verificar chaves estrangeiras, Otimizar e Compactar) e Copiar o nome;
   o texto desses itens fica alinhado com o dos que têm ícone.
 
+### Corrigido
+
+- **O Excel não corta mais os números na largura padrão** (PO1 da revisão de 26/10/2026): o `.xlsx` sem largura de
+  coluna (o que o `pandas.to_excel` e o `openpyxl` gravam) abria com todas as colunas em 8,43 caracteres e os números
+  cortados ("47232…"). Sem largura no arquivo, a coluna é medida pelo conteúdo das primeiras linhas, como no CSV (até
+  320 px). Onde um número, uma data ou uma hora ainda não cabe, a célula mostra `####`, como o Excel, e a dica traz o
+  valor inteiro.
+- **A planilha com uma folha só não tem mais a faixa das planilhas** (D14): eram 32 px com uma pílula e as setas
+  desligadas; o rodapé já diz o nome. Com duas ou mais planilhas à vista, a faixa volta.
+
 ## [0.2.4] - 2026-10-23
 
 Acabamento da interface, da revisão de UI de 22/10/2026 (o debate do designer com o PO, em

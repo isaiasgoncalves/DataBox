@@ -22,7 +22,8 @@
 //!   terminar, a que indexou passa a servir as páginas, e o tamanho, as mesclas e o filtro ficam os do arquivo.
 //! - **Várias planilhas**: a faixa das planilhas embaixo da grade (`interface::pecas::folhas`); trocar
 //!   cancela o índice da que sai e a guarda num cache curto (`folhas::EM_MEMORIA`, 3 abertas ao mesmo tempo): voltar a
-//!   uma indexada é instantâneo. Ctrl+PageDown e Ctrl+PageUp trocam de dentro da grade.
+//!   uma indexada é instantâneo. Ctrl+PageDown e Ctrl+PageUp trocam de dentro da grade. Com uma planilha só na faixa,
+//!   ela não aparece (D14 da revisão de 26/10/2026): o rodapé já diz o nome, e a grade fica com a altura dela.
 //! - **Erros**: o que impede de abrir vira a ficha do arquivo com o aviso e os botões que resolvem
 //!   (**Abrir no programa padrão**, **Mostrar na pasta**): a senha e o formato antigo com a frase do núcleo; o arquivo
 //!   estragado com "O arquivo não é uma planilha válida: …"; o que sumiu com os botões desligados. O erro de uma planilha
@@ -95,7 +96,8 @@ pub use crate::fonte::{
     texto_para_levar,
 };
 pub use crate::grade::{
-    CARACTERES_NA_DICA, Grade, LARGURA_NUMERO, OPACIDADE_FANTASMA, alinhamento_do_valor, dica_da_celula,
+    CARACTERES_NA_DICA, Grade, LARGURA_NUMERO, LINHAS_MEDIDAS, NAO_CABE, OPACIDADE_FANTASMA, alinhamento_do_valor,
+    dica_da_celula,
 };
 pub use crate::menu::{COPIAR_COLUNA, MSG_ABRA_UM_CSV, TRAZER_DESTA_PLANILHA, rotulo_de_copiar};
 pub use crate::propriedades::{COPIAR_A_FORMULA, MSG_FILTRO, MSG_FORMULAS, MSG_MACROS};
@@ -688,9 +690,12 @@ impl TelaPlanilha {
             egui.request_repaint();
             return;
         }
-        let rect_faixa = Rect::from_min_max(egui::pos2(rect.left(), rect.bottom() - ALTURA_FAIXA_FOLHAS), rect.max);
-        let rect_grade = Rect::from_min_max(rect.min, egui::pos2(rect.right(), rect_faixa.top()));
         let Corpo::Pronta(p) = &mut self.corpo else { return };
+        // uma planilha só: sem a faixa (o rodapé já diz o nome); nenhuma à vista: a faixa vazia, com a frase na grade
+        let com_faixa = p.faixa.len() != 1;
+        let altura_faixa = if com_faixa { ALTURA_FAIXA_FOLHAS } else { 0.0 };
+        let rect_faixa = Rect::from_min_max(egui::pos2(rect.left(), rect.bottom() - altura_faixa), rect.max);
+        let rect_grade = Rect::from_min_max(rect.min, egui::pos2(rect.right(), rect_faixa.top()));
         let mut escolhida = None;
         let mut copiar = false;
         let mut trazer = false;
@@ -762,12 +767,14 @@ impl TelaPlanilha {
             }
         }
         // a faixa das planilhas, entre a grade e o rodapé
-        let folhas: Vec<Folha<'_>> = p.faixa.iter().map(|f| Folha::new(&f.nome).estado(f.estado)).collect();
-        let ativa = p.aba.as_ref().and_then(|a| p.faixa.iter().position(|f| f.folha == a.sessao.folha));
-        let mut ui_faixa = ui.new_child(UiBuilder::new().id_salt((sal, "faixa")).max_rect(rect_faixa));
-        let r = FaixaDeFolhas::new((sal, "folhas"), &folhas).ativa(ativa).mostrar(&mut ui_faixa);
-        if let Some(i) = r.escolhida {
-            escolhida = p.faixa.get(i).map(|f| f.folha);
+        if com_faixa {
+            let folhas: Vec<Folha<'_>> = p.faixa.iter().map(|f| Folha::new(&f.nome).estado(f.estado)).collect();
+            let ativa = p.aba.as_ref().and_then(|a| p.faixa.iter().position(|f| f.folha == a.sessao.folha));
+            let mut ui_faixa = ui.new_child(UiBuilder::new().id_salt((sal, "faixa")).max_rect(rect_faixa));
+            let r = FaixaDeFolhas::new((sal, "folhas"), &folhas).ativa(ativa).mostrar(&mut ui_faixa);
+            if let Some(i) = r.escolhida {
+                escolhida = p.faixa.get(i).map(|f| f.folha);
+            }
         }
         ui.allocate_rect(rect, Sense::hover());
         // Ctrl+PageDown e Ctrl+PageUp: a planilha seguinte e a anterior (o núcleo da grade os deixa livres)

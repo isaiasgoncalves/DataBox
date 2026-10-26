@@ -6,6 +6,12 @@
 //!
 //! - **Larguras do arquivo**: `round(caracteres × 7 + 5)` entre 24 e 640 (`larguras_do_arquivo`), a padrão
 //!   da aba ou 8,43; a coluna oculta sai. A alça de redimensionar continua (a largura é da sessão).
+//! - **Largura pelo conteúdo** (PO1 da revisão de 26/10/2026): a coluna que o arquivo não diz a largura (sem
+//!   `<col width>` nem `defaultColWidth`, como gravam o `pandas.to_excel` e o `openpyxl`) é medida pelo texto das
+//!   primeiras [`LINHAS_MEDIDAS`] linhas, como o CSV, entre a padrão do Excel (64px) e 320px, quando o primeiro bloco
+//!   chega.
+//! - **Número que não cabe** vira [`NAO_CABE`] (`####`, como o Excel), com o valor inteiro na dica: um número cortado
+//!   com "…" ("47232…") se lê como outro número. Vale para números, datas e horas; o texto continua com o "…".
 //! - **Mesclas** e **painel congelado**: do `MetaFolha`, pelo `com_mesclas`/`com_congelado` do
 //!   núcleo. As mesclas só vêm completas depois do índice: a grade se refaz quando ele termina.
 //! - **Seleção**: a célula ativa do núcleo; as colunas (clique no `th`; Ctrl e Shift somam) e as linhas
@@ -18,13 +24,16 @@ use std::collections::{BTreeSet, HashMap};
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
-use egui::{Color32, Ui};
+use egui::text::LayoutJob;
+use egui::{Color32, Painter, Ui};
+use interface::fontes::{self, Peso};
 use interface::formato::formatar_numero;
 use interface::grade::{
-    Alinhamento, CabecalhoVisivel, CelulaMesclada, CelulaVisivel, ColunaDoArquivo, Congelado, DesenhoGrade,
-    IndiceDeMesclas, Mescla, NucleoGrade, RespostaNucleo, Th, Toques, larguras_do_arquivo, pintar_cabecalho_coluna,
-    pintar_texto_alinhado,
+    Alinhamento, CARACTERES_PADRAO_ARQUIVO, CabecalhoVisivel, CelulaMesclada, CelulaVisivel, ColunaDoArquivo,
+    Congelado, DesenhoGrade, IndiceDeMesclas, LARGURA_MAX_COLUNA, Mescla, NucleoGrade, PADDING_X, RespostaNucleo, Th,
+    Toques, largura_do_arquivo, larguras_do_arquivo, pintar_cabecalho_coluna, pintar_texto_alinhado,
 };
+use interface::pecas::texto::formato;
 use interface::tema::{Paleta, paleta};
 use planilha::{Celula, Intervalo, Linha, MetaFolha, Pasta, Valor, nome_da_coluna, referencia_a1};
 
@@ -42,6 +51,11 @@ pub fn largura_do_numero(linhas: u32) -> f32 {
         texto.chars().fold((0, 0), |(a, p), c| if c.is_ascii_digit() { (a + 1, p) } else { (a, p + 1) });
     (algarismos as f32 * 7.0 + pontos as f32 * 4.0 + 21.0).ceil().max(LARGURA_NUMERO)
 }
+
+/// Quantas linhas do começo medem a coluna sem largura no arquivo (as que já chegaram: o primeiro bloco tem 128).
+pub const LINHAS_MEDIDAS: u32 = 200;
+/// O que a célula de número, data ou hora mostra quando o valor não cabe (repetido até encher a coluna, como o Excel).
+pub const NAO_CABE: &str = "####";
 
 /// Até quantos caracteres a dica mostra o texto da célula.
 pub const CARACTERES_NA_DICA: usize = 300;
@@ -106,6 +120,9 @@ pub struct Grade {
     assinatura: Option<(u32, bool)>,
     /// As linhas da grade que rolam e que o último quadro desenhou.
     desenhadas: Option<RangeInclusive<usize>>,
+    /// As colunas (do arquivo) sem largura no arquivo que esperam o primeiro bloco para serem medidas, e as já medidas.
+    a_medir: BTreeSet<u32>,
+    medidas: BTreeSet<u32>,
 }
 
 impl Grade {
@@ -125,6 +142,8 @@ impl Grade {
             ancora_linha: None,
             assinatura: None,
             desenhadas: None,
+            a_medir: BTreeSet::new(),
+            medidas: BTreeSet::new(),
         }
     }
 
@@ -215,6 +234,45 @@ impl Grade {
         let mesclas: Vec<Mescla> = sessao.meta.mescladas.iter().filter_map(|m| self.mescla_da_grade(m)).collect();
         nucleo.definir_mesclas((!mesclas.is_empty()).then(|| Arc::new(IndiceDeMesclas::nova(mesclas))));
         self.nucleo = nucleo;
+        let sem_largura: Vec<u32> = self
+            .do_arquivo
+            .iter()
+            .copied()
+            .filter(|c| sessao.meta.largura_da_coluna(*c).is_none() && !self.medidas.contains(c))
+            .collect();
+        self.a_medir.extend(sem_largura);
+    }
+
+    /// Mede pelo conteúdo as colunas sem largura no arquivo, quando o primeiro bloco chega: o texto mais largo das
+    /// primeiras [`LINHAS_MEDIDAS`] linhas que já chegaram (sem as mescladas, como o ajuste do Excel), com o padding e o
+    /// fio, entre a padrão do Excel e [`LARGURA_MAX_COLUNA`], como o CSV. Uma vez por coluna: a largura que a pessoa
+    /// arrastar depois fica.
+    fn medir_pelo_conteudo(&mut self, painter: &Painter, sessao: &SessaoDaFolha) {
+        if self.a_medir.is_empty() || sessao.linha(1).is_none() {
+            return;
+        }
+        let (esq, dir) = (PADDING_X, PADDING_X + 1.0);
+        let limite = LARGURA_MAX_COLUNA - esq - dir;
+        let mut maiores: Vec<(u32, f32)> = self.a_medir.iter().map(|&c| (c, 0.0)).collect();
+        for n in 1..=sessao.tamanho().0.min(LINHAS_MEDIDAS) {
+            let Some(linha) = sessao.linha(n) else { break };
+            for (c, maior) in maiores.iter_mut().filter(|(_, m)| *m < limite) {
+                if let Some(celula) = linha.celula(*c)
+                    && !celula.valor.vazio()
+                    && sessao.meta.mescla_em(n, *c).is_none()
+                {
+                    *maior = maior.max(largura_do_texto(painter, &texto_da_celula(sessao.pasta(), celula)));
+                }
+            }
+        }
+        let minima = largura_do_arquivo(CARACTERES_PADRAO_ARQUIVO);
+        for (c, maior) in maiores {
+            if let Some(k) = self.coluna_da_grade(c) {
+                self.nucleo.definir_largura(k, (maior.min(limite) + esq + dir).ceil().max(minima));
+            }
+            self.medidas.insert(c);
+        }
+        self.a_medir.clear();
     }
 
     /// O clique no `th` da coluna `c` da grade: sozinho escolhe só ela; Ctrl soma ou tira; Shift estende da âncora.
@@ -276,6 +334,7 @@ impl Grade {
         sessao: &SessaoDaFolha,
         altura: f32,
     ) -> (RespostaNucleo, Option<RangeInclusive<u32>>) {
+        self.medir_pelo_conteudo(ui.painter(), sessao);
         let congeladas = self.nucleo.congelado().map_or(0, |c| c.linhas);
         let mut nucleo = std::mem::replace(&mut self.nucleo, NucleoGrade::new("vazia", 0, Vec::new()));
         let mut desenho = Desenho { p: paleta(ui), sessao, grade: &*self, congeladas, primeira: usize::MAX, ultima: 0 };
@@ -291,6 +350,29 @@ impl Grade {
 /// O texto de uma célula como a grade o mostra (o `exibir` do núcleo).
 pub fn texto_da_celula(pasta: &Pasta, celula: &Celula) -> String {
     pasta.exibir(celula)
+}
+
+/// A largura do texto de uma célula numa linha (12px), sem padding.
+fn largura_do_texto(painter: &Painter, texto: &str) -> f32 {
+    if texto.is_empty() {
+        return 0.0;
+    }
+    let mut job = LayoutJob::single_section(
+        texto.replace(['\n', '\r', '\t'], " "),
+        formato(fontes::fonte(12.0, Peso::Normal), Color32::PLACEHOLDER),
+    );
+    job.break_on_newline = false;
+    painter.layout_job(job).size().x
+}
+
+/// O texto de um número, data ou hora em `largura`: ele mesmo se cabe; senão, [`NAO_CABE`] repetido até encher (pelo
+/// menos um "#"), como o Excel.
+fn numero_que_cabe(painter: &Painter, texto: String, largura: f32) -> String {
+    if largura_do_texto(painter, &texto) <= largura + 0.5 {
+        return texto;
+    }
+    let cerquilha = largura_do_texto(painter, "#").max(1.0);
+    "#".repeat(((largura / cerquilha).floor() as usize).max(1))
 }
 
 struct Desenho<'a> {
@@ -346,6 +428,12 @@ impl DesenhoGrade for Desenho<'_> {
             return;
         }
         if let Some((texto, cor, alinhamento)) = self.conteudo(c.linha, c.coluna) {
+            // à direita só ficam números, datas e horas: esses nunca cortam com "…"
+            let texto = if alinhamento == Alinhamento::Direita {
+                numero_que_cabe(&pintor, texto, c.conteudo.width())
+            } else {
+                texto
+            };
             pintar_texto_alinhado(&pintor, p, c.conteudo, &texto, alinhamento, cor, false);
         }
     }
