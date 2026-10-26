@@ -38,7 +38,69 @@ fica na pasta: é a fonte que o `logo_final.py` lê.
 | Janelas e estados | `Exportar.dc.html` · `Janelas.dc.html` · `Preferencias.dc.html` | Exportar; a ficha da linha, Alterar a coluna e Nova tabela; Preferências e Sobre |
 | Janelas e estados | `Estados.dc.html` | Consulta executando e vazia, JSON inválido, fechar aba alterada, coluna nova e linhas marcadas no CSV, Histórico vazio, Copiar caminho, Desfazer no banco, ficha só leitura |
 | Janelas e estados | `Colunas.dc.html` · `DadosArrastar.dc.html` | Copiar, colar e trazer colunas; arrastar a aba de um painel |
-| Telas futuras | `FuturoPerfil.dc.html` · `FuturoGrafico.dc.html` · `FuturoConexao.dc.html` | Do roadmap: perfil de colunas nas Propriedades, gráfico de uma consulta com Abrir no Python, conexão ao PostgreSQL |
+| Telas futuras | `FuturoPerfil.dc.html` · `FuturoConexao.dc.html` | Do roadmap: perfil de colunas nas Propriedades, conexão ao PostgreSQL |
+| Telas futuras | `FuturoGrafico.dc.html` | Os gráficos da 0.3 (PR 7), em onze cenas: a vista Gráfico nas Propriedades, o gráfico em aba, os quatro tipos, vazio, carregando, a amostra, Copiar/Salvar/Python e o texto 40% mais longo (`grafico.py`) |
+| Telas futuras | `FuturoSsh.dc.html` | O SSH da 0.3.0 (S1, só leitura), em sete cenas: o menu, a janela Conectar por SSH, a impressão digital da chave, o Explorador remoto com a aba "saida.csv · servidor", trazer com Interromper, o banco remoto como cópia e a conexão que cai (`ssh.py`) |
+
+Pranchetas da onda 0 da 0.3, em 26/10/2026 (`FuturoGrafico` refeita sobre as decisões 6 e 7 da 0.3; `FuturoSsh`
+nova, sobre o S1 de [`planos-ssh.md`](planos-ssh.md)). O que elas decidem, ainda **não implementado**:
+
+- **Gráficos (PR 7 → PR 8 e 9):**
+  - a prancheta de 13/10/2026 (um "Tabela · Gráfico" no resultado da Consulta, com rótulos de 130 px e uma legenda de
+    uso) saiu inteira;
+  - **vista "Gráfico"** nas Propriedades (Alt+6, depois do Perfil), para tabela, visão, CSV, planilha e o resultado da
+    Consulta (segue o comando escolhido). De cima para baixo: o Tipo (os sólidos `g_barras`, `g_linhas`,
+    `g_histograma`, `g_dispersao` da biblioteca num segmentado só de ícones, o nome do escolhido à direita do rótulo),
+    as colunas do tipo (com a pastilha), a prévia (a largura da doca, 184 px, sem títulos de eixo), a contagem
+    ("9 barras · 57 de 60 linhas"), "Abrir em aba" (o principal) e, embaixo, Copiar a imagem, Salvar como PNG e o
+    Abrir no Python (sutil, com a explicação na dica). O app já escolhe as colunas ao abrir (a selecionada na grade e
+    a primeira numérica);
+  - **seis vistas não cabem com nome na doca:** o segmentado das vistas passa a só ícones na doca (Perfil com a Caixa,
+    `g_caixa`; Gráfico com as Colunas, `g_colunas`; as outras com os sólidos de hoje) e por extenso na janela própria;
+    a doca alarga para 340 px nas vistas Perfil e Gráfico;
+  - **a aba do gráfico:** "Gráfico de clientes", com o sólido do tipo e o caminho na dica; endereço próprio (Voltar e
+    Avançar passam por ela); fechar não pergunta. **Sem faixa**: o tipo e as colunas ficam nas Propriedades (a mesma
+    vista, sem a prévia e sem o "Abrir em aba"); o título e a fonte vão **dentro** do gráfico, porque a imagem e o PNG
+    precisam deles. Na barra, Atualizar lê a fonte de novo e Exportar salva o PNG (Ctrl+Shift+S, o Salvar como da
+    aba); o rodapé conta à esquerda e mostra o ponto sob o cursor à direita (U4);
+  - **os tipos:** barras **deitadas** (o nome da categoria inteiro à esquerda, em qualquer idioma; até 30, as outras
+    numa barra "Outras (n)"); linhas com até três séries (`--s1` o destaque, `--s2` verde-azulado e `--s3` âmbar, nos
+    dois temas; a legenda a partir de duas); histograma com as barras encostadas (1 px) e Faixas Automático/10/20/50;
+    dispersão a 55% de opacidade. Os rótulos e eixos medem o texto, sem coluna fixa;
+  - **estados:** sem coluna de números, a caixa de nota oferece "Contar por categoria"; escolha faltando diz o que
+    falta e desliga as ações; carregando, a prévia fica a 35% com o arco e a aba mostra andamento e Interromper (como a
+    N3); **amostra** acima de 100 mil pontos na dispersão, sorteada com semente fixa, com a etiqueta âmbar no rodapé e
+    "amostra" no subtítulo do gráfico (a imagem não mente);
+  - **o menu do gráfico** (clique direito): Copiar a imagem (Ctrl+C), Salvar como PNG (a silhueta do Exportar),
+    Abrir no Python e Restaurar o zoom. Copiar leva o PNG a 2× com o fundo do tema da tela; sem Python, o script vai
+    para a área de transferência e o aviso oferece vê-lo;
+  - **o texto 40% mais longo** (pseudoidioma da P7) está na cena k: nada de largura pelo português; Agregar e Ordem
+    descem um embaixo do outro, os botões passam a uma linha cada e o campo corta com "…" e a dica.
+- **SSH (S1, PR 14):**
+  - **Arquivo › Conectar por SSH** (sem reticências, pela regra dos menus; sem silhueta, pela U11), logo depois de
+    Abrir arquivo, com Ctrl+Shift+K; o Explorador sem pasta oferece Abrir pasta e Conectar por SSH;
+  - **a janela** (480 px, modal): Destino com as sugestões dos `Host` do `~/.ssh/config` (o nome e, embaixo, usuário,
+    endereço e porta), Usuário e Porta na mesma linha, Pasta inicial ("a pasta de casa" vazia). A coluna dos rótulos
+    mede o rótulo mais longo. Nenhum campo de senha de saída: Senha ou Frase da chave (com o nome do arquivo) só quando
+    a máquina pede, e o principal vira "Entrar"; **sem "Lembrar"**. Conectando, os campos desligam e o principal gira;
+    os erros vão na caixa de aviso, o da senha no campo;
+  - **a impressão digital:** máquina nova mostra a SHA-256 em mono (seleciona inteira, Copiar), o tipo da chave e
+    "Lembrar esta máquina" (desmarcado, grava no `known_hosts`), com "Confiar e conectar"; **chave mudada já chega
+    recusada**: sem botão de aceitar, as duas impressões (a guardada riscada, a nova em `--perigo`), a linha do
+    `known_hosts` e o `ssh-keygen -R`, com Copiar os detalhes e Fechar;
+  - **o Explorador remoto:** a raiz `isaias@servidor:/srv/etl` com o sólido novo **Máquina remota** (`a_maquina`,
+    seção Aplicativo da biblioteca) e o ponto verde da conexão; a dica tem a máquina, o endereço, o tempo conectado,
+    a latência e a chave. Dentro, o Explorador de sempre;
+  - **a aba remota:** "saida.csv" e, em `--t3`, " · servidor", com o endereço inteiro e a hora da cópia na dica. Tudo
+    que é remoto abre **só leitura** na 0.3.0: a faixa leva o chip Somente leitura, de onde veio a cópia e "Trazer de
+    novo" (o Atualizar, F5); Salvar e a edição desligam com o motivo na dica. As Propriedades contam a máquina, o
+    caminho lá, as datas de lá e da cópia, e a cópia local. A barra de status mostra a conexão;
+  - **trazer:** andamento na própria aba depois de 400 ms (MB, velocidade, tempo que falta) com Interromper; acima de
+    1 GB pergunta antes; interrompido não deixa nada no cache;
+  - **o banco remoto** abre a cópia como o banco só leitura de hoje (o cilindro cinza com cadeado); Editar e "Enviar
+    ao servidor" não aparecem, nem desligados (são da 0.4);
+  - **a raiz remota** tem Atualizar, Copiar caminho (no formato do `scp`) e Desconectar; quando a conexão cai, a raiz
+    fica em `--t3` e a caixa de aviso oferece Reconectar, sem perder as abas.
 
 Revisão de UI de 22/10/2026 (debate do designer com o PO, depois da 0.2.3; o debate inteiro, os achados U1 a U11 e
 as capturas de antes estão em [`revisao-ui-0.3.md`](revisao-ui-0.3.md) e na página "Propostas 0.3" do canvas).
@@ -215,7 +277,8 @@ Da revisão crítica de 15/10/2026, aplicada às pranchetas (as que se refazem i
     caminho) e o abre no programa padrão do Windows ou na pasta dele. A pasta aberta volta na próxima abertura do app
     (o banco não); fechar a pasta fecha as fichas de dentro dela e mantém o banco.
 - **Só no canvas, sem implementar por enquanto:** os 21 ícones de gráficos e visualizações e os de MySQL/MariaDB,
-  PostgreSQL, DuckDB e MongoDB. Ficaram prontos para quando esses recursos vierem.
+  PostgreSQL, DuckDB e MongoDB. Ficaram prontos para quando esses recursos vierem. Seis dos de gráficos (barras,
+  linhas, histograma, dispersão, colunas e caixa) vão para o app com o PR 8 da 0.3 (a prancheta `FuturoGrafico`).
 
 ## Anatomia da janela
 
@@ -440,6 +503,9 @@ Os sólidos, por grupo:
   - ajuda: com "?";
   - bloqueado: cadeado de frente, com corpo de latão mais largo que alto, filete claro por dentro da borda, arco
     de aço tubular e fechadura gravada.
+- **Máquina remota** (a raiz do SSH no Explorador, 26/10/2026): duas gavetas de servidor empilhadas, de metal claro,
+  com a frente escura, o led verde e as frestas; no desenho de 48, o halo do led, os parafusos e três frestas; até
+  24 px, o contorno firme e duas frestas. Na seção Aplicativo da biblioteca; ainda sem PNG no app.
 - **Gráficos (só canvas):** colunas, colunas empilhadas, barras, linhas, área, pizza, rosca, dispersão,
   bolhas, histograma, caixa, mapa de calor, treemap, cascata, funil, radar, medidor, indicador, tabela
   dinâmica, mapa e painel.
@@ -505,6 +571,9 @@ idempotentes).
 | `planilha.py` | Monta a prancheta 17 (`Planilha.dc.html`, 17/10/2026) com a folha, as definições e o script do `Colunas.dc.html` (que já traz os do `Estados.dc.html` e as regras de formulário) e as peças das outras pranchetas, sem ícone novo. Seis cenas com título e legenda, todas com o relatorio_q3.xlsx: a planilha aberta, muitas planilhas, a planilha grande lendo, os erros e a tela sem planilha à vista, o Trazer colunas com origem numa planilha e o menu do cabeçalho. A faixa das planilhas (`.folhas`, 32 px, planilhas em pílula de 24 px) e a grade com letras de coluna, mescla e painel congelado são as peças novas, para `pecas::folhas` e o `NucleoGrade`. Põe a prancheta no `canvas.json` (x 1560, y 8300). Refaz a prancheta inteira; recusa um `Planilha.dc.html` sem a marca dele e um lugar ocupado no canvas. Com `--conferir`, só confere o que já foi gravado (marca, lugar, as seis cenas, definições `url(#…)` e as peças da biblioteca). | vivo (idempotente) |
 | `cabecalho_fino.py`, `cabecalho_na_linha.py` | O `.cab` dos painéis em duas camadas de regra no fim do `<style>`: `cabecalho_fino.py` (16/10/2026: 23 px de altura, botões de 20 px, título de 10,5 px) e, depois dele, `cabecalho_na_linha.py` (17/10/2026: faixa na largura da linha da árvore, margem de 6 px, cantos de 6 px, fio `--btb` em volta). Uma marca no `<style>` faz cada um pular a prancheta já ajustada; o segundo recusa a que ainda não tem a regra do primeiro. As pranchetas do logo ficam de fora. | vivo (idempotentes) |
 | `propostas_03.py` | As pranchetas da página "Propostas 0.3" (`Propostas03*.dc.html`, 22/10/2026), da revisão em [`revisao-ui-0.3.md`](revisao-ui-0.3.md): cada uma sai de uma prancheta original (Dados, CSV, JSON, Consulta, Visão geral, `FuturoPerfil`, Preferências), com os ícones e as peças dela, e muda só o que a proposta muda; as etiquetas âmbar apontam os achados. A `Propostas03Hoje` (as capturas de antes) não sai dele. Refaz as pranchetas inteiras e recusa a original que mudou a ponto de um trecho esperado sumir; não mexe no `canvas.json`. | vivo (idempotente) |
+| `pecas.py` | As peças comuns de `grafico.py` e `ssh.py` (26/10/2026): a folha, as definições e o script da prancheta 17 com as regras do segmentado do Dados; os botões e os ícones tirados das pranchetas pelo `aria-label`, pelo texto ou pela forma da biblioteca (`g_barras`, `st_info`…) e de `icones/`; as cenas, os campos, os itens de menu e os avisos; e o `gravar`, que guarda a página e o lugar da prancheta no `canvas.json` e recusa um lugar ocupado. Não grava nada sozinho. | vivo (biblioteca) |
+| `grafico.py` | Refaz `FuturoGrafico.dc.html` (PR 7 da 0.3) com onze cenas e os gráficos em SVG desenhados por ele, com as cores dos tokens. A primeira vez pede `--substituir` (a prancheta à mão de 13/10/2026 não tinha a marca); `--medir` só imprime a página. | vivo (idempotente) |
+| `ssh.py` | Monta `FuturoSsh.dc.html` (S1 do SSH) com sete cenas e põe a Máquina remota (`a_maquina`, `a_maquinaG`) na seção Aplicativo da biblioteca, se faltar; recusa a biblioteca com só uma das duas formas ou com a forma mudada à mão. Depois dele, o `icones_app.py` leva o ícone ao app (no PR 14). | vivo (idempotente) |
 | `vidro_transparente.py` | O `--flut` mais transparente (17/10/2026): 78% no escuro e 80% no claro, no lugar de 88% e 90%, em toda prancheta que o define. Pula a que já tem os valores novos e recusa um `--flut` desconhecido. | vivo (idempotente) |
 
 ## Implementação no Rust
