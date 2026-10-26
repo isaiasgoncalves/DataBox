@@ -77,7 +77,8 @@ Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
     Salvar, Novo, Excluir, Filtrar, Nova consulta, Exportar…): o menu ensina a barra. Vale para os menus da barra e os
     de contexto, e revê a de 20/10/2026 (silhueta em todo item que a biblioteca tem). Saem os ícones de Novo banco,
     Colunas, Renomear a tabela, Propriedades em janela própria, Fazer cópia de segurança e as manutenções do menu
-    Banco; o texto deles fica alinhado com os outros. Ainda não implementado;
+    Banco (e o Copiar o nome do menu Tabela, que também não tem botão); o texto deles fica alinhado com os outros.
+    Implementado na 0.3.0;
   - **a faixa de cima é para controle e contexto que a aba não diz; contagens e a posição do cursor ficam no rodapé,
     à direita** (U4);
   - **toda aba de documento tem o caminho inteiro na dica** (U4);
