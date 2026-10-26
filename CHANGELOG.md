@@ -21,6 +21,10 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   Saem as silhuetas de Novo banco, Colunas, Renomear a tabela, Propriedades em janela própria, Fazer cópia de segurança,
   as manutenções do Banco (Verificar integridade, Verificar chaves estrangeiras, Otimizar e Compactar) e Copiar o nome;
   o texto desses itens fica alinhado com o dos que têm ícone.
+- **Regras de número no guia** (PO3, PO8 e D11 da revisão de 26/10/2026): a grade do CSV e do Excel mostra o texto
+  do arquivo; o que o app calcula (soma, média, mínimo, máximo, contagens, a coluna "#") segue o idioma da interface,
+  com as casas da coluna e sem perder o zero final; sem milhar em chaves, na "#" e em colunas de id, ano e CEP; REAL
+  na forma mais curta, sem notação científica. Seção "Números" do `design/README.md`.
 
 ## [0.2.4] - 2026-10-23
 

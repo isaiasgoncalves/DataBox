@@ -110,7 +110,9 @@ Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
   interface (milhar, vírgula, algarismos tabulares), **sem arredondar**: todas as casas gravadas aparecem. A edição,
   a ficha da linha e o Copiar levam o valor gravado ("14542.56"). Preferências › Aparência ganha "Números na grade:
   Formatados (padrão) · Como gravados". O CSV e o Excel não mudam (lá o dado é o texto do arquivo e o formato da
-  célula). Vai junto com a P7, que faz o `interface::formato` seguir o idioma.
+  célula). Vai junto com a P7, que faz o `interface::formato` seguir o idioma. O que o app **calcula** sobre o CSV
+  e o Excel (soma, média, mínimo, máximo, contagens, a coluna "#") segue o idioma, e ids, anos e CEPs saem sem milhar:
+  ver [Números](#números-regras-de-26102026).
 - **Rolagem contínua nos Dados (U2):** sai o "100 por página" e o "Página 1 de 1"; os Dados rolam como o CSV, o Excel
   e a Consulta, com "Linhas a–b de n" no rodapé e Ctrl+Home/Ctrl+End até as bordas. Na 0.3, no marco M1, antes do
   perfil.
@@ -243,6 +245,61 @@ Da revisão crítica de 15/10/2026, aplicada às pranchetas (as que se refazem i
 - **Copiar caminho** no menu do item no Explorador e na seção Arquivo das Propriedades.
 - **Ficha da linha só leitura** (Excel e banco só leitura): campos só leitura, NULL que não se marca, BLOB que só se
   salva, rodapé com Copiar a linha e Fechar.
+
+## Números (regras de 26/10/2026)
+
+Decididas pelo Isaías em 26/10/2026, a partir da [revisão do PO e do designer](revisao-po-designer-26-10.md) (PO3,
+PO4, PO8, D11). Completam a U1 e a decisão 13 do [`planos-0.3.md`](planos-0.3.md); quem implementa a I1 e a trilha de
+formatos confere as telas por esta lista. **Ainda não implementado**: o texto abaixo é o alvo, e a PR de código de cada
+linha cita o item.
+
+1. **De onde vem o número decide como ele aparece.**
+   - **Lido do arquivo** (a célula do CSV e do Excel, na grade e na edição): o texto do arquivo, como está
+     ("1056,30", "589.0893", "R$ 10.119,37"). O separador decimal do arquivo só serve para *ler* o número.
+   - **Gravado no banco** (Dados, resultado da Consulta): INTEGER e REAL no idioma da interface (U1), ver 3 e 4.
+   - **Calculado pelo app** (Soma, Média, Mínimo, Máximo e Contagem do rodapé da seleção e das Propriedades; a coluna
+     "#"; as contagens de linhas): sempre no idioma da interface, em qualquer tipo de arquivo, **também no CSV e no
+     Excel**. Português: "1.234,56". Inglês: "1,234.56". Um CSV com ponto decimal mostra "589.0893" na grade e "589,0893" no Mínimo em português: é
+     de propósito (a grade é o arquivo, a conta é do app), e vale também com a interface em inglês e o arquivo em vírgula.
+     Dois formatos *calculados* na mesma tela, nunca.
+2. **Casas decimais.** A coluna tem as *casas* do maior número de casas que um valor dela tem (lido do texto, com os
+   zeros finais: "20,90" tem duas). Limite: 15.
+   - **Soma, Mínimo e Máximo** saem com as casas da coluna, **zeros finais mantidos** ("2.929.066.524,40", nunca
+     "…524,4"). A soma é arredondada nessas casas (tira o ruído do ponto flutuante: 0,1 + 0,2 → "0,3"). Mínimo e
+     máximo são calculados sobre o valor numérico, não copiados da célula.
+   - **Média** (e qualquer divisão): as casas da coluna, **no mínimo 2** ("10.857,06", não "10.857,058571428572").
+   - **Contagem** e **Vazias**: inteiros, sem casas.
+   - Uma coluna de inteiros tem 0 casas: Soma, Mínimo e Máximo saem sem vírgula; só a Média tem 2.
+3. **REAL gravado** (Dados e Consulta, sem calcular nada): a representação mais curta que volta ao **mesmo** número
+   (o que o Rust faz com `{}`), sem arredondar e **sem notação científica**: 14542.56 → "14.542,56";
+   1e-7 → "0,0000001"; 17051.0 → "17.051". "Sem arredondar" da U1 quer dizer isto. Consequência assumida: um
+   `avg()` da Consulta mostra o que o SQLite devolveu ("10.857,058571428572"); quem quer duas casas escreve
+   `round(avg(x), 2)`. O app não adivinha casas numa coluna que a consulta inventou.
+4. **INTEGER** nunca passa por `f64`: 2^63 − 1 sai exato.
+5. **Sem separador de milhar** (os algarismos colados: "2025", "12345", "01310100") em:
+   - **chave primária e chave estrangeira** (o esquema declara; vale nos Dados e onde a Consulta traz a coluna com a
+     origem conhecida);
+   - a **coluna "#"** das grades (e o "Ir para a linha"): é identificação, não quantidade;
+   - **colunas cujo nome indique identificador, ano ou CEP.** A heurística é a mais simples que funciona: o nome,
+     sem acento e em minúsculas, é partido em palavras por `_`, `-`, espaço e a virada de caixa (`clienteId`), e a
+     coluna é de identificação se **uma palavra inteira** for `id`, `ano`, `year`, `cep` ou `zip`
+     (`id`, `cliente_id`, `id_pedido`, `ano`, `ano_fiscal`, `CEP`). Vale no CSV (que não tem esquema), no Excel e na
+     Consulta, e só em coluna de inteiros. O valor não decide: "1234" pode ser quantidade.
+   - **Limite da heurística:** só pega o que o *nome* diz. `anos_de_casa` e `identidade` ficam com milhar (a palavra
+     inteira não bate, de propósito); um id chamado `matricula`, `pedido`, `sku` ou `numero` ganha milhar; um
+     `qtd_por_id` perde o milhar que deveria ter. Nenhum desses erros muda o valor, só a leitura, e o Copiar leva
+     sempre o número cru. A lista de palavras cresce quando aparecer caso real, não por adivinhação.
+   - O que não for desses casos leva milhar normalmente (U1).
+6. **NaN, infinito e científica.** O app escreve por extenso: "NaN", "Infinito" e "−Infinito" (em inglês "Infinity" e
+   "−Infinity"), nunca "inf" ou "NaN" cru de biblioteca. Notação científica não sai de conta nem de REAL gravado
+   (regra 3): "1,5E3" no arquivo vira, numa conta, "1.500". Texto do arquivo que não é número (inclui "NaN", "inf",
+   "1e") é texto: fica de fora das contas e não conta como número.
+7. **Alinhamento:** número alinhado à direita, algarismos tabulares; D10 (alinhar pela vírgula na Consulta) vem junto da
+   U1.
+
+**Como conferir** (cada regra vira um teste): a mesma coluna do CSV com ponto decimal mostra "589.0893" na grade e o
+Mínimo/Máximo/Soma no formato da interface nas Propriedades e no rodapé; a Soma de "20,93" e "1,5" é "22,43"; a de
+"2.000,10" e "3" é "2.003,10"; a coluna `id` e a "#" dão "2000" nas duas; `avg` de duas casas dá "10.857,06".
 
 ## Escopo e comportamento
 
