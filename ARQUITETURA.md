@@ -890,7 +890,7 @@ linha" · "Fechar".
     as divisórias, o documento e os botões da janela) e só para em peças com nome; o espaço livre da barra de título,
     as faixas de redimensionar e a seta dos nós do Explorador não são paradas. No Explorador, → e ← abrem e fecham o
     nó com o foco nele; nos menus, ver abaixo.
-- **Menus**: Arquivo (com os sólidos de 24: Abrir pasta (Ctrl+Shift+O), Abrir arquivo, Novo banco, Abertos
+- **Menus**: ícone (a silhueta de 14) só no item cujo verbo tem botão na barra de ferramentas (Abrir pasta, Abrir arquivo, Salvar, Nova consulta SQL, Nova tabela, Exportar, Nova coluna, Excluir), e o texto dos outros fica alinhado com eles; Arquivo (Abrir pasta (Ctrl+Shift+O), Abrir arquivo, Novo banco, Abertos
   recentemente (o ícone de cada tipo, sem o banco aberto nem a pasta aberta), Salvar, Fechar aba, Fechar banco, Fechar pasta (ligado com a pasta aberta), Preferências); Editar (os verbos da aba, das mesmas
   `Ofertas` da barra); Exibir (Explorador, Propriedades e Histórico de consultas, marcados quando à vista, e Tema ▸
   Seguir o Windows/Claro/Escuro e "Preferências de aparência"; Propriedades desligado no Início e quando o painel some

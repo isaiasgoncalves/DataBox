@@ -15,6 +15,13 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   casam; ao limpá-lo, volta o que estava aberto. As colunas são lidas numa tarefa de fundo, de uma vez, e relidas
   quando a estrutura do banco muda.
 
+### Alterado
+
+- **Menus da barra: ícone só quando o mesmo verbo tem botão na barra de ferramentas** (U11): o menu ensina a barra.
+  Saem as silhuetas de Novo banco, Colunas, Renomear a tabela, Propriedades em janela própria, Fazer cópia de segurança,
+  as manutenções do Banco (Verificar integridade, Verificar chaves estrangeiras, Otimizar e Compactar) e Copiar o nome;
+  o texto desses itens fica alinhado com o dos que têm ícone.
+
 ## [0.2.4] - 2026-10-23
 
 Acabamento da interface, da revisão de UI de 22/10/2026 (o debate do designer com o PO, em
