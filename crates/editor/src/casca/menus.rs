@@ -171,8 +171,8 @@ fn item_do_verbo(p: &mut PainelMenu<'_>, ofertas: &Ofertas, verbo: Verbo) -> boo
 pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> SaidaMenus {
     let mut pedido = None;
     let _ = Menu::new(IDS[0], "Arquivo").largura(LARGURA_ARQUIVO).mostrar(ui, |p| {
-        // as silhuetas da barra de ferramentas (revisão de 20/10/2026: item de menu é ação, como nos outros menus;
-        // os sólidos ficam para os objetos, como os arquivos dos Abertos recentemente)
+        // a silhueta só vai no item cujo verbo tem botão na barra de ferramentas (U11: o menu ensina a barra); os
+        // sólidos ficam para os objetos, como os arquivos dos Abertos recentemente
         p.com_silhuetas();
         if p.silhueta(Icone::Pasta).item("Abrir pasta", Some("Ctrl+Shift+O"), false).clicked() {
             pedido = Some(PedidoMenu::Acao(Acao::EscolherEAbrirPasta));
@@ -180,7 +180,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
         if p.silhueta(Icone::Arquivo).item("Abrir arquivo", Some("Ctrl+O"), false).clicked() {
             pedido = Some(PedidoMenu::Acao(Acao::EscolherEAbrir { somente_leitura: false }));
         }
-        if p.silhueta(Icone::NovoBanco).item("Novo banco", None, false).clicked() {
+        if p.item("Novo banco", None, false).clicked() {
             pedido = Some(PedidoMenu::Acao(Acao::NovoBanco));
         }
         p.separador();
@@ -306,15 +306,13 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
                 pedido = Some(PedidoMenu::Acao(Acao::AbrirNovaTabela));
             }
             p.separador();
-            // as silhuetas da seção Manutenção das Propriedades
             let manutencoes = [
-                (AcaoManutencao::Integridade, Icone::VerificarIntegridade, "Verificar integridade", false),
-                (AcaoManutencao::Chaves, Icone::VerificarChaves, "Verificar chaves estrangeiras", false),
-                (AcaoManutencao::Otimizar, Icone::Otimizar, "Otimizar", true),
-                (AcaoManutencao::Vacuum, Icone::Compactar, "Compactar (VACUUM)", true),
+                (AcaoManutencao::Integridade, "Verificar integridade", false),
+                (AcaoManutencao::Chaves, "Verificar chaves estrangeiras", false),
+                (AcaoManutencao::Otimizar, "Otimizar", true),
+                (AcaoManutencao::Vacuum, "Compactar (VACUUM)", true),
             ];
-            for (acao, icone, rotulo, escreve) in manutencoes {
-                p.silhueta(icone);
+            for (acao, rotulo, escreve) in manutencoes {
                 if escreve && somente_leitura {
                     p.item_desligado(rotulo, None);
                 } else if p.item(rotulo, None, false).clicked() {
@@ -322,7 +320,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
                 }
             }
             p.separador();
-            if p.silhueta(Icone::CopiaSeguranca).item("Fazer cópia de segurança", None, false).clicked() {
+            if p.item("Fazer cópia de segurança", None, false).clicked() {
                 pedido = Some(PedidoMenu::Acao(Acao::CopiaDeSeguranca));
             }
             if p.silhueta(Icone::Exportar).item("Exportar o banco", None, false).clicked() {
@@ -354,9 +352,6 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
                 ]
             };
             for &(parte, rotulo, atalho) in vistas {
-                if parte == Parte::Estrutura {
-                    p.silhueta(Icone::Editar);
-                }
                 if p.item(rotulo, Some(atalho), false).clicked() {
                     pedido = Some(PedidoMenu::Tabela(ItemTabela::Vista(parte)));
                 }
@@ -365,7 +360,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
             let itens = [
                 (Some(Icone::NovaConsulta), "Abrir na Consulta SQL", ItemTabela::AbrirNaConsulta),
                 (Some(Icone::Exportar), "Exportar a tabela", ItemTabela::Exportar),
-                (Some(Icone::CopiarCaminho), "Copiar o nome", ItemTabela::CopiarNome),
+                (None, "Copiar o nome", ItemTabela::CopiarNome),
             ];
             for (icone, rotulo, item) in itens {
                 if let Some(i) = icone {
@@ -376,7 +371,7 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
                 }
             }
             p.separador();
-            if p.silhueta(Icone::Destacar).item("Propriedades em janela própria", None, false).clicked() {
+            if p.item("Propriedades em janela própria", None, false).clicked() {
                 pedido = Some(PedidoMenu::Tabela(ItemTabela::PropriedadesEmJanela));
             }
             p.separador();
@@ -399,7 +394,6 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
                 }
             }
             p.separador();
-            p.silhueta(Icone::Editar);
             if !t.editavel {
                 p.item_desligado("Renomear a tabela", None);
             } else if p.item("Renomear a tabela", None, false).clicked() {
