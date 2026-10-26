@@ -361,6 +361,182 @@ fn tabelas_das_propriedades_inserem_no_cursor() {
     assert_eq!(tela(&h).texto(), "SELECT * FROM clientes");
 }
 
+// ------------------------------------------------------------------ as colunas na seção Tabelas (Q1)
+
+/// O nó da tabela ou da coluna que insere `nome` (o rótulo diz o que o clique faz).
+fn no_inserir(nome: &str) -> String {
+    format!("Inserir {nome} no comando")
+}
+
+/// Abre (ou fecha) a tabela pelo teclado, como a seta: o foco no nó e o → (ou o ←).
+fn alternar_tabela(h: &mut H, nome: &str, abrir: bool) {
+    h.get_by_role_and_label(Role::Link, &no_inserir(nome)).focus();
+    h.run_steps(1);
+    h.key_press(if abrir { Key::ArrowRight } else { Key::ArrowLeft });
+    h.run_steps(2);
+}
+
+/// Abre a tabela (`nome` como o nó o cita) e espera as colunas dela chegarem (a primeira coluna à vista).
+fn abrir_tabela(h: &mut H, nome: &str, primeira: &str) {
+    alternar_tabela(h, nome, true);
+    assert!(tela(h).tabela_aberta(nome.trim_matches('"')), "{nome}");
+    let alvo = no_inserir(primeira);
+    esperar(h, move |h| h.query_by_role_and_label(Role::Link, &alvo).is_some());
+}
+
+/// Digita no filtro "Filtrar tabelas e colunas" (trocando o que havia).
+fn filtrar(h: &mut H, termo: &str) {
+    h.get_by_label(tela_consulta::DICA_FILTRO).click();
+    h.run_steps(1);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    h.key_press(Key::Backspace);
+    if !termo.is_empty() {
+        h.get_by_label(tela_consulta::DICA_FILTRO).type_text(termo);
+    }
+    h.run_steps(3);
+}
+
+#[test]
+fn tabelas_abrem_as_colunas_com_o_tipo_e_as_chaves() {
+    for (tema, nome) in [(Tema::Claro, "claro"), (Tema::Escuro, "escuro")] {
+        let amb = Ambiente::exemplo("consulta_colunas_abrem");
+        let mut h = abrir(&amb, None, tema);
+        // fechadas de partida: as colunas não aparecem
+        assert!(h.query_by_role_and_label(Role::Link, &no_inserir("cliente_id")).is_none());
+        abrir_tabela(&mut h, "pedidos", "cliente_id");
+        // a referência e o tipo à direita (pintados no nó)
+        let pintados: Vec<String> = h
+            .output()
+            .shapes
+            .iter()
+            .filter_map(|c| match &c.shape {
+                egui::Shape::Text(t) => Some(t.galley.text().to_string()),
+                _ => None,
+            })
+            .collect();
+        assert!(pintados.iter().any(|t| t == "→ clientes.id"), "{pintados:?}");
+        assert!(pintados.iter().any(|t| t == "INTEGER"), "{pintados:?}");
+        // as colunas ficam entre a tabela e a seguinte, um nível adentro
+        let tabela = h.get_by_role_and_label(Role::Link, &no_inserir("pedidos")).rect();
+        let coluna = h.get_by_role_and_label(Role::Link, &no_inserir("cliente_id")).rect();
+        let seguinte = h.get_by_role_and_label(Role::Link, &no_inserir("produtos")).rect();
+        assert!(tabela.bottom() <= coluna.top() && coluna.bottom() <= seguinte.top(), "{tabela:?} {coluna:?}");
+        abrir_tabela(&mut h, "clientes", "email");
+        capturar_sem_hover(&mut h, &format!("consulta-tabelas-colunas-{nome}.png"));
+        // o ← fecha
+        alternar_tabela(&mut h, "pedidos", false);
+        assert!(!tela(&h).tabela_aberta("pedidos"));
+        assert!(h.query_by_role_and_label(Role::Link, &no_inserir("cliente_id")).is_none());
+    }
+}
+
+#[test]
+fn a_seta_abre_e_o_clique_no_nome_continua_inserindo_a_tabela() {
+    let amb = Ambiente::exemplo("consulta_colunas_seta");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    escrever(&mut h, "SELECT * FROM");
+    // a seta fica no começo do nó, depois do recuo
+    let no = h.get_by_role_and_label(Role::Link, &no_inserir("clientes")).rect();
+    let seta = Pos2::new(no.left() + 6.0 + 12.0 + 5.0, no.center().y);
+    h.event(Event::PointerMoved(seta));
+    for pressed in [true, false] {
+        h.event(Event::PointerButton {
+            pos: seta,
+            button: PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+        h.run_steps(1);
+    }
+    h.run_steps(2);
+    assert!(tela(&h).tabela_aberta("clientes"));
+    assert_eq!(tela(&h).texto(), "SELECT * FROM", "a seta só abre");
+    h.get_by_role_and_label(Role::Link, &no_inserir("clientes")).click();
+    h.run_steps(3);
+    assert_eq!(tela(&h).texto(), "SELECT * FROM clientes");
+}
+
+#[test]
+fn coluna_insere_o_nome_no_cursor_e_com_shift_a_tabela_junto() {
+    let amb = Ambiente::exemplo("consulta_colunas_inserem");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    escrever(&mut h, "SELECT");
+    abrir_tabela(&mut h, "clientes", "email");
+    h.get_by_role_and_label(Role::Link, &no_inserir("email")).click();
+    h.run_steps(3);
+    // com o espaço antes, e o foco de volta no editor
+    assert_eq!(tela(&h).texto(), "SELECT email");
+    assert!(h.get_by_label("Comando SQL").is_focused());
+    h.get_by_label("Comando SQL").type_text(", ");
+    h.run_steps(1);
+    h.get_by_role_and_label(Role::Link, &no_inserir("nome")).click_modifiers(Modifiers::SHIFT);
+    h.run_steps(3);
+    assert_eq!(tela(&h).texto(), "SELECT email, clientes.nome");
+    // o nome que precisa de aspas vai citado, e a tabela também
+    let citada = "\"coluna \"\"citada\"\"\"";
+    abrir_tabela(&mut h, "\"Tabela com espaço\"", citada);
+    h.get_by_label("Comando SQL").click();
+    h.run_steps(1);
+    h.key_press(Key::End);
+    h.get_by_label("Comando SQL").type_text(" FROM ");
+    h.run_steps(1);
+    h.get_by_role_and_label(Role::Link, &no_inserir(citada)).click_modifiers(Modifiers::SHIFT);
+    h.run_steps(3);
+    assert_eq!(tela(&h).texto(), format!("SELECT email, clientes.nome FROM \"Tabela com espaço\".{citada}"));
+}
+
+#[test]
+fn filtro_acha_a_coluna_em_todas_as_tabelas_e_abre_so_as_que_casam() {
+    let amb = Ambiente::exemplo("consulta_colunas_filtro");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    // uma tabela aberta antes do filtro volta aberta quando ele é limpo
+    abrir_tabela(&mut h, "produtos", "codigo");
+    filtrar(&mut h, "EMAIL");
+    let alvo = no_inserir("email");
+    esperar(&mut h, move |h| h.query_by_role_and_label(Role::Link, &alvo).is_some());
+    assert!(tela(&h).tabela_aberta("clientes"));
+    assert!(!tela(&h).tabela_aberta("produtos"));
+    // só a tabela que casa, só com a coluna que casa
+    assert!(h.query_by_role_and_label(Role::Link, &no_inserir("clientes")).is_some());
+    assert!(h.query_by_role_and_label(Role::Link, &no_inserir("pedidos")).is_none());
+    assert!(h.query_by_role_and_label(Role::Link, &no_inserir("nome")).is_none());
+    capturar_sem_hover(&mut h, "consulta-tabelas-filtro-claro.png");
+    // pelo nome da tabela: ela aparece fechada
+    filtrar(&mut h, "itens");
+    assert!(h.query_by_role_and_label(Role::Link, &no_inserir("itens_pedido")).is_some());
+    assert!(h.query_by_role_and_label(Role::Link, &no_inserir("clientes")).is_none());
+    assert!(!tela(&h).tabela_aberta("itens_pedido"));
+    // nada casa
+    filtrar(&mut h, "xyzzy");
+    assert!(h.query_by_label(tela_consulta::NADA_NO_FILTRO).is_some());
+    // limpo: tudo de volta, com o que estava aberto antes
+    filtrar(&mut h, "");
+    assert!(h.query_by_role_and_label(Role::Link, &no_inserir("pedidos")).is_some());
+    assert!(tela(&h).tabela_aberta("produtos"));
+    assert!(!tela(&h).tabela_aberta("clientes"));
+}
+
+#[test]
+fn tabela_sem_colunas_visiveis_e_estrutura_nova_relida() {
+    let mut amb = Ambiente::exemplo("consulta_colunas_vazias");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    abrir_tabela(&mut h, "clientes", "email");
+    // o comando que muda a estrutura relê as colunas (fora da casca a versão do estado não sobe)
+    executar(
+        &mut h,
+        Some(
+            "ALTER TABLE clientes ADD COLUMN apelido TEXT; CREATE TABLE t (x); CREATE VIEW quebrada AS SELECT x FROM t; DROP TABLE t;",
+        ),
+        false,
+    );
+    casca_rele(&mut h, &mut amb);
+    let alvo = no_inserir("apelido");
+    esperar(&mut h, move |h| h.query_by_role_and_label(Role::Link, &alvo).is_some());
+    // a visão quebrada abre e diz que não tem colunas
+    alternar_tabela(&mut h, "quebrada", true);
+    esperar_texto(&mut h, tela_consulta::SEM_COLUNAS);
+}
+
 // ------------------------------------------------------------------ resultados
 
 #[test]
@@ -1166,6 +1342,8 @@ fn banco_sem_tabelas_mostra_o_aviso_nas_propriedades() {
     amb.recarregar();
     let mut h = abrir(&amb, None, Tema::Claro);
     assert!(h.query_by_label("O banco ainda não tem tabelas; crie a primeira com CREATE TABLE.").is_some());
+    // sem tabelas, sem o filtro das colunas
+    assert!(h.query_by_label(tela_consulta::DICA_FILTRO).is_none());
     capturar_sem_hover(&mut h, "consulta-sem-tabelas-claro.png");
 }
 

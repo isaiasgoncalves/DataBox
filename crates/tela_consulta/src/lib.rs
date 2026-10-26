@@ -50,7 +50,9 @@
 //! Também públicas: as regras de texto ([`resumo_comando`],
 //! [`nome_para_exportar`], [`inserir_no_cursor`]) e as constantes [`LIMITE`], [`MAX_SQL_NO_ENDERECO`],
 //! [`ALTURA_EDITOR`], [`ALTURA_MIN_EDITOR`], [`DICA_BUSCA`], [`DICA_EDITOR`], [`PARA_COMECAR`], [`NADA_EXECUTADO`],
-//! [`DICA_EXECUTAR`], [`DICA_EXECUTANDO`] e [`DICA_INTERROMPER`]. Para os testes (`#[doc(hidden)]`):
+//! [`DICA_EXECUTAR`], [`DICA_EXECUTANDO`], [`DICA_INTERROMPER`], [`DICA_FILTRO`], [`SEM_COLUNAS`] e
+//! [`NADA_NO_FILTRO`]. Para os testes (`#[doc(hidden)]`): [`TelaConsulta::tabela_aberta`],
+//! [`TelaConsulta::colunas_do_banco`],
 //! [`TelaConsulta::id_editor`] e [`TelaConsulta::id_do_editor`], [`TelaConsulta::texto`],
 //! [`TelaConsulta::execucoes`] (quantas respostas já foram mostradas), [`TelaConsulta::area_editor`],
 //! [`TelaConsulta::tipos_dos_cards`], [`TelaConsulta::escolhido`], [`TelaConsulta::grade`] e
@@ -120,7 +122,10 @@
 //! - **Propriedades**: "Execução" (Comandos · Executados · Parou em, "Comando 3" em `--perigo` · Transação, "aberta"
 //!   / "nenhuma aberta") e "Tabelas" (os nós com a ficha e o ↵ que inserem o nome citado no cursor, com um espaço
 //!   antes quando precisa; o banco sem tabelas diz "O banco ainda não tem tabelas; crie a primeira com CREATE
-//!   TABLE.").
+//!   TABLE."). Desde o Q1 da 0.3, cada tabela abre as colunas (a seta, ou → e ←), e o clique na coluna insere o
+//!   nome dela (com Shift, `tabela.coluna`), com o filtro [`DICA_FILTRO`] no alto: o módulo `tabelas`. As colunas
+//!   vêm do [`estado::ColunasDoBanco`] da tela, lido numa tarefa e invalidado quando um comando muda a estrutura (e
+//!   no COMMIT e no ROLLBACK); o autocompletar (Q2) vai ler do mesmo cache.
 //! - Depois de cada resposta: `Acao::NotarTransacao(transacao_aberta)` (a casca relê também o Histórico de
 //!   consultas) e `Acao::RecarregarObjetos` quando `alterou_esquema` ou `alterou_dados`.
 //! - Erros de tarefa passam por `ctx.reagir` (banco trocado e leitura substituída ficam em silêncio).
@@ -133,7 +138,7 @@
 //!
 //! # Limites conhecidos
 //!
-//! - O desfazer (Ctrl+Z) não alcança o que as Tabelas das Propriedades inserem.
+//! - O desfazer (Ctrl+Z) não alcança o que as Tabelas das Propriedades inserem (as tabelas e as colunas).
 //! - Os resultados não se empilham em cards: um por vez, pelo seletor. O Histórico mora no painel da
 //!   casca.
 //! - A monoespaçada do editor e dos comandos sai na Consolas quando a Cascadia Mono só existe como fonte
@@ -142,8 +147,8 @@
 //!
 //! # Testes
 //!
-//! `src/lib.rs` (os ids sem e com o sal), `src/texto.rs` e `src/resultados.rs` (as regras de texto e a montagem
-//! dos resultados) e `tests/consulta.rs`, no `egui_kittest` com o banco de
+//! `src/lib.rs` (os ids sem e com o sal), `src/texto.rs`, `src/resultados.rs` e `src/tabelas.rs` (as regras de texto,
+//! a montagem dos resultados e o filtro das colunas) e `tests/consulta.rs`, no `egui_kittest` com o banco de
 //! exemplo, pelo `palco_documento` (a tela desenhada como a casca: a barra com os verbos e a busca, o documento com a
 //! faixa e o rodapé e as Propriedades à direita), que grava em `capturas/rust/` as capturas `consulta-*`. Fora
 //! daqui: a exportação do resultado até o arquivo (em `tela_exportar/tests/exportar.rs`; este crate só confere o
@@ -153,6 +158,7 @@
 #![forbid(unsafe_code)]
 
 mod resultados;
+mod tabelas;
 mod texto;
 
 use std::hash::{Hash, Hasher};
@@ -166,14 +172,12 @@ use egui::{
     Align, CornerRadius, CursorIcon, Event, Id, Key, Layout, Margin, Rect, Sense, Stroke, Ui, UiBuilder, Vec2, pos2,
     vec2,
 };
-use estado::{Acao, Contexto, Promessa, Reacao, Rota};
-use interface::codigo::citar as citar_nome;
+use estado::{Acao, ColunasDoBanco, Contexto, Promessa, Reacao, Rota};
 use interface::fontes::{self, Peso};
 use interface::formato::{formatar_numero, formatar_segundos};
 use interface::grade::rodape_da_selecao;
 use interface::icones::{self, EstadoIcone, Icone};
 use interface::pecas::arranjo::em_linha;
-use interface::pecas::arvore::No;
 use interface::pecas::avisos::TomAviso;
 use interface::pecas::botao::Botao;
 use interface::pecas::campos::{AreaTexto, LARGURA_CALHA};
@@ -186,6 +190,7 @@ use interface::pecas::toast::{toast, toast_atencao, toast_erro};
 use interface::pintura::{self, Preenchimento};
 use interface::tema::paleta;
 
+pub use tabelas::{DICA_FILTRO, NADA_NO_FILTRO, SEM_COLUNAS};
 pub use texto::{inserir_no_cursor, nome_para_exportar, resumo_comando};
 
 use resultados::Card;
@@ -336,6 +341,10 @@ pub struct TelaConsulta {
     busca: String,
     achado: Option<(usize, usize)>,
     rolar_achado: bool,
+    /// As colunas do banco (a seção "Tabelas" das Propriedades; o autocompletar vai ler daqui também) e o filtro e
+    /// as tabelas abertas da seção.
+    colunas: ColunasDoBanco,
+    doca: tabelas::DocaTabelas,
 }
 
 impl TelaConsulta {
@@ -366,6 +375,8 @@ impl TelaConsulta {
             busca: String::new(),
             achado: None,
             rolar_achado: false,
+            colunas: ColunasDoBanco::novo(),
+            doca: tabelas::DocaTabelas::default(),
         }
     }
 
@@ -838,6 +849,7 @@ impl TelaConsulta {
                 ctx.emitir(Acao::NotarTransacao(resposta.transacao_aberta));
                 self.transacao = Some(resposta.transacao_aberta);
                 let recarregar = pedido != Pedido::Executar || resposta.alterou_esquema || resposta.alterou_dados;
+                let resposta_mudou_esquema = resposta.alterou_esquema;
                 let fim = match pedido {
                     Pedido::Executar => None,
                     Pedido::Gravar => Some(FIM_GRAVADA),
@@ -859,6 +871,10 @@ impl TelaConsulta {
                 self.escolhido = resultados::escolhido_de_partida(&self.cards);
                 if recarregar {
                     ctx.emitir(Acao::RecarregarObjetos);
+                }
+                // o COMMIT e o ROLLBACK também podem mudar a estrutura (um CREATE dentro da transação)
+                if pedido != Pedido::Executar || resposta_mudou_esquema {
+                    self.colunas.invalidar();
                 }
             }
             Err(e) => {
@@ -954,45 +970,49 @@ impl TelaConsulta {
         });
     }
 
-    /// "Tabelas": as tabelas e visões do banco, que inserem o nome citado no cursor do editor.
-    fn secao_tabelas(&mut self, ui: &mut Ui, ctx: &Contexto) {
-        let mut clicado = None;
+    /// "Tabelas": as tabelas e visões do banco, que inserem o nome citado no cursor do editor e abrem as colunas
+    /// (o módulo `tabelas`).
+    fn secao_tabelas(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
+        let egui = ui.ctx().clone();
+        self.colunas.atualizar(&egui, ctx);
         let objetos = ctx.estado.objetos.as_ref();
         let tabelas = objetos.map(|o| o.tabelas.as_slice()).unwrap_or_default();
         let visoes = objetos.map(|o| o.visoes.as_slice()).unwrap_or_default();
+        let itens: Vec<(&str, Icone)> = tabelas
+            .iter()
+            .map(|t| (t.nome.as_str(), estado::icone_da_tabela(t.tipo, t.sem_rowid)))
+            .chain(visoes.iter().map(|v| (v.nome.as_str(), Icone::Visao)))
+            .collect();
+        let banco_id = ctx.banco_id();
+        let id_filtro = self.id("propriedades::tabelas::filtro");
         let t3 = paleta(ui).estudio.t3;
-        let _ = Secao::new(self.chave("propriedades::tabelas"), "Tabelas").mostrar(ui, |ui| {
-            if tabelas.is_empty() && visoes.is_empty() {
+        let secao = Secao::new(self.chave("propriedades::tabelas"), "Tabelas");
+        let (doca, colunas) = (&mut self.doca, &self.colunas);
+        let mut inserir = None;
+        let _ = secao.mostrar(ui, |ui| {
+            if itens.is_empty() {
                 egui::Frame::NONE.inner_margin(Margin { left: 14, right: 14, top: 2, bottom: 12 }).show(ui, |ui| {
                     paragrafo(ui, SEM_TABELAS, 12.0, t3);
                 });
                 return;
             }
-            let itens = tabelas
-                .iter()
-                .map(|t| (t.nome.as_str(), estado::icone_da_tabela(t.tipo, t.sem_rowid)))
-                .chain(visoes.iter().map(|v| (v.nome.as_str(), Icone::Visao)));
-            for (nome, icone) in itens {
-                let dica = format!("Inserir {} no comando", citar_nome(nome));
-                // o rótulo diz o que o clique faz (e não repete o nó do Explorador)
-                let r = No::new(nome)
-                    .rotulo(&dica)
-                    .recuo(12.0)
-                    .icone(icone)
-                    .icone_a_direita(Icone::Inserir)
-                    .dica(&dica)
-                    .mostrar(ui);
-                if r.resposta.clicked() {
-                    clicado = Some(nome.to_string());
-                }
-            }
-            // `padding:0 0 10px`
-            ui.add_space(10.0);
+            inserir = doca.mostrar(ui, id_filtro, &banco_id, &itens, colunas);
         });
-        if let Some(nome) = clicado {
-            let egui = ui.ctx().clone();
-            self.inserir(&egui, &citar_nome(&nome));
+        if let Some(texto) = inserir {
+            self.inserir(&egui, &texto);
         }
+    }
+
+    /// A seção "Tabelas" das Propriedades abriu as colunas desta tabela (nos testes).
+    #[doc(hidden)]
+    pub fn tabela_aberta(&self, nome: &str) -> bool {
+        self.doca.aberta(nome)
+    }
+
+    /// As colunas do banco que a tela guarda (nos testes e, depois, no autocompletar).
+    #[doc(hidden)]
+    pub fn colunas_do_banco(&self) -> &ColunasDoBanco {
+        &self.colunas
     }
 }
 

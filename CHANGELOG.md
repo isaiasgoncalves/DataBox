@@ -5,6 +5,16 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Não lançado]
 
+### Adicionado
+
+- **As colunas à mão ao escrever SQL** (Q1 da 0.3): na Consulta, cada tabela da seção "Tabelas" das Propriedades abre
+  as colunas, com a pastilha do tipo dos cabeçalhos dos Dados (a chave primária e a estrangeira com o ícone delas) e,
+  à direita, o tipo declarado ou a referência ("→ clientes.id"). O clique na coluna insere o nome dela no cursor do
+  editor (citado quando precisa); com Shift, `tabela.coluna`. O clique na tabela continua inserindo o nome dela, e a
+  seta (ou → e ←) abre e fecha. O filtro "Filtrar tabelas e colunas" acha a coluna em todas as tabelas e abre só as que
+  casam; ao limpá-lo, volta o que estava aberto. As colunas são lidas numa tarefa de fundo, de uma vez, e relidas
+  quando a estrutura do banco muda.
+
 ## [0.2.4] - 2026-10-23
 
 Acabamento da interface, da revisão de UI de 22/10/2026 (o debate do designer com o PO, em

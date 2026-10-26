@@ -136,6 +136,36 @@ pub struct VisaoResumo {
     pub colunas: Option<u64>,
 }
 
+/// Uma coluna de [`TabelaColunas`]: só o que a Consulta mostra ao lado do editor (sem os índices, o padrão, as
+/// regras nem a contagem de linhas, que a leitura completa de [`TabelaInfo`] faz).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ColunaResumo {
+    pub nome: String,
+    /// Tipo declarado ("" sem tipo).
+    pub tipo: String,
+    /// Posição na chave primária (0 = fora dela).
+    pub pk: i64,
+    pub fk: Option<Referencia>,
+}
+
+/// O que uma coluna com chave estrangeira referencia.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Referencia {
+    pub tabela: String,
+    /// None: o REFERENCES sem coluna, numa tabela sem chave primária para completar.
+    pub coluna: Option<String>,
+}
+
+/// Uma tabela ou visão do usuário com as colunas visíveis (as ocultas das tabelas virtuais ficam de fora), na ordem
+/// da tabela. `colunas` vazia: a tabela virtual só tem colunas ocultas, ou a visão está quebrada.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TabelaColunas {
+    pub nome: String,
+    /// Table, Virtual ou View.
+    pub tipo: TipoObjeto,
+    pub colunas: Vec<ColunaResumo>,
+}
+
 /// Uma tabela do sistema (sqlite_*) ou sombra de tabela virtual.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SistemaResumo {

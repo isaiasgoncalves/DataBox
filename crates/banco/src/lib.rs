@@ -22,6 +22,8 @@
 //!
 //!   info() -> Resultado<BancoInfo>                      com a trava presa > 0,5 s, devolve o último que leu
 //!   objetos() -> Resultado<ObjetosInfo>
+//!   colunas_do_banco() -> Resultado<Vec<TabelaColunas>>   as colunas de todas as tabelas e visões, numa leitura só
+//!                                                       (nome, tipo, chave primária e estrangeira), sem contar linhas
 //!   tabela_info(nome) -> Resultado<TabelaInfo>          sem definicoes/restricoes (o serviço junta do esquema)
 //!   linhas(nome, &PedidoPagina) -> Resultado<Pagina>
 //!   contagem(nome, busca: Option<&str>, filtros: &[Filtro], leitura: Option<&str>) -> Resultado<Contagem>
@@ -158,10 +160,10 @@ pub use exportacao::{FiltroExportacao, LinhasExportacao, Parar};
 pub use manutencao::{AcaoManutencao, CopiaFeita, ResultadoManutencao};
 pub use sql::dividir_comandos;
 pub use tipos::{
-    BancoInfo, CelulaDesfeita, ChaveEstrangeira, ColunaIndice, ColunaInfo, Contagem, ContagemObjetos, Direcao,
-    FkColuna, GatilhoInfo, GatilhoResumo, IndiceInfo, IndiceResumo, LinhaCompleta, LinhaGravada, LinhaPagina,
-    ObjetosInfo, OrigemIndice, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, SistemaResumo, TabelaInfo,
-    TabelaResumo, TipoChave, TipoObjeto, VisaoResumo,
+    BancoInfo, CelulaDesfeita, ChaveEstrangeira, ColunaIndice, ColunaInfo, ColunaResumo, Contagem, ContagemObjetos,
+    Direcao, FkColuna, GatilhoInfo, GatilhoResumo, IndiceInfo, IndiceResumo, LinhaCompleta, LinhaGravada, LinhaPagina,
+    ObjetosInfo, OrigemIndice, Pagina, PedidoPagina, Referencia, ResultadoComando, ResultadoConsulta, SistemaResumo,
+    TabelaColunas, TabelaInfo, TabelaResumo, TipoChave, TipoObjeto, VisaoResumo,
 };
 pub use valores::{Coagido, coagir};
 
