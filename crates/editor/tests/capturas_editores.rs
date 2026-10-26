@@ -176,10 +176,7 @@ fn captura_da_pergunta_ao_fechar() {
         let mut h = editor(&amb, tema);
         abrir(&mut h, &csv, " de 40");
         // a primeira célula de dados (abaixo do cabeçalho, depois da caixa de marcar e do número da linha)
-        let grade = {
-            use egui_kittest::kittest::{Queryable, by};
-            h.get(by().label("Grade")).rect()
-        };
+        let grade = esperar_grade(&mut h);
         let pos = egui::pos2(grade.left() + 32.0 + 48.0 + 20.0, grade.top() + 14.0);
         h.event(egui::Event::PointerMoved(pos));
         for pressed in [true, false] {

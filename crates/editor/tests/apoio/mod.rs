@@ -106,6 +106,13 @@ pub fn assentar(h: &mut H) {
     esperar(h, "as tarefas terminarem", |h| !h.state().ocupado());
 }
 
+/// Espera a grade aparecer (a leitura da tabela é uma tarefa de fundo: `assentar` sozinho pode voltar antes dela
+/// chegar) e devolve o retângulo dela.
+pub fn esperar_grade(h: &mut H) -> egui::Rect {
+    esperar(h, "a grade (o nó \"Grade\") aparecer", |h| h.query_by_label("Grade").is_some());
+    h.get_by_label("Grade").rect()
+}
+
 /// Quantos nós têm este rótulo (exato).
 pub fn quantos(h: &H, rotulo: &str) -> usize {
     h.query_all_by_label(rotulo).count()
