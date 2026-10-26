@@ -189,7 +189,7 @@ fn shift_f10_na_grade_abre_o_menu_da_celula_e_o_esc_volta_a_ela() {
     let mut h = harness(&amb);
     clicar_link(&mut h, "clientes");
     assentar(&mut h);
-    let grade = h.get(by().label("Grade")).rect();
+    let grade = esperar_grade(&mut h);
     // o corpo da grade, depois da caixa de marcar (32)
     let pos = egui::pos2(grade.left() + 32.0 + 60.0, grade.top() + 14.0);
     h.event(egui::Event::PointerMoved(pos));

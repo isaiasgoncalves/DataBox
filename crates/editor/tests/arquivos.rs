@@ -546,7 +546,7 @@ fn fila_espera_a_pergunta_da_tela_de_texto() {
 fn editar_a_primeira_celula(h: &mut H, rodape: &str, digitado: &str) {
     let alvo = rodape.to_string();
     esperar(h, "o CSV na grade", move |h| tem_texto(h, &alvo));
-    let grade = h.get(by().label("Grade")).rect();
+    let grade = esperar_grade(h);
     // o corpo da grade (abaixo do cabeçalho), depois da caixa de marcar (32) e do número da linha (48)
     let pos = egui::pos2(grade.left() + 32.0 + 48.0 + 20.0, grade.top() + 14.0);
     h.event(egui::Event::PointerMoved(pos));
