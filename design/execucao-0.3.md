@@ -16,7 +16,17 @@ Os números dos PRs (1 a 14) e os nomes I1 a I4, U1 e U2, S0 e S1 são os de `pl
 - Todas as decisões da 0.3.0 estão tomadas, inclusive a tradução (P7), os gráficos (P6b) e, desde 23/10/2026, a
   primeira etapa do SSH (S1), como a trilha E.
 - As pranchetas `FuturoPerfil` e `FuturoGrafico` já existem no canvas; a do SSH não (a janela da conexão e a da
-  impressão digital da chave).
+  impressão digital da chave). **Feito em 26/10/2026 (onda 0):** a `FuturoGrafico` foi refeita sobre as decisões 6 e 7
+  (`ferramentas/grafico.py`) e a `FuturoSsh` desenhada (`ferramentas/ssh.py`); o que elas decidem está no
+  [`README.md`](README.md). **Pendências que elas passam aos PRs:**
+  - **PR 3 e PR 8:** com o Perfil e o Gráfico, as Propriedades têm seis vistas, que não cabem com nome na doca: o
+    segmentado delas passa a só ícones na doca (Perfil com a Caixa, `g_caixa`; Gráfico com as Colunas, `g_colunas`) e
+    por extenso na janela própria; a doca alarga para 340 px nessas duas vistas. O Gráfico é Alt+6;
+  - **PR 8:** os sólidos `g_barras`, `g_linhas`, `g_histograma`, `g_dispersao`, `g_colunas` e `g_caixa` saem do
+    "só canvas" e vão para o app pelo `icones_app.py`; a aba do gráfico não tem faixa (o tipo e as colunas ficam nas
+    Propriedades) e o Exportar da barra é o Salvar como PNG;
+  - **PR 14:** o item é "Conectar por SSH", sem reticências (a regra dos menus do guia; os planos escrevem
+    "Conectar por SSH…"), com Ctrl+Shift+K; o sólido novo `a_maquina` vai para o app pelo `icones_app.py`.
 - Falta um PR pequeno da U11: tirar as silhuetas de seis itens dos menus da barra (Novo banco, Colunas, Renomear a
   tabela, Propriedades em janela própria, Fazer cópia de segurança e as manutenções do Banco). Só o guia foi atualizado.
 
