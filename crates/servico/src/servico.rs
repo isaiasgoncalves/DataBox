@@ -10,7 +10,7 @@ use std::time::Duration;
 use banco::{
     AcaoManutencao, Banco, BancoInfo, CelulaDesfeita, Contagem, CopiaFeita, Filtro, Interrupcao, LinhaCompleta,
     LinhaGravada, ObjetosInfo, Pagina, PedidoPagina, ResultadoComando, ResultadoConsulta, ResultadoManutencao,
-    TipoObjeto,
+    TabelaColunas, TipoObjeto,
 };
 use comum::{Celula, Chave, Codigo, Entrada, ErroBanco, Resultado};
 use prefs::{ComandoSql, Mudanca, MudancaExportacao, Preferencias, PrefsInfo, ResultadoSql, Tema};
@@ -387,6 +387,12 @@ impl Servico {
     /// `GET /api/banco/objetos`.
     pub fn objetos(&self, banco_id: &str) -> Resultado<ObjetosInfo> {
         self.banco_aberto(banco_id)?.objetos()
+    }
+
+    /// As colunas de todas as tabelas e visões do banco, numa leitura só (a doca "Tabelas" da Consulta e o
+    /// autocompletar): [`banco::Banco::colunas_do_banco`].
+    pub fn colunas_do_banco(&self, banco_id: &str) -> Resultado<Vec<TabelaColunas>> {
+        self.banco_aberto(banco_id)?.colunas_do_banco()
     }
 
     /// `POST /api/banco/manutencao` → `{acao, ok, mensagens, tamanho_antes, tamanho_depois}`.

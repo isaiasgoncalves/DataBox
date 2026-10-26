@@ -38,6 +38,7 @@
 //!   pub fn fechar_banco(&self, banco_id: &str, descartar_transacao: bool) -> Resultado<()>
 //!   pub fn info_banco(&self, banco_id: &str) -> Resultado<BancoInfo>
 //!   pub fn objetos(&self, banco_id: &str) -> Resultado<ObjetosInfo>
+//!   pub fn colunas_do_banco(&self, banco_id: &str) -> Resultado<Vec<TabelaColunas>>   as colunas de tudo, sem contar linhas
 //!   pub fn manutencao(&self, banco_id: &str, acao: AcaoManutencao) -> Resultado<ResultadoManutencao>
 //!   pub fn copia(&self, banco_id: &str, caminho: &Path, substituir: bool) -> Resultado<CopiaFeita>
 //!   // tabela e dados (§4.3)

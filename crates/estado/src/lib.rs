@@ -7,6 +7,11 @@
 //! Promessa<T>                 tarefa de fundo: Promessa::rodar(ctx, || -> Resultado<T>) · tomar() -> Option<Resultado<T>>
 //!                             (uma vez) · pendente() · Promessa::pronta(r). Pânico vira ErroBanco 500 MSG_INESPERADO.
 //!                             tarefas_em_andamento() · esperar_tarefas(prazo) (o executável espera ao fechar).
+//! ColunasDoBanco              as colunas de todas as tabelas e visões do banco aberto, lidas numa Promessa e guardadas
+//!                             até a estrutura mudar: novo() · atualizar(egui, ctx) (a cada quadro; lê quando precisa,
+//!                             relê com outro banco ou outra ctx.versao) · invalidar() · tabelas() · compartilhadas() ·
+//!                             colunas_de(nome) (exato, depois sem caixa) · lendo() · erro(). A doca "Tabelas" da
+//!                             Consulta e o autocompletar dela.
 //! Rota::{Inicio, Banco, Tabela{nome, aba, dados}, Visao{nome, aba, dados}, Consulta{sql}, Arquivo{caminho}}
 //!     objeto(nome, e_visao) · objeto_na_aba · consulta_com(sql) · arquivo(caminho) · exige_banco (false no Início e
 //!     no Arquivo) · nome_objeto · caminho_arquivo · aba · dados · com_dados(ConsultaDados) · endereco()
@@ -160,6 +165,7 @@ mod acao;
 #[cfg(any(test, feature = "apoio-testes"))]
 pub mod apoio_testes;
 pub mod busca;
+mod colunas;
 mod contexto;
 mod dialogos;
 pub mod documento;
@@ -171,6 +177,7 @@ mod verbo;
 
 pub use abas::{AbaAberta, Abas, Abertura, ChaveAba, Entrada, IdAba};
 pub use acao::{Acao, FiltroAtual, OrigemJanelaExportar, PainelCasca, PedidoJanelaExportar};
+pub use colunas::ColunasDoBanco;
 pub use contexto::{Contexto, Estado, LIMIAR_TABELA_GRANDE, MSG_SO_NA_TRANSACAO, NoDaPasta, PastaAberta, Reacao};
 pub use dialogos::{Dialogos, Escolha, FormatoArquivo, filtros_de_abrir_arquivo};
 pub use documento::{

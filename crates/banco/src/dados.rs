@@ -15,9 +15,9 @@ use crate::meta::{
 };
 use crate::sql::tem_palavra;
 use crate::tipos::{
-    ChaveEstrangeira, ColunaIndice, ColunaInfo, Contagem, FkColuna, GatilhoInfo, GatilhoResumo, IndiceInfo,
-    IndiceResumo, LinhaCompleta, LinhaPagina, ObjetosInfo, OrigemIndice, Pagina, PedidoPagina, SistemaResumo,
-    TabelaInfo, TabelaResumo, TipoObjeto, VisaoResumo,
+    ChaveEstrangeira, ColunaIndice, ColunaInfo, ColunaResumo, Contagem, FkColuna, GatilhoInfo, GatilhoResumo,
+    IndiceInfo, IndiceResumo, LinhaCompleta, LinhaPagina, ObjetosInfo, OrigemIndice, Pagina, PedidoPagina, Referencia,
+    SistemaResumo, TabelaColunas, TabelaInfo, TabelaResumo, TipoObjeto, VisaoResumo,
 };
 use crate::valores::{contagem_de, inteiro_de, texto_de, texto_do_valor, texto_opcional};
 
@@ -39,6 +39,42 @@ fn colunas_visiveis(conn: &Connection, nome: &str) -> Option<u64> {
         r.get_ref(0).map(contagem_de)
     })
     .ok()
+}
+
+/// As colunas visíveis de uma tabela ou visão, com a chave estrangeira de cada uma (a primeira que a inclui).
+fn colunas_resumo(conn: &Connection, nome: &str, tipo: TipoObjeto) -> rusqlite::Result<Vec<ColunaResumo>> {
+    let mut colunas = Vec::new();
+    {
+        let mut stmt =
+            conn.prepare("SELECT name, type, pk FROM pragma_table_xinfo(?, 'main') WHERE hidden != 1 ORDER BY cid")?;
+        let mut r = stmt.query([nome])?;
+        while let Some(l) = r.next()? {
+            colunas.push(ColunaResumo {
+                nome: texto_de(l.get_ref(0)?),
+                tipo: texto_de(l.get_ref(1)?),
+                pk: inteiro_de(l.get_ref(2)?),
+                fk: None,
+            });
+        }
+    }
+    if tipo == TipoObjeto::Table {
+        let mut stmt = conn.prepare("SELECT \"table\", \"from\", \"to\" FROM pragma_foreign_key_list(?, 'main')")?;
+        let mut r = stmt.query([nome])?;
+        let mut referencias = Vec::new();
+        while let Some(l) = r.next()? {
+            referencias.push((texto_de(l.get_ref(0)?), texto_de(l.get_ref(1)?), texto_opcional(l.get_ref(2)?)));
+        }
+        for (tabela, de, para) in referencias {
+            let Some(coluna) = colunas.iter_mut().find(|c| c.nome == de && c.fk.is_none()) else { continue };
+            let para = match para {
+                Some(p) => Some(p),
+                // REFERENCES tabela sem coluna: a chave primária da tabela referenciada (a primeira coluna dela)
+                None => chave_primaria_de(conn, &tabela).ok().and_then(|pk| pk.into_iter().next()),
+            };
+            coluna.fk = Some(Referencia { tabela, coluna: para });
+        }
+    }
+    Ok(colunas)
 }
 
 /// Lê todas as linhas de uma consulta como valores exatos.
@@ -148,6 +184,29 @@ impl Banco {
                 Ok(ObjetosInfo { tabelas, visoes, sistema, indices, gatilhos })
             })()
             .ctx("Não foi possível listar os objetos do banco.")
+        })
+    }
+
+    /// As colunas de todas as tabelas e visões do usuário (as do sistema e as sombras de tabela virtual ficam de
+    /// fora), numa leitura só: o nome, o tipo declarado, a posição na chave primária e a chave estrangeira de
+    /// cada uma. Mais leve que [`Banco::tabela_info`] por tabela (que lê índices e gatilhos e conta as linhas): é o
+    /// que a Consulta pede para mostrar as colunas ao lado do editor. Uma visão quebrada vem sem colunas, em vez
+    /// de falhar a leitura toda. Primeiro as tabelas, depois as visões, cada grupo por nome sem caixa.
+    pub fn colunas_do_banco(&self) -> Resultado<Vec<TabelaColunas>> {
+        self.lendo(|conn| {
+            (|| {
+                let cls = classificar(conn)?;
+                let mut saida = Vec::new();
+                for t in cls.tabelas.iter().chain(&cls.visoes) {
+                    saida.push(TabelaColunas {
+                        nome: t.nome.clone(),
+                        tipo: t.tipo,
+                        colunas: colunas_resumo(conn, &t.nome, t.tipo).unwrap_or_default(),
+                    });
+                }
+                Ok(saida)
+            })()
+            .ctx("Não foi possível ler as colunas do banco.")
         })
     }
 

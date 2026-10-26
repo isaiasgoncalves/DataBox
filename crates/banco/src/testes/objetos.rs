@@ -309,3 +309,63 @@ fn identidade_quando_rowid_esta_sombreado() {
     let p = pag(b, "s1", |_| {});
     assert_eq!(p.linhas, vec![LinhaPagina { chave: Some(Chave::Rowid(1)), valores: vec![ct("texto"), ct("a")] }]);
 }
+
+#[test]
+fn colunas_do_banco_traz_tabelas_e_visoes_com_chaves() {
+    let ex = exemplo("colunas_do_banco");
+    let tudo = ex.banco.colunas_do_banco().unwrap();
+    let por_nome: HashMap<&str, _> = tudo.iter().map(|t| (t.nome.as_str(), t)).collect();
+    // sem o sistema nem as sombras da tabela virtual; as visões depois das tabelas
+    assert!(!por_nome.contains_key("sqlite_sequence"));
+    assert!(!por_nome.contains_key("notas_data"));
+    assert_eq!(tudo.last().map(|t| t.nome.as_str()), Some("v_pedidos_por_cliente"));
+    assert_eq!(por_nome["v_pedidos_por_cliente"].tipo, TipoObjeto::View);
+    assert_eq!(por_nome["v_pedidos_por_cliente"].colunas.len(), 4);
+    // a virtual sem as colunas ocultas do FTS5
+    assert_eq!(por_nome["notas"].colunas.len(), 2);
+    // a mesma contagem do `objetos()`
+    let objs = ex.banco.objetos().unwrap();
+    for t in &objs.tabelas {
+        assert_eq!(por_nome[t.nome.as_str()].colunas.len() as u64, t.colunas.unwrap(), "{}", t.nome);
+    }
+    // chave primária e estrangeira
+    let pedidos = &por_nome["pedidos"].colunas;
+    let id = pedidos.iter().find(|c| c.nome == "id").unwrap();
+    assert_eq!(id.pk, 1);
+    assert!(id.fk.is_none());
+    let cliente = pedidos.iter().find(|c| c.nome == "cliente_id").unwrap();
+    let fk = cliente.fk.as_ref().unwrap();
+    assert_eq!(fk.tabela, "clientes");
+    assert_eq!(fk.coluna.as_deref(), Some("id"));
+    // as colunas na ordem da tabela
+    let ordem: Vec<&str> = por_nome["clientes"].colunas.iter().map(|c| c.nome.as_str()).collect();
+    assert_eq!(ordem.first(), Some(&"id"));
+}
+
+#[test]
+fn colunas_do_banco_completa_references_sem_coluna_e_aguenta_visao_quebrada() {
+    let pasta = Pasta::nova("colunas_sem_coluna");
+    let caminho = banco_de(
+        &pasta,
+        "CREATE TABLE a (x INTEGER PRIMARY KEY, y TEXT);
+         CREATE TABLE b (id INTEGER PRIMARY KEY, a_id INTEGER REFERENCES a, sem_tipo);
+         CREATE TABLE c (c_id INTEGER PRIMARY KEY);
+         CREATE TABLE d (c_ref INTEGER REFERENCES c);
+         CREATE VIEW v AS SELECT x FROM a;
+         DROP TABLE a;",
+        "fk.db",
+    );
+    let banco = Banco::abrir(&caminho, false, false).unwrap();
+    let tudo = banco.colunas_do_banco().unwrap();
+    let b = tudo.iter().find(|t| t.nome == "b").unwrap();
+    // a tabela referenciada já não existe: a coluna fica sem destino, mas a referência é lembrada
+    let a_id = b.colunas.iter().find(|c| c.nome == "a_id").unwrap();
+    assert_eq!(a_id.fk.as_ref().map(|f| f.tabela.as_str()), Some("a"));
+    assert_eq!(a_id.fk.as_ref().and_then(|f| f.coluna.as_deref()), None);
+    assert_eq!(b.colunas.iter().find(|c| c.nome == "sem_tipo").unwrap().tipo, "");
+    // o REFERENCES sem coluna aponta para a chave primária da tabela referenciada
+    let d = tudo.iter().find(|t| t.nome == "d").unwrap();
+    assert_eq!(d.colunas[0].fk.as_ref().and_then(|f| f.coluna.as_deref()), Some("c_id"));
+    // a visão quebrada vem sem colunas, e a leitura toda não falha
+    assert!(tudo.iter().find(|t| t.nome == "v").unwrap().colunas.is_empty());
+}

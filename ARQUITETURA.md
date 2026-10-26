@@ -578,7 +578,8 @@ gatilhos, Definição SQL; `Aba` ficou como apelido, e "aba" agora é a aba de d
 de documento com o histórico único, sem egui), `Verbo`/`Oferta`/`Ofertas` (os verbos da barra de ferramentas),
 `Acao` (pedidos das telas à casca), `Estado`, `Contexto` (o que cada tela recebe a cada quadro: serviço, estado, a
 janela dona dos diálogos e o canal de ações), `Dialogos` (rfd), `TabelaAberta` (a tabela carregada pela casca e
-entregue às abas) e, com o recurso `apoio-testes`, `apoio_testes::{Ambiente, palco, esperar, esperar_texto,
+entregue às abas), `ColunasDoBanco` (as colunas de todas as tabelas e visões do banco aberto, ver abaixo) e, com o
+recurso `apoio-testes`, `apoio_testes::{Ambiente, palco, esperar, esperar_texto,
 capturar}` para testar telas com o `egui_kittest` e gravar capturas em `capturas/rust/`.
 
 **Abas** (`estado::Abas<T>`; a casca guarda um `Abas<Documento>`):
@@ -725,6 +726,18 @@ tela_consulta  TelaConsulta::nova(sql) · com_id(sal) (o id da aba: ids do egui 
                    esquecer_transacao() · interromper(&egui::Context, &mut Contexto) (numa tarefa, §4.3)
 tela_exportar  JanelaExportar::nova(PedidoJanelaExportar) · mostrar(…) -> bool · exportando() -> bool
 ```
+
+**As colunas do banco** (`estado::ColunasDoBanco`, a peça do Q1 e do Q2 da 0.3): o cache das colunas de todas as
+tabelas e visões do banco aberto (nome, tipo declarado, posição na chave primária e a referência da chave
+estrangeira, `banco::TabelaColunas`), lidas numa `Promessa` pelo `Servico::colunas_do_banco` (uma leitura só, sem
+contar linhas). `atualizar(egui, ctx)` a cada quadro em que as colunas aparecem lê na primeira vez e relê quando o
+banco muda (esquece o anterior na hora), quando `ctx.versao` muda (os objetos relidos pela casca: uma tabela criada,
+alterada ou excluída em qualquer aba) ou depois de `invalidar()` (a Consulta chama quando um comando dela mudou a
+estrutura, e no COMMIT e no ROLLBACK). Ao reler, o que já estava lido fica à vista até o novo chegar, e uma leitura que
+corria quando a estrutura mudou é refeita. Leitura: `tabelas()`, `compartilhadas()` (a `Arc`, para levar a uma
+tarefa), `colunas_de(nome)` (exato, depois sem caixa), `lendo()` e `erro()`. Cada `TelaConsulta` tem o seu: a seção
+"Tabelas" das Propriedades (`tela_consulta::tabelas`, as tabelas que abrem as colunas, com o filtro "Filtrar tabelas e
+colunas") lê daqui, e o autocompletar do editor (Q2) vai ler também.
 
 A Consulta mostra um resultado por vez pelo seletor `interface::pecas::navegacao::seletor`, e o trecho que a busca da
 barra acha fica pintado (`AreaTexto::destacar`), porque o egui 0.36 reduz a seleção do editor ao cursor quando ele é
