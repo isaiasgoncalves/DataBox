@@ -3,6 +3,11 @@
 Pedido do Isaías em 21/10/2026: "integração com SSH, para ver arquivos que estão em outros dispositivos", em uma das
 próximas versões. Este documento traz a proposta do PO, a resposta do TL e as decisões. Nada aqui está implementado.
 
+**Decidido em 23/10/2026:** a primeira etapa (**S1**: conectar, a chave da máquina, o Explorador remoto e abrir pelo
+cache, só leitura) sobe para a **0.3.0**, como a trilha E do plano de execução
+([`execucao-0.3.md`](execucao-0.3.md)), com o spike da biblioteca (S0) no começo dela. O resto (S2 e S3) fica na 0.4.
+A tabela da seção 2.6 mostra o que cai em cada versão.
+
 ---
 
 ## 1. O PO
@@ -38,6 +43,11 @@ o DataBox só enxerga o disco local, e eles saem dele para o terminal.
   conferir (como o `ssh` faz); se mudar depois, a conexão é recusada com o aviso, nunca aceita em silêncio.
 - **Lembrar:** as conexões usadas entram nos recentes do Início, e a pasta remota aberta volta na próxima abertura
   (pedindo a senha de novo, se for o caso).
+
+**Na 0.3.0 (S1):** Conectar (chaves, agente e senha digitada, sem "Lembrar"), Navegar (a pasta remota no Explorador),
+Abrir (pelo cache, só leitura, com progresso e Interromper), a chave da máquina à vista, e o banco remoto aberto
+como cópia local **só leitura**. Todo o resto do "pronto quando" acima (salvar de volta, "Lembrar", recentes, banco
+remoto editável e Enviar ao servidor) é da 0.4.
 
 **Fora da primeira versão:** editar um banco SQLite remoto **ao vivo** (no servidor, com outros programas gravando
 ao mesmo tempo: exige o `sqlite3` de lá ou um ajudante do DataBox no servidor); abrir um arquivo de vários GB sem trazê-lo
@@ -113,27 +123,28 @@ conferência da chave da máquina tem teste próprio (nova, igual, mudada).
 ### 2.6 Custo e lugar
 
 **G**: o spike (P), o `remoto` com o cache (M), o Explorador e as abas (M), salvar de volta (M), segurança e
-recentes (M). Não cabe na 0.3, que já tem a tradução, o perfil, o Salvar como, o SQL sobre CSV e os gráficos.
+recentes (M). Inteiro, não cabia na 0.3, que já tem a tradução, o perfil, o Salvar como, o SQL sobre CSV e os
+gráficos; por isso só a primeira etapa (S0 e S1) entrou na 0.3.0, em 23/10/2026, e o resto ficou na 0.4.
 
-**Proposta conciliada:** abrir a **0.4 — "Conectar"** pelo SSH, antes do PostgreSQL. O SSH reaproveita todos os
+**Proposta conciliada:** continuar o SSH na **0.4 — "Conectar"**, antes do PostgreSQL (a 0.3.0 traz o S0 e o S1). O SSH reaproveita todos os
 editores e entrega primeiro; o PostgreSQL vem depois, usando o mesmo cofre de senhas e, de quebra, o **túnel SSH**
 (o banco que só aceita conexão de dentro do servidor), que é o jeito comum de chegar num PostgreSQL de produção. O
-spike da biblioteca pode correr no fim da 0.3, para a 0.4 começar sem a dúvida do build.
+spike da biblioteca corre no começo da trilha E da 0.3.0 e decide o build já na 0.3.
 
-| Marco da 0.4 | Conteúdo |
-|---|---|
-| S0 | Spike da biblioteca (no fim da 0.3) |
-| S1 | `remoto`, conectar, chave da máquina, Explorador remoto, abrir pelo cache (só leitura) |
-| S2 | Salvar de volta (CSV, JSON, texto), recentes, pasta remota que volta, "Esquecer esta conexão" |
-| S3 | O banco remoto como cópia local editável: Enviar ao servidor com a conferência (sem mudança lá, sem `-wal`/`-journal`), Atualizar, a pergunta ao fechar |
-| P1 em diante | PostgreSQL (o contrato de fonte de dados), com o túnel SSH do S1 |
+| Marco | Versão | Conteúdo |
+|---|---|---|
+| S0 | **0.3.0** | Spike da biblioteca (PR 11 do plano da 0.3) |
+| S1 | **0.3.0** | `remoto`, conectar, chave da máquina, Explorador remoto, abrir pelo cache (só leitura; PRs 12 a 14) |
+| S2 | 0.4 | Salvar de volta (CSV, JSON, texto), recentes, pasta remota que volta, "Esquecer esta conexão" |
+| S3 | 0.4 | O banco remoto como cópia local editável: Enviar ao servidor com a conferência (sem mudança lá, sem `-wal`/`-journal`), Atualizar, a pergunta ao fechar |
+| P1 em diante | 0.4 | PostgreSQL (o contrato de fonte de dados), com o túnel SSH do S1 |
 
 ---
 
 ## 3. Decisões para o Isaías
 
 1. ~~Lugar~~ **Decidido em 21/10/2026:** o SSH abre a 0.4, antes do PostgreSQL; o spike da biblioteca corre no fim
-   da 0.3.
+   da 0.3. **Revisto em 23/10/2026:** o S0 e o S1 sobem para a 0.3.0 (decisão 6); o S2 e o S3 continuam na 0.4.
 2. ~~Biblioteca~~ **Decidido em 21/10/2026:** `russh` + `russh-sftp` (dependências aprovadas), com o spike antes; se
    ele falhar no Windows, o plano B é o `ssh`/`sftp` do sistema.
 3. ~~Escrita remota~~ **Decidido em 21/10/2026:** a primeira versão já salva de volta CSV, JSON e texto, com a
@@ -142,5 +153,9 @@ spike da biblioteca pode correr no fim da 0.3, para a 0.4 começar sem a dúvida
    "Lembrar" marcado pela pessoa.
 5. ~~Banco SQLite remoto~~ **Decidido em 21/10/2026:** cópia local editável, com consultas, e Enviar ao servidor com a
    conferência; o modo ao vivo fica para depois.
+
+6. ~~S1 na 0.3.0~~ **Decidido em 23/10/2026:** o spike e a primeira etapa (conectar, chave da máquina, Explorador
+   remoto, abrir pelo cache, só leitura) entram na 0.3.0 como a trilha E (marco M6). Se o spike falhar no Windows, a
+   trilha E sai da 0.3.0, ou usa o `ssh`/`sftp` do sistema se o Isaías preferir; o resto da 0.3.0 não espera por ela.
 
 Todas as decisões do SSH estão tomadas.
