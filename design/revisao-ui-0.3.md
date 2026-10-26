@@ -185,6 +185,9 @@ Decididas em 22/10/2026 (registradas na "Revisão de UI de 22/10/2026" do [`READ
 
 1. ~~U1 Números~~ **Decidido:** formatar INTEGER e REAL nos Dados e na Consulta, sem arredondar, com o cru no Copiar,
    na edição e na ficha, e a opção "Como gravados" nas Preferências; CSV e Excel como estão. Junto com a P7.
+   **Completado em 26/10/2026** (revisão do PO e do designer, PO3 e PO8): "como estão" vale só para a grade; o que o
+   app calcula no CSV e no Excel segue o idioma, e ids, anos, CEPs e a "#" saem sem milhar. Regras em "Números" no
+   guia.
 2. ~~U2 Rolagem contínua nos Dados~~ **Decidido:** na 0.3, no marco M1, antes do perfil.
 3. ~~Ganhos rápidos~~ **Decidido:** numa 0.2.4 de acabamento, antes da varredura da tradução, um PR por assunto (U3,
    U4 sem a faixa das fontes da Consulta, U5, U6, U7, U8, U9, U10).
