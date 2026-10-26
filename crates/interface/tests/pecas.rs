@@ -3110,6 +3110,170 @@ fn faixa_de_abas_encolhe_os_nomes_e_rola_ate_a_ativa() {
     assert!(primeira.is_none_or(|n| n.rect().left() >= area.min - 0.5), "a primeira some pela esquerda");
 }
 
+/// Muitas abas de documento (D1 da revisão de 26/10/2026): o ícone, o nome e a pasta-mãe dos nomes iguais.
+struct EstadoMuitasAbas {
+    abas: Vec<(Icone, String, Option<String>)>,
+    largura: f32,
+    ativa: usize,
+    juncao: Option<egui::Rangef>,
+    faixa: egui::Rect,
+}
+
+fn muitas_abas(nomes: &[&str], largura: f32, ativa: usize) -> EstadoMuitasAbas {
+    let abas = nomes
+        .iter()
+        .map(|n| {
+            let (nome, pasta) = match n.split_once('|') {
+                Some((nome, pasta)) => (nome.to_string(), Some(pasta.to_string())),
+                None => (n.to_string(), None),
+            };
+            (Icone::Folha(icones::TipoArquivo::Csv), nome, pasta)
+        })
+        .collect();
+    EstadoMuitasAbas { abas, largura, ativa, juncao: None, faixa: egui::Rect::NOTHING }
+}
+
+fn faixa_de_muitas_abas(ui: &mut Ui, s: &mut EstadoMuitasAbas) {
+    use interface::pecas::abas_documento::{AbaDocumento, FaixaAbas};
+    let abas: Vec<AbaDocumento<'_>> = s
+        .abas
+        .iter()
+        .map(|(icone, nome, pasta)| match pasta {
+            Some(p) => AbaDocumento::new(*icone, nome).pasta(p),
+            None => AbaDocumento::new(*icone, nome),
+        })
+        .collect();
+    let rect = egui::Rect::from_min_size(ui.cursor().min, egui::vec2(s.largura, 40.0));
+    let mut filho = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+    let r = FaixaAbas::new("muitas", &abas).ativa(Some(s.ativa)).nova(true).todas(true).mostrar(&mut filho);
+    if let Some(i) = r.clicada.or(r.escolhida) {
+        s.ativa = i;
+    }
+    s.juncao = r.juncao;
+    s.faixa = r.rect;
+}
+
+/// A área das abas na faixa: sem o "+" (32px), o "Todas as abas" (28px) e o recuo da direita (10px).
+fn area_das_abas(h: &Harness<'_, EstadoMuitasAbas>) -> egui::Rangef {
+    let f = h.state().faixa;
+    egui::Rangef::new(f.left(), f.right() - 10.0 - 32.0 - 28.0)
+}
+
+/// Os textos pintados no último quadro.
+fn textos_pintados<S>(h: &Harness<'_, S>) -> Vec<String> {
+    h.output()
+        .shapes
+        .iter()
+        .filter_map(|c| match &c.shape {
+            egui::Shape::Text(t) => Some(t.galley.text().to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+const SETE_ARQUIVOS: [&str; 7] = [
+    "enderecos_clientes.csv",
+    "exportacao_bi.csv",
+    "relatorio_q3.xlsx",
+    "app.log",
+    "config.json",
+    "exemplo.db",
+    "vendas_2025.csv",
+];
+
+#[test]
+fn sete_abas_ficam_reconheciveis_com_o_nome_cortado_no_meio() {
+    // a área do documento a 1280px com o Explorador e as Propriedades abertos
+    let mut h = harness(muitas_abas(&SETE_ARQUIVOS, 720.0, 6), faixa_de_muitas_abas);
+    h.run_steps(2);
+    let area = area_das_abas(&h);
+    let textos = textos_pintados(&h);
+    let mut largura_das_outras = 0.0_f32;
+    for nome in SETE_ARQUIVOS {
+        let Some(aba) = h.query(by().role(Role::Tab).label(nome)) else { continue };
+        // o nó é o trecho à vista: as abas cortadas pela ponta da área ficam de fora
+        let r = aba.rect();
+        if r.left() > area.min + 0.5 && r.right() < area.max - 0.5 {
+            largura_das_outras = largura_das_outras.max(r.width());
+            let inteira = textos.iter().any(|t| t == nome);
+            assert!(inteira || r.width() >= 120.0, "{nome}: {} px, cortada abaixo do mínimo", r.width());
+        }
+    }
+    // a ativa (a última) inteira e à vista, sem encolher antes das outras
+    let ativa = h.get(by().role(Role::Tab).label("vendas_2025.csv")).rect();
+    assert!(ativa.left() >= area.min - 0.5 && ativa.right() <= area.max + 0.5, "{ativa:?} {area:?}");
+    assert!(ativa.width() >= largura_das_outras, "{} < {largura_das_outras}", ativa.width());
+    assert!(textos_pintados(&h).iter().any(|t| t == "vendas_2025.csv"), "a ativa com o nome inteiro");
+    // as cortadas: no meio, com a extensão inteira ("enderecos…ntes.csv"), nunca "en…"
+    let textos = textos_pintados(&h);
+    let cortados: Vec<&String> = textos.iter().filter(|t| t.contains('…')).collect();
+    assert!(!cortados.is_empty(), "{textos:?}");
+    for t in cortados {
+        let (antes, depois) = t.split_once('…').unwrap();
+        assert!(antes.chars().count() >= 3, "pouco do começo: {t}");
+        assert!(depois.contains('.'), "sem a extensão inteira: {t}");
+    }
+}
+
+#[test]
+fn quinze_abas_rolam_e_a_ativa_fica_a_vista() {
+    let nomes: Vec<String> = (1..=15).map(|i| format!("planilha_{i:02}.csv")).collect();
+    let nomes: Vec<&str> = nomes.iter().map(String::as_str).collect();
+    let mut h = harness(muitas_abas(&nomes, 720.0, 0), faixa_de_muitas_abas);
+    h.run_steps(2);
+    let area = area_das_abas(&h);
+    // o nó é o trecho à vista da aba: inteira à vista, ela tem a largura toda (nenhuma encolhe abaixo do mínimo)
+    let a_vista = |h: &Harness<'_, EstadoMuitasAbas>, nome: &str| {
+        h.query(by().role(Role::Tab).label(nome)).is_some_and(|n| {
+            let r = n.rect();
+            r.left() >= area.min - 0.5 && r.right() <= area.max + 0.5 && r.width() >= 120.0
+        })
+    };
+    // nem todas cabem: a faixa rola
+    assert!(a_vista(&h, "planilha_01.csv") && a_vista(&h, "planilha_04.csv"));
+    assert!(!a_vista(&h, "planilha_15.csv"));
+    // escolher a última no "Todas as abas" rola até ela
+    h.get_by_label("Todas as abas").click();
+    h.run_steps(2);
+    h.get_by_label("planilha_15.csv").click();
+    h.run_steps(3);
+    assert_eq!(h.state().ativa, 14);
+    assert!(a_vista(&h, "planilha_15.csv"), "a ativa à vista");
+    assert!(!a_vista(&h, "planilha_01.csv"));
+    // a roda leva a faixa de volta ao começo; uma aba nova (a faixa muda) traz a ativa de volta
+    let centro = h.get(by().role(Role::Tab).label("planilha_15.csv")).rect().center();
+    h.hover_at(centro);
+    for _ in 0..20 {
+        h.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, 200.0),
+            phase: egui::TouchPhase::Move,
+            modifiers: Modifiers::NONE,
+        });
+        h.run_steps(1);
+    }
+    h.run_steps(4);
+    assert!(a_vista(&h, "planilha_01.csv"), "a roda rola a faixa");
+    h.state_mut().abas.push((Icone::Consulta, "Consulta 1".into(), None));
+    h.run_steps(3);
+    assert!(a_vista(&h, "planilha_15.csv"), "a faixa mudou: a ativa volta à vista");
+}
+
+#[test]
+fn nomes_iguais_mostram_a_pasta_mae_mesmo_encolhidos() {
+    let nomes = ["vendas_2025.csv|2024", "vendas_2025.csv|2025", "exportacao_bi.csv", "config.json", "app.log"];
+    for largura in [1000.0, 560.0] {
+        let mut h = harness(muitas_abas(&nomes, largura, 1), faixa_de_muitas_abas);
+        h.run_steps(2);
+        // o leitor de tela e o "Todas as abas" separam as duas
+        let a = h.get(by().role(Role::Tab).label("vendas_2025.csv · 2024")).rect();
+        let b = h.get(by().role(Role::Tab).label("vendas_2025.csv · 2025")).rect();
+        assert!(a.width() >= 120.0 && b.width() >= 120.0);
+        let textos = textos_pintados(&h);
+        assert!(textos.iter().any(|t| t == "2024") && textos.iter().any(|t| t == "2025"), "{largura}: {textos:?}");
+    }
+}
+
 #[derive(Default)]
 struct EstadoArvore {
     aberto: bool,

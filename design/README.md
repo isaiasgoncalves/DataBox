@@ -127,7 +127,10 @@ Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
     extra_03" com o botão principal "Nova linha"; o filtro que não acha nada diz "Nenhuma linha com estes filtros"
     com "Limpar filtros". Vale para os Dados, o CSV e o resultado vazio da Consulta;
   - **caminhos cortados (U6):** guardam o nome inteiro e a pasta-mãe e cortam do começo ("…/dados/vendas_2025.csv");
-    só um nome que não cabe sozinho corta no meio, guardando a extensão. O caminho inteiro na dica;
+    só um nome que não cabe sozinho corta no meio, guardando a extensão. O caminho inteiro na dica. **Nas abas de
+    documento** (D1 da revisão de 26/10/2026): cada aba encolhe até umas dez letras do nome (~130px com o ícone e o
+    ×) e daí a faixa rola; o nome corta no meio com a extensão; a ativa não encolhe antes das outras e fica sempre à
+    vista; dois nomes iguais ganham a pasta-mãe em `--t3`, como no VS Code;
   - **seta da ordenação (U7)** logo depois do nome da coluna, também nas numéricas;
   - **Visão geral (U8):** a linha inteira abre a tabela (duplo clique e Enter); "Colunas" vira botão de ícone no hover
     e no foco; VIRTUAL e SEM ROWID viram etiqueta ao lado do nome; a coluna Tipo sai e entra a de Índices;

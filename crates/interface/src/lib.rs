@@ -304,7 +304,9 @@
 //!     - [`pecas::abas_documento`]: `FaixaAbas::new(id, &[AbaDocumento]).ativa(..).nova(..).mostrar(ui) ->
 //!       RespostaAbas { clicada, fechar, nova, mover, rect, juncao }` (abas de 34px com ícone, nome, sub e ×, e a
 //!       chave estável de `com_chave`; papel `tab`; clique do meio fecha; arrastar muda de lugar (`mover: (de, para)`),
-//!       e o menu da aba move e fecha; encolhem com "…" e rolam; `alterada(true)` põe o
+//!       e o menu da aba move e fecha; encolhem até [`pecas::abas_documento::TEXTO_MINIMO`], com o nome cortado no
+//!       meio e a extensão inteira, e daí rolam, com a ativa sem encolher antes das outras e sempre à vista;
+//!       `pasta(..)` mostra a pasta-mãe dos nomes iguais; `alterada(true)` põe o
 //!       ponto de 7px `--acct` ([`pecas::abas_documento::LADO_PONTO`], o `.aba .mod`) no lugar do ×, que volta com o
 //!       ponteiro ou o foco na aba, e o rótulo ganha ", alterada") e
 //!       `pintar_documento(painter, paleta, rect, juncao)` (o `.doc` sem o fio de cima embaixo da aba ativa).
