@@ -27,14 +27,11 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use banco::{TabelaInfo, TipoObjeto};
-use egui::{Align, Layout, Rect, Sense, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, vec2};
-use interface::fontes::{self, Peso};
+use egui::{Align, Layout, Ui, vec2};
 use interface::formato::{formatar_bytes_opt, formatar_data_opt, formatar_numero, formatar_numero_opt};
 use interface::icones::Icone;
-use interface::pecas::botao::{Botao, LADO_PEQUENO};
 use interface::pecas::detalhes::Detalhes;
 use interface::pecas::painel::{Secao, ficha};
-use interface::pecas::texto::{galley_caminho, y_na_linha};
 use interface::pecas::toast::toast_concluido;
 
 use crate::contexto::{Contexto, Estado};
@@ -541,10 +538,6 @@ pub fn secao_tabela(ui: &mut Ui, tabela: &TabelaAberta, depois: impl FnOnce(&mut
     });
 }
 
-/// O espaço entre o caminho e o botão Copiar caminho, e a altura da linha da ficha (`.det`: 12px × 1,4).
-const ESPACO_COPIAR: f32 = 4.0;
-const ALTURA_LINHA_FICHA: f32 = 17.0;
-
 /// O momento em ISO 8601 com `Z` ("2026-10-18T13:05:00Z"): o `formatar_data` do `interface` o converte para a hora
 /// local. Sem biblioteca de datas aqui (o algoritmo de dias civis de Howard Hinnant); antes de 1970, `None`.
 fn iso_utc(quando: SystemTime) -> Option<String> {
@@ -561,27 +554,6 @@ fn iso_utc(quando: SystemTime) -> Option<String> {
     let ano = ano_da_era + era * 400 + i64::from(mes <= 2);
     let (h, m, s) = (resto / 3_600, resto % 3_600 / 60, resto % 60);
     Some(format!("{ano:04}-{mes:02}-{dia:02}T{h:02}:{m:02}:{s:02}Z"))
-}
-
-/// O Caminho da ficha numa linha, cortado do começo quando não cabe, com o nome e a pasta-mãe inteiros (o
-/// `galley_caminho`; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele foi
-/// clicado.
-fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
-    let e = &interface::tema::paleta(ui).estudio;
-    let largura = (ui.available_width() - LADO_PEQUENO - ESPACO_COPIAR).max(0.0);
-    let g = galley_caminho(ui, caminho, fontes::fonte(12.0, Peso::Leve), e.t, largura);
-    let encurtado = g.text() != caminho;
-    // a linha de 17pt das outras da ficha; o botão de 26 centrado nela, logo depois do caminho, sem a esticar
-    let (rect, resp) = ui.allocate_exact_size(vec2(g.size().x, ALTURA_LINHA_FICHA), Sense::hover());
-    ui.painter().galley(pos2(rect.left(), y_na_linha(rect.top(), ALTURA_LINHA_FICHA, &g)), Arc::clone(&g), e.t);
-    resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, caminho));
-    if encurtado {
-        resp.on_hover_text(caminho);
-    }
-    let centro = pos2(rect.right() + ESPACO_COPIAR + LADO_PEQUENO / 2.0, rect.center().y);
-    let mut ui_botao =
-        ui.new_child(UiBuilder::new().max_rect(Rect::from_center_size(centro, vec2(LADO_PEQUENO, LADO_PEQUENO))));
-    ui_botao.add(Botao::icone(Icone::CopiarCaminho).pequeno().dica("Copiar caminho")).clicked()
 }
 
 /// A seção "Arquivo" das Propriedades dos editores (CSV, texto, JSON) e da ficha: Caminho (com o Copiar caminho e o
@@ -609,7 +581,7 @@ pub fn secao_arquivo_com(
     let mut copiar = false;
     let _ = Secao::new("propriedades::arquivo", "Arquivo").primeira(primeira).mostrar(ui, |ui| {
         ficha(ui, |d| {
-            d.linha("Caminho", |ui| copiar = linha_do_caminho(ui, &caminho));
+            copiar = d.linha_caminho("Caminho", &caminho);
             d.linha_texto("Tamanho", Some(&tamanho), "—");
             d.linha_texto("Modificado em", Some(&modificado), "—");
             linhas(d);

@@ -10,6 +10,7 @@ pub mod avisos;
 pub mod barra_status;
 pub mod barra_titulo;
 pub mod botao;
+pub mod caminho;
 pub mod campos;
 pub mod cartao;
 pub mod casca;

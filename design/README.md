@@ -132,7 +132,11 @@ Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
     só um nome que não cabe sozinho corta no meio, guardando a extensão. O caminho inteiro na dica. **Nas abas de
     documento** (D1 da revisão de 26/10/2026): cada aba encolhe até umas dez letras do nome (~130px com o ícone e o
     ×) e daí a faixa rola; o nome corta no meio com a extensão; a ativa não encolhe antes das outras e fica sempre à
-    vista; dois nomes iguais ganham a pasta-mãe em `--t3`, como no VS Code;
+    vista; dois nomes iguais ganham a pasta-mãe em `--t3`, como no VS Code. **O Caminho das Propriedades** (D3) é uma
+    peça só (`interface::pecas::caminho`): o rótulo em cima, o caminho na largura da seção em até duas linhas
+    (quebradas entre as pastas; a pasta-mãe que não cabe corta no meio) e o Copiar caminho na ponta, no banco, na
+    tabela e no arquivo; as faixas usam a forma de uma linha em `--t3`. **A dica de uma célula** (D13) só aparece
+    quando a célula não mostra tudo (o texto cortado com "…", as quebras de linha, o vazio, o BLOB);
   - **seta da ordenação (U7)** logo depois do nome da coluna, também nas numéricas;
   - **Visão geral (U8):** a linha inteira abre a tabela (duplo clique e Enter); "Colunas" vira botão de ícone no hover
     e no foco; VIRTUAL e SEM ROWID viram etiqueta ao lado do nome; a coluna Tipo sai e entra a de Índices;

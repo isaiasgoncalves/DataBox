@@ -34,6 +34,21 @@ fn docas_com_os_solidos_e_o_explorador_on() {
     assert!(icone_pintado_em(&h, Icone::TabelaSemRowid, 16.0, aba).is_some(), "a ficha anil na aba");
 }
 
+/// D4 da revisão de 26/10/2026: o "Colunas" de cada linha da Visão geral leva o ícone da vista Colunas das
+/// Propriedades (o destino dele), não o lápis de renomear.
+#[test]
+fn colunas_da_visao_geral_com_o_icone_da_vista_colunas() {
+    use interface::icones::Icone;
+    let amb = Ambiente::exemplo("visao_geral_icone_colunas");
+    let mut h = harness(&amb);
+    assentar(&mut h);
+    h.get(by().role(Role::Button).label("clientes")).hover();
+    h.run_steps(3);
+    let botao = rect_de(&h, Role::Button, "Colunas de clientes");
+    assert!(icone_pintado_em(&h, Icone::Estrutura, 14.0, botao).is_some(), "o ícone da vista Colunas");
+    assert!(icone_pintado_em(&h, Icone::Editar, 14.0, botao).is_none(), "sem o lápis");
+}
+
 #[test]
 fn menu_arquivo_com_as_silhuetas_e_os_recentes_com_os_solidos() {
     use interface::icones::Icone;

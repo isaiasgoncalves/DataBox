@@ -54,14 +54,15 @@ use interface::formato::formatar_bytes;
 use interface::icones::{self, Icone};
 use interface::pecas::avisos::{TomAviso, aviso_texto, aviso_tom, carregando};
 use interface::pecas::botao::Botao;
+use interface::pecas::caminho::caminho_na_faixa;
 use interface::pecas::painel::{Secao, ficha};
-use interface::pecas::texto::{Trecho, galley, galley_caminho};
+use interface::pecas::texto::{Trecho, galley};
 use interface::pecas::toast::toast_concluido;
 use interface::tema::paleta;
 use servico::InfoArquivo;
 
 use crate::casca::explorador::icone_do_arquivo;
-use crate::visao_geral::{MSG_CAMINHO_COPIADO, linha_do_caminho};
+use crate::visao_geral::MSG_CAMINHO_COPIADO;
 
 // ------------------------------------------------------------------ a escolha da tela
 
@@ -532,14 +533,7 @@ impl estado::Documento for Ficha {
         ui.painter().galley(rect.min, g, e.t);
         resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &self.nome));
         let caminho = self.caminho.display().to_string();
-        let g = galley_caminho(ui, &caminho, fontes::fonte(12.0, Peso::Leve), e.t3, ui.available_width());
-        let encurtado = g.text() != caminho;
-        let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
-        ui.painter().galley(rect.min, g, e.t3);
-        resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &caminho));
-        if encurtado {
-            resp.on_hover_text(&caminho);
-        }
+        caminho_na_faixa(ui, &caminho, ui.available_width());
     }
 
     fn conteudo(&mut self, ui: &mut Ui, ctx: &mut Contexto) {
@@ -585,7 +579,7 @@ impl estado::Documento for Ficha {
                 d.linha_texto("Tipo", tipo, "—");
                 d.linha_texto("Tamanho", tamanho, "—");
                 d.linha_texto("Modificado em", modificado, "—");
-                d.linha("Caminho", |ui| copiar = linha_do_caminho(ui, &caminho_a_copiar));
+                copiar = d.linha_caminho("Caminho", &caminho_a_copiar);
             });
         });
         if copiar {

@@ -2037,3 +2037,24 @@ fn itens_de_escrita_desligados_com_o_motivo() {
         );
     }
 }
+
+/// D13 da revisão de 26/10/2026: a dica da célula só aparece quando o texto foi cortado com "…"; o que cabe inteiro
+/// não ganha um balão que repete o que já está escrito.
+#[test]
+fn dica_da_celula_so_no_texto_cortado() {
+    let amb = Ambiente::exemplo("dados_dica_cortada");
+    let longo = "Maria Aparecida dos Santos Albuquerque de Vasconcelos e Silva Figueiredo Cavalcanti Monteiro";
+    executar(&amb, &format!("UPDATE clientes SET nome = '{longo}' WHERE id = 1"));
+    let mut h = abrir(&amb, "clientes");
+    dicas_sem_demora(&mut h);
+    assert_eq!(celula(&h, 0, 1), longo);
+    let curto = celula(&h, 1, 1);
+    // o nome curto, inteiro na célula: sem dica
+    let p = centro_celula(&h, 1, 1);
+    pairar(&mut h, p);
+    assert!(h.query_by_label(&curto).is_none(), "a dica repetia \"{curto}\"");
+    // o nome longo, cortado: a dica com o texto inteiro
+    let p = centro_celula(&h, 0, 1);
+    pairar(&mut h, p);
+    assert!(h.query_by_label(longo).is_some(), "a dica do texto cortado");
+}

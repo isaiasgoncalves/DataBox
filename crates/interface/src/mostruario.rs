@@ -265,10 +265,18 @@ impl DesenhoGrade for DesenhoDados<'_> {
                 }
             }
             1 => pintar_numero_linha(&pintor, p, c.conteudo, &(c.linha + 1).to_string()),
-            2 => pintar_celula_chave(&pintor, p, c.conteudo, &Celula::Inteiro(id), true),
-            3 => pintar_celula(&pintor, p, c.conteudo, &Celula::Texto(nome.into()), false),
-            4 => pintar_celula(&pintor, p, c.conteudo, &Celula::Texto(cidade.into()), false),
-            _ => pintar_celula(&pintor, p, c.conteudo, &limite.map_or(Celula::Nulo, Celula::Real), true),
+            2 => {
+                pintar_celula_chave(&pintor, p, c.conteudo, &Celula::Inteiro(id), true);
+            }
+            3 => {
+                pintar_celula(&pintor, p, c.conteudo, &Celula::Texto(nome.into()), false);
+            }
+            4 => {
+                pintar_celula(&pintor, p, c.conteudo, &Celula::Texto(cidade.into()), false);
+            }
+            _ => {
+                pintar_celula(&pintor, p, c.conteudo, &limite.map_or(Celula::Nulo, Celula::Real), true);
+            }
         }
     }
 
@@ -1351,7 +1359,8 @@ impl Mostruario {
         Cartao::new("arquivo").esticar().titulo("Arquivo").mostrar(ui, |c| {
             c.corpo(|ui| {
                 detalhes(ui, |d| {
-                    d.linha_texto("Caminho", Some("C:\\dados\\vendas.db"), "—");
+                    // a peça do Caminho (D3 da revisão de 26/10/2026): o rótulo em cima, até duas linhas, o Copiar na ponta
+                    let _ = d.linha_caminho("Caminho", "C:\\Users\\ana\\Documents\\Projetos\\2026\\dados\\vendas.db");
                     d.linha_texto("Tamanho", Some(&formatar_bytes(1_258_291)), "—");
                     d.linha_texto("Modificado em", Some(&crate::formato::formatar_data("2026-09-22T10:31:00")), "—");
                     d.linha_texto("Versão do usuário", None, "não informada");

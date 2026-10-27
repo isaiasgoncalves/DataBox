@@ -34,6 +34,15 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   a extensão inteira ("enderecos…ntes.csv"), como os caminhos. A aba ativa não encolhe antes das outras e fica sempre à
   vista, também quando uma aba abre ou fecha e quando a janela muda de largura. Dois arquivos abertos com o mesmo nome
   mostram a pasta-mãe depois do nome ("vendas_2025.csv 2024"), também no "Todas as abas" e no leitor de tela.
+- **O Caminho das Propriedades tem um desenho só** (D3 da revisão de 26/10/2026): no banco, na tabela e no arquivo, o
+  rótulo vai em cima e o caminho ocupa a largura inteira da seção, em até duas linhas, cortado do começo e com o nome
+  inteiro, com o Copiar caminho na ponta (a tabela não tinha o Copiar, e o CSV mostrava só o nome cortado). A faixa
+  do leitor de arquivo e a da planilha usam a mesma regra, com o caminho inteiro na dica.
+- **O "Colunas" de cada tabela da Visão geral leva o ícone da vista Colunas** das Propriedades, para onde ele leva,
+  e não mais o lápis, que é o de renomear (D4).
+- **A dica de uma célula só aparece quando o texto foi cortado** (D13), nos Dados e no resultado da Consulta: o texto
+  que cabe inteiro não ganha mais um balão repetindo o mesmo texto. O texto com quebras de linha, o vazio, o texto
+  longo cortado pelo banco e o BLOB continuam com a dica.
 
 ## [0.2.4] - 2026-10-23
 
