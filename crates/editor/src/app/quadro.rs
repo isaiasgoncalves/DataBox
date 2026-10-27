@@ -123,6 +123,7 @@ impl Editor {
             tema: self.tema,
             barra_status: self.barra_status,
             banco: self.estado.banco.as_ref(),
+            na_visao_geral: pronta && matches!(self.abas.ativa().conteudo, Documento::Banco(_)),
             tabela: match (pronta, &self.abas.ativa().conteudo) {
                 (true, Documento::Tabela(t)) => Some(MenuTabela {
                     nome: t.nome(),

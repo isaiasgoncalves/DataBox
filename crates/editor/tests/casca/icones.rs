@@ -71,7 +71,10 @@ fn menu_arquivo_com_as_silhuetas_e_os_recentes_com_os_solidos() {
     capturar(&mut h, "menu-arquivo-silhuetas-claro.png");
 }
 
-/// Os menus Banco e Tabela (U11): a silhueta só nos itens cujo verbo tem botão na barra de ferramentas.
+/// Os menus Banco e Tabela (U11): a silhueta só nos itens cujo verbo tem botão na barra de ferramentas, sobre o mesmo
+/// objeto na aba ativa (D5 da revisão de 26/10/2026). Nos Dados, a lixeira da barra exclui as linhas e o "+" cria uma
+/// linha: o Excluir a tabela fica sem a lixeira, e o Nova tabela e o Exportar o banco ficam sem as silhuetas, que voltam
+/// com a Visão geral ativa.
 #[test]
 fn menus_banco_e_tabela_so_com_as_silhuetas_da_barra() {
     use interface::icones::Icone;
@@ -98,12 +101,10 @@ fn menus_banco_e_tabela_so_com_as_silhuetas_da_barra() {
     }
     conferir(
         &h,
+        &[(Icone::NovaConsulta, "Nova consulta SQL")],
         &[
-            (Icone::NovaConsulta, "Nova consulta SQL"),
             (Icone::Novo, "Nova tabela"),
             (Icone::Exportar, "Exportar o banco"),
-        ],
-        &[
             (Icone::VerificarIntegridade, "Verificar integridade"),
             (Icone::VerificarChaves, "Verificar chaves estrangeiras"),
             (Icone::Otimizar, "Otimizar"),
@@ -122,9 +123,10 @@ fn menus_banco_e_tabela_so_com_as_silhuetas_da_barra() {
             (Icone::NovaConsulta, "Abrir na Consulta SQL"),
             (Icone::Exportar, "Exportar a tabela"),
             (Icone::NovaColuna, "Nova coluna"),
-            (Icone::Excluir, "Excluir a tabela"),
+            (Icone::Novo, "Nova linha"),
         ],
         &[
+            (Icone::Excluir, "Excluir a tabela"),
             (Icone::Editar, "Colunas"),
             (Icone::Editar, "Renomear a tabela"),
             (Icone::Destacar, "Propriedades em janela própria"),
@@ -132,4 +134,23 @@ fn menus_banco_e_tabela_so_com_as_silhuetas_da_barra() {
         ],
     );
     capturar(&mut h, "menu-tabela-claro.png");
+    h.key_press(Key::Escape);
+    h.run_steps(3);
+
+    // na Visão geral, o "+" da barra é a Nova tabela, e o Exportar, o do banco: as silhuetas voltam
+    h.state_mut().ir(Rota::Banco);
+    assentar(&mut h);
+    abrir_menu(&mut h, "Banco");
+    conferir(
+        &h,
+        &[
+            (Icone::NovaConsulta, "Nova consulta SQL"),
+            (Icone::Novo, "Nova tabela"),
+            (Icone::Exportar, "Exportar o banco"),
+        ],
+        // as manutenções sem silhueta já foram conferidas nos Dados (aqui a Manutenção da Visão geral, embaixo do
+        // menu, pinta as mesmas)
+        &[],
+    );
+    capturar(&mut h, "menu-banco-visao-geral-claro.png");
 }

@@ -145,7 +145,10 @@ Decidido pelo Isaías em 22/10/2026, ainda **não implementado**:
     de contexto, e revê a de 20/10/2026 (silhueta em todo item que a biblioteca tem). Saem os ícones de Novo banco,
     Colunas, Renomear a tabela, Propriedades em janela própria, Fazer cópia de segurança e as manutenções do menu
     Banco (e o Copiar o nome do menu Tabela, que também não tem botão); o texto deles fica alinhado com os outros.
-    Implementado na 0.3.0;
+    Implementado na 0.3.0. **Refinada em 26/10/2026 (D5):** o mesmo verbo **sobre o mesmo objeto na aba ativa**. O
+    Excluir a tabela fica sem a lixeira (o menu Tabela só existe com a tabela à vista, onde a lixeira da barra é
+    "Excluir as linhas"; o vermelho já marca o perigo), e o Nova tabela e o Exportar o banco do menu Banco só levam a
+    silhueta com a Visão geral ativa (nos Dados, o "+" é "Nova linha" e o Exportar exporta a tabela);
   - **a faixa de cima é para controle e contexto que a aba não diz; contagens e a posição do cursor ficam no rodapé,
     à direita** (U4);
   - **toda aba de documento tem o caminho inteiro na dica** (U4);
