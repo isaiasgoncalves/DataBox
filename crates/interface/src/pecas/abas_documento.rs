@@ -14,8 +14,13 @@
 //! - A aba com alteração não salva ([`AbaDocumento::alterada`]) mostra o ponto de [`LADO_PONTO`] em `--acct` (`.aba
 //!   .mod`) no lugar do ×; o × volta com o ponteiro na aba ou com o foco nela, na mesma posição (a largura da aba não
 //!   muda entre um e outro, ao contrário do CSS, que troca 21px por 24px).
-//! - Sem espaço, os textos encolhem por igual com "…" (as abas curtas ficam inteiras) até [`TEXTO_MINIMO`]; daí
-//!   em diante a faixa rola com a roda, e a aba que passa a ser a ativa entra à vista.
+//! - Sem espaço, os textos encolhem por igual (as abas curtas ficam inteiras) até [`TEXTO_MINIMO`], o bastante para
+//!   reconhecer o arquivo (D1 da revisão de 26/10/2026); daí em diante a faixa rola com a roda, e o "Todas as abas"
+//!   lista todas. O nome é cortado no meio, com a extensão inteira ("vendas_2…25.csv", a regra U6). A aba ativa não
+//!   encolhe antes das outras e fica sempre à vista: a faixa rola até ela quando ela muda, quando uma aba abre ou
+//!   fecha e quando a faixa muda de largura.
+//! - Dois arquivos com o mesmo nome ganham a pasta-mãe em `--t3` depois do nome ([`AbaDocumento::pasta`]), como no
+//!   VS Code; ela tem lugar garantido na aba, mesmo encolhida.
 //! - Arrastar uma aba muda o lugar dela na faixa (revisão de 20/10/2026): a aba segue o ponteiro, o fio `--acct`
 //!   marca onde ela vai cair e, ao soltar, [`RespostaAbas::mover`] diz de onde para onde (o Esc cancela). O clique
 //!   direito (ou o Shift+F10) abre o menu da aba: "Mover à esquerda", "Mover à direita" (sem o atalho ao lado, que
@@ -29,11 +34,13 @@
 //! pintar_documento(ui.painter(), paleta(ui), rect_do_documento, r.juncao);
 //! ```
 
+use std::sync::Arc;
+
 use egui::accesskit::Role;
 use egui::epaint::RectShape;
 use egui::{
-    Align, Color32, CursorIcon, Id, Layout, Painter, PointerButton, Rangef, Rect, Sense, Stroke, StrokeKind, Ui,
-    UiBuilder, WidgetInfo, WidgetType, pos2, vec2,
+    Align, Color32, CursorIcon, FontId, Galley, Id, Layout, Painter, PointerButton, Rangef, Rect, Sense, Stroke,
+    StrokeKind, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, vec2,
 };
 
 use crate::fontes::{self, Peso};
@@ -44,14 +51,20 @@ use crate::pecas::menu_contexto::MenuContexto;
 use crate::pecas::navegacao::{
     ALTURA_ABA, ALTURA_ABAS, ESPACO_ABAS, RAIO_ABA, RECUO_ABAS, cantos_aba, pintar_aba_ativa,
 };
-use crate::pecas::texto::{galley, galley_cortado};
+use crate::pecas::texto::{encurtar_nome, galley, galley_cortado};
 use crate::pintura;
 use crate::tema::{Paleta, duracao_transicao, paleta};
 
 /// Altura da faixa das abas (as abas de 34px encostadas embaixo; o documento começa 1px antes do fim dela).
 pub const ALTURA_FAIXA: f32 = ALTURA_ABAS;
-/// O texto mínimo de uma aba encolhida (o resto vira "…").
-pub const TEXTO_MINIMO: f32 = 30.0;
+/// O texto mínimo de uma aba encolhida (o resto vira "…"): umas dez letras, com o ícone e o × dá ~130px por aba (D1
+/// da revisão de 26/10/2026). Mais apertado do que isso, a faixa rola.
+pub const TEXTO_MINIMO: f32 = 64.0;
+/// A pasta-mãe dos nomes iguais tem pelo menos isto (ou a largura dela, se for menor) na aba encolhida.
+const PASTA_MINIMA: f32 = 40.0;
+/// O teto do texto da aba ativa quando falta espaço: ela não encolhe antes das outras, mas um nome enorme não toma a
+/// faixa inteira.
+const TETO_ATIVA: f32 = 280.0;
 /// Lado do ícone da aba (`.sk.s16`).
 const LADO_ICONE: f32 = 16.0;
 /// Lado do × (`.aba .x`).
@@ -92,12 +105,15 @@ pub struct AbaDocumento<'a> {
     pub alterada: bool,
     /// A dica da aba: o caminho inteiro do arquivo ou do banco (U4 da revisão de UI de 22/10/2026).
     pub dica: Option<&'a str>,
+    /// A pasta-mãe, quando outra aba aberta tem o mesmo nome ("dados", ou "2024/dados" se as pastas também forem
+    /// iguais): em `--t3` depois do nome, no lugar do sub (D1 da revisão de 26/10/2026).
+    pub pasta: Option<&'a str>,
 }
 
 impl<'a> AbaDocumento<'a> {
     /// Uma aba fechável, sem sub ("Consulta 2").
     pub fn new(icone: Icone, nome: &'a str) -> Self {
-        AbaDocumento { icone, nome, sub: None, fechavel: true, chave: None, alterada: false, dica: None }
+        AbaDocumento { icone, nome, sub: None, fechavel: true, chave: None, alterada: false, dica: None, pasta: None }
     }
 
     /// A aba tem alteração não salva (o ponto no lugar do ×; o leitor de tela ouve ", alterada").
@@ -110,6 +126,17 @@ impl<'a> AbaDocumento<'a> {
     pub fn dica(mut self, dica: &'a str) -> Self {
         self.dica = Some(dica);
         self
+    }
+
+    /// A pasta-mãe que separa dois nomes iguais (ver [`AbaDocumento::pasta`]).
+    pub fn pasta(mut self, pasta: &'a str) -> Self {
+        self.pasta = Some(pasta);
+        self
+    }
+
+    /// O texto em `--t3` depois do nome: o sub ou, sem ele, a pasta-mãe.
+    fn segundo(&self) -> Option<&'a str> {
+        self.sub.or(self.pasta)
     }
 
     /// A chave estável da aba (ver [`AbaDocumento::chave`]).
@@ -131,10 +158,10 @@ impl<'a> AbaDocumento<'a> {
         self
     }
 
-    /// O nome para o leitor de tela: "clientes · Dados", ou só o nome sem o sub; a aba com alteração não salva ganha
-    /// ", alterada" ("vendas_2025.csv, alterada").
+    /// O nome para o leitor de tela: "clientes · Dados", ou só o nome sem o sub; com a pasta-mãe dos nomes iguais,
+    /// "vendas.csv · 2024"; a aba com alteração não salva ganha ", alterada" ("vendas_2025.csv, alterada").
     pub fn rotulo(&self) -> String {
-        let base = match self.sub {
+        let base = match self.segundo() {
             Some(s) => format!("{} · {s}", self.nome),
             None => self.nome.to_owned(),
         };
@@ -210,12 +237,23 @@ impl<'a> FaixaAbas<'a> {
         };
         let fonte = fontes::fonte(12.0, Peso::Normal);
         let medir = |texto: &str| galley(ui, texto, fonte.clone(), Color32::PLACEHOLDER).size().x;
-        let medidas: Vec<(f32, f32)> = self.abas.iter().map(|a| (medir(a.nome), a.sub.map_or(0.0, medir))).collect();
+        let medidas: Vec<(f32, f32)> =
+            self.abas.iter().map(|a| (medir(a.nome), a.segundo().map_or(0.0, medir))).collect();
         let naturais: Vec<f32> = self
             .abas
             .iter()
             .zip(&medidas)
-            .map(|(a, &(nome, sub))| if a.sub.is_some() { nome + GAP + sub } else { nome })
+            .map(|(a, &(nome, sub))| if a.segundo().is_some() { nome + GAP + sub } else { nome })
+            .collect();
+        // o mínimo de cada aba: as dez letras e, nos nomes iguais, o lugar da pasta-mãe
+        let minimos: Vec<f32> = self
+            .abas
+            .iter()
+            .zip(&medidas)
+            .map(|(a, &(_, pasta))| match (a.sub, a.pasta) {
+                (None, Some(_)) => TEXTO_MINIMO + GAP + pasta.min(PASTA_MINIMA),
+                _ => TEXTO_MINIMO,
+            })
             .collect();
         let fixas: Vec<f32> =
             self.abas.iter().map(|a| ANTES_DO_TEXTO + if a.fechavel { DEPOIS_COM_X } else { DEPOIS_SEM_X }).collect();
@@ -226,7 +264,7 @@ impl<'a> FaixaAbas<'a> {
             faixa.left_top(),
             pos2((faixa.right() - RECUO_ABAS - reserva_nova - reserva_todas).max(faixa.left()), faixa.bottom()),
         );
-        let textos = larguras_texto(&naturais, &fixas, ESPACO_ABAS, area.width(), TEXTO_MINIMO);
+        let textos = larguras_texto_abas(&naturais, &minimos, &fixas, ESPACO_ABAS, area.width(), self.ativa);
         let larguras: Vec<f32> = fixas.iter().zip(&textos).map(|(f, t)| (f + t).ceil()).collect();
         let inicios: Vec<f32> = larguras
             .iter()
@@ -238,19 +276,22 @@ impl<'a> FaixaAbas<'a> {
             .collect();
         let total = larguras.iter().sum::<f32>() + ESPACO_ABAS * larguras.len().saturating_sub(1) as f32;
 
-        // a rolagem (só quando nem encolhidas as abas cabem)
+        // a rolagem (só quando nem encolhidas as abas cabem); o que muda a faixa (a ativa, quantas abas, a largura)
+        // traz a ativa de volta à vista, mas a roda pode levá-la para fora
         let id_rolagem = self.id.with("rolagem");
-        let antes: (f32, Option<usize>) = ui.ctx().data(|d| d.get_temp(id_rolagem)).unwrap_or((0.0, None));
+        let marca = (self.ativa, self.abas.len(), area.width().round() as i32);
+        let antes: (f32, (Option<usize>, usize, i32)) =
+            ui.ctx().data(|d| d.get_temp(id_rolagem)).unwrap_or((0.0, (None, 0, 0)));
         let mut deslocamento = antes.0;
         let excesso = (total - area.width()).max(0.0);
         if excesso > 0.0 && faixa_resp.contains_pointer() {
             let delta = ui.input(|i| i.smooth_scroll_delta);
             deslocamento -= delta.x + delta.y;
         }
-        if self.ativa != antes.1
+        if marca != antes.1
             && let Some(i) = self.ativa.filter(|&i| i < larguras.len())
         {
-            // a aba que passou a ser a ativa entra à vista
+            // a aba ativa entra à vista
             let (x0, x1) = (inicios[i], inicios[i] + larguras[i]);
             if x0 < deslocamento {
                 deslocamento = x0;
@@ -259,8 +300,8 @@ impl<'a> FaixaAbas<'a> {
             }
         }
         deslocamento = deslocamento.clamp(0.0, excesso);
-        if (deslocamento, self.ativa) != antes {
-            ui.ctx().data_mut(|d| d.insert_temp(id_rolagem, (deslocamento, self.ativa)));
+        if (deslocamento, marca) != antes {
+            ui.ctx().data_mut(|d| d.insert_temp(id_rolagem, (deslocamento, marca)));
         }
 
         let pintor = ui.painter().with_clip_rect(area);
@@ -384,18 +425,19 @@ impl<'a> FaixaAbas<'a> {
             let icone =
                 Rect::from_min_size(pos2(x_icone, r.center().y - LADO_ICONE / 2.0), vec2(LADO_ICONE, LADO_ICONE));
             icones::pintar(&pintor, icone, aba.icone, cor);
-            // o nome tem a preferência; o sub fica com o que sobra
+            // o nome tem a preferência e é cortado no meio, com a extensão; o sub fica com o que sobra, e a pasta-mãe
+            // dos nomes iguais, com o lugar garantido
             let espaco = textos[i];
             let (nome, sub) = medidas[i];
             let x_texto = x_icone + LADO_ICONE + GAP;
-            let g_nome = if nome <= espaco + 0.5 {
-                galley(ui, aba.nome, fonte.clone(), cor)
-            } else {
-                galley_cortado(ui, aba.nome, fonte.clone(), cor, espaco)
+            let reserva = match (aba.sub, aba.pasta) {
+                (None, Some(_)) if nome + GAP + sub > espaco + 0.5 => GAP + sub.min(PASTA_MINIMA),
+                _ => 0.0,
             };
+            let g_nome = galley_nome(ui, aba.nome, nome, fonte.clone(), cor, espaco - reserva);
             let largura_nome = g_nome.size().x;
             pintor.galley(pos2(x_texto, r.center().y - g_nome.size().y / 2.0), g_nome, cor);
-            if let Some(s) = aba.sub {
+            if let Some(s) = aba.segundo() {
                 let resta = espaco - largura_nome - GAP;
                 if resta >= SUB_MINIMO.min(sub) {
                     let cor_sub = cor_sub_aba(p, e_ativa);
@@ -524,6 +566,58 @@ enum PedidoMenuAba {
     Fechar,
 }
 
+/// O nome da aba em `largura`: inteiro, se couber (`natural` é a medida dele); senão, cortado no meio com a extensão
+/// inteira ([`encurtar_nome`], a regra U6); se nem "…" com a extensão couber, cortado no fim.
+fn galley_nome(ui: &Ui, nome: &str, natural: f32, fonte: FontId, cor: Color32, largura: f32) -> Arc<Galley> {
+    if natural <= largura + 0.5 {
+        return galley(ui, nome, fonte, cor);
+    }
+    let cabe = |s: &str| galley(ui, s, fonte.clone(), cor).size().x <= largura + 0.5;
+    match encurtar_nome(nome, cabe) {
+        Some(curto) => galley(ui, &curto, fonte, cor),
+        None => galley_cortado(ui, nome, fonte, cor, largura),
+    }
+}
+
+/// A largura do texto de cada aba de documento para caberem em `disponivel` (D1 da revisão de 26/10/2026): as
+/// naturais, se couberem; senão, a `ativa` fica inteira (até [`TETO_ATIVA`]) e as outras encolhem até um teto comum
+/// (as curtas ficam inteiras), cada uma nunca abaixo do seu mínimo (nem da sua natural, se for menor); o que ainda
+/// não couber, a faixa rola.
+pub(crate) fn larguras_texto_abas(
+    naturais: &[f32],
+    minimos: &[f32],
+    fixas: &[f32],
+    espaco: f32,
+    disponivel: f32,
+    ativa: Option<usize>,
+) -> Vec<f32> {
+    let n = naturais.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let resto = disponivel - fixas.iter().sum::<f32>() - espaco * (n - 1) as f32;
+    if naturais.iter().sum::<f32>() <= resto {
+        return naturais.to_vec();
+    }
+    let ativa = ativa.filter(|&i| i < n);
+    let da_ativa = ativa.map_or(0.0, |i| naturais[i].min(TETO_ATIVA.max(minimos[i])));
+    let sobra = resto - da_ativa;
+    let com_teto =
+        |teto: f32, i: usize| if Some(i) == ativa { da_ativa } else { naturais[i].min(teto.max(minimos[i])) };
+    let soma = |teto: f32| (0..n).filter(|&i| Some(i) != ativa).map(|i| com_teto(teto, i)).sum::<f32>();
+    // o maior teto comum que ainda cabe (a soma cresce com o teto); nenhum cabe: todas no mínimo
+    let (mut cabe, mut nao_cabe) = (0.0_f32, naturais.iter().copied().fold(0.0, f32::max));
+    for _ in 0..32 {
+        let meio = (cabe + nao_cabe) / 2.0;
+        if soma(meio) <= sobra {
+            cabe = meio;
+        } else {
+            nao_cabe = meio;
+        }
+    }
+    (0..n).map(|i| com_teto(cabe, i)).collect()
+}
+
 /// A largura do texto de cada aba para caberem em `disponivel`: as naturais, se couberem; senão, o texto de cada
 /// uma encolhe até um teto comum (as curtas ficam inteiras), nunca abaixo de `minimo` (aí a faixa rola).
 pub(crate) fn larguras_texto(naturais: &[f32], fixas: &[f32], espaco: f32, disponivel: f32, minimo: f32) -> Vec<f32> {
@@ -601,10 +695,33 @@ mod testes {
     }
 
     #[test]
+    fn abas_de_documento_param_no_minimo_e_a_ativa_nao_encolhe_antes() {
+        let fixas = [60.0; 4];
+        let minimos = [58.0; 4];
+        // cabem: as naturais
+        let t = larguras_texto_abas(&[50.0, 90.0, 120.0, 40.0], &minimos, &fixas, 2.0, 1000.0, Some(1));
+        assert_eq!(t, [50.0, 90.0, 120.0, 40.0]);
+        // 400 de texto (646 − 4 × 60 − 3 × 2): a ativa (120) inteira; as outras dividem 280, a curta (40) inteira
+        let t = larguras_texto_abas(&[150.0, 200.0, 120.0, 40.0], &minimos, &fixas, 2.0, 646.0, Some(2));
+        assert_eq!(t[2], 120.0, "a ativa não encolhe antes das outras");
+        assert_eq!(t[3], 40.0, "a curta fica inteira");
+        assert!((t[0] - 120.0).abs() < 0.01 && (t[1] - 120.0).abs() < 0.01, "{t:?}");
+        // apertado demais: cada uma no mínimo dela (a curta na natural), a ativa inteira, e a faixa rola
+        let minimos = [58.0, 98.0, 58.0, 58.0];
+        let t = larguras_texto_abas(&[150.0, 200.0, 120.0, 40.0], &minimos, &fixas, 2.0, 300.0, Some(2));
+        assert_eq!(t, [58.0, 98.0, 120.0, 40.0]);
+        // a ativa enorme fica no teto
+        let t = larguras_texto_abas(&[900.0, 50.0], &[58.0; 2], &[60.0; 2], 2.0, 300.0, Some(0));
+        assert_eq!(t, [TETO_ATIVA, 50.0]);
+    }
+
+    #[test]
     fn rotulo_da_aba() {
         assert_eq!(AbaDocumento::new(Icone::Tabela, "clientes").sub("Dados").rotulo(), "clientes · Dados");
         assert_eq!(AbaDocumento::new(Icone::Consulta, "Consulta 2").rotulo(), "Consulta 2");
         assert!(!AbaDocumento::new(Icone::Inicio, "Início").fechavel(false).fechavel);
         assert_eq!(AbaDocumento::new(Icone::Consulta, "Consulta 2").com_chave(7).chave, Some(7));
+        let homonima = AbaDocumento::new(Icone::Folha(crate::icones::TipoArquivo::Csv), "vendas.csv").pasta("2024");
+        assert_eq!(homonima.rotulo(), "vendas.csv · 2024");
     }
 }

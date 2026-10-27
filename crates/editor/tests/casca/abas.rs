@@ -479,3 +479,73 @@ fn criar_indice_pela_janela_da_casca_rele_a_tabela() {
     esperar(&mut h, "a tabela relida com o índice", tem_indice);
     assert_eq!(h.state().rota(), &Rota::objeto("clientes", false));
 }
+
+/// D1 da revisão de 26/10/2026: sete arquivos abertos e uma Consulta a 1280 × 800. Cada aba fica com o mínimo para
+/// reconhecer o arquivo (a faixa rola no lugar de cortar até "en…"), a ativa fica à vista e inteira, e os dois
+/// `vendas_2025.csv` ganham a pasta-mãe. Capturas `casca-abas-muitas-{claro,escuro}.png`.
+#[test]
+fn sete_arquivos_e_uma_consulta_a_1280_ficam_reconheciveis() {
+    for (tema, sufixo) in [(Tema::Claro, "claro"), (Tema::Escuro, "escuro")] {
+        let amb = Ambiente::exemplo(&format!("abas_muitas_{sufixo}"));
+        let pasta = amb.pasta().join("revisao");
+        for sub in ["2024", "2025"] {
+            std::fs::create_dir_all(pasta.join(sub)).unwrap();
+            std::fs::write(pasta.join(sub).join("vendas_2025.csv"), "id;valor\n1;10,5\n2;20\n").unwrap();
+        }
+        let arquivos = [
+            ("enderecos_clientes.csv", "id,cep\n1,01310100\n"),
+            ("exportacao_bi.csv", "id,receita\n1,589.0893\n"),
+            ("app.log", "2026-10-26 ERROR algo\n"),
+            ("config.json", "{\"conexoes\": []}\n"),
+            ("notas_da_reuniao.md", "# Notas\n"),
+        ];
+        let mut caminhos: Vec<PathBuf> = arquivos
+            .iter()
+            .map(|(nome, conteudo)| {
+                let c = pasta.join(nome);
+                std::fs::write(&c, conteudo).unwrap();
+                c
+            })
+            .collect();
+        caminhos.insert(0, pasta.join("2024").join("vendas_2025.csv"));
+        caminhos.push(pasta.join("2025").join("vendas_2025.csv"));
+        let mut h = harness_com(&amb, tema, egui::vec2(1280.0, 800.0), Partida::default(), |_| None);
+        for c in &caminhos {
+            h.state_mut().ir(Rota::arquivo(c));
+            assentar(&mut h);
+        }
+        h.state_mut().emitir(estado::Acao::NovaConsulta { sql: None });
+        assentar(&mut h);
+        // a última aberta (a Consulta) é a ativa; volta para o segundo vendas_2025.csv
+        clicar_aba(&mut h, "vendas_2025.csv · 2025");
+        assentar(&mut h);
+        assert_eq!(rotulos_das_abas(&h).1, "vendas_2025.csv");
+
+        let doc = documento(&h);
+        // a área das abas: do canto do documento até o "+", o "Todas as abas" e o recuo da direita
+        let area = egui::Rangef::new(doc.left(), doc.right() - 10.0 - 32.0 - 28.0);
+        // o nó é o trecho à vista de cada aba: as que não encostam nas pontas da área estão inteiras, e as que
+        // foram encolhidas não passam do mínimo (as de nome curto, como app.log, ficam com a largura dele)
+        let mut vistas = 0;
+        for n in h.query_all(by().role(Role::Tab)) {
+            let r = n.rect();
+            if r.left() > area.min + 0.5 && r.right() < area.max - 0.5 {
+                vistas += 1;
+                let rotulo = n.accesskit_node().label().unwrap_or_default();
+                let curta = ["app.log", "config.json", "Consulta 1"].iter().any(|c| rotulo.starts_with(c));
+                assert!(curta || r.width() >= 120.0, "{rotulo}: {} px", r.width());
+            }
+        }
+        assert!(vistas >= 3, "{vistas} abas à vista");
+        let ativa = rect_de(&h, Role::Tab, "vendas_2025.csv · 2025");
+        assert!(ativa.left() >= area.min - 0.5 && ativa.right() <= area.max + 0.5, "{ativa:?} {area:?}");
+        // os dois vendas_2025.csv separados pela pasta-mãe (no leitor de tela e no "Todas as abas")
+        assert!(existe(&h, Role::Tab, "vendas_2025.csv · 2025"));
+        clicar_botao(&mut h, "Todas as abas");
+        h.run_steps(2);
+        assert!(h.query_by_label("vendas_2025.csv · 2024").is_some(), "o \"Todas as abas\" lista a de 2024");
+        h.key_press(Key::Escape);
+        h.run_steps(2);
+        capturar(&mut h, &format!("casca-abas-muitas-{sufixo}.png"));
+    }
+}

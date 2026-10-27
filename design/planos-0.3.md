@@ -144,7 +144,9 @@ fica aqui pela descrição.)*
     Atalhos do teclado. Os números e as datas seguem o idioma ("1.234,56" e "21/10/2026" no português; "1,234.56" e
     "2026-10-21" no inglês).
   - O que vem do arquivo da pessoa não muda: nomes de tabela, valores, o separador decimal do CSV (que continua
-    detectado pelo arquivo).
+    detectado pelo arquivo). O que o app calcula sobre o CSV e o Excel (soma, média, mínimo, máximo, contagens, a
+    coluna "#") segue o idioma, com as casas da coluna e sem milhar em ids, anos e CEPs: as regras estão em
+    "Números" no guia (`design/README.md`, 26/10/2026).
   - Um idioma novo é um arquivo de catálogo novo, sem mexer no código: uma pessoa de fora traduz para o espanhol com
     uma ferramenta comum de tradução e abre um PR só com o arquivo. O CI diz que textos faltam em cada idioma.
   - O README em inglês ganha capturas da interface em inglês.
@@ -378,8 +380,10 @@ fatiado, o menu da seleção, o Ctrl+F nos arquivos e as contas do CSV em fluxo.
 - **0.3.2 — "Entender o banco":** o diagrama relacional em aba (Q3 do P8), gerado a partir do banco.
 - **0.4 — "Conectar":** continua o **SSH** (a 0.3.0 já traz o S1, só leitura; a 0.4 traz salvar de volta, "Lembrar" no
   cofre do sistema, recentes e o banco remoto como cópia local editável; plano em [`planos-ssh.md`](planos-ssh.md));
-  depois, o contrato de fonte de dados (um documento de decisão escrito ainda durante a 0.3, sem código), PostgreSQL
-  só leitura por padrão, com o túnel SSH, senhas no cofre do sistema.
+  depois, o contrato de fonte de dados (um documento de decisão escrito ainda durante a 0.3, sem código:
+  [`contrato-fonte-de-dados.md`](contrato-fonte-de-dados.md)), PostgreSQL só leitura por padrão, com o túnel SSH,
+  senhas no cofre do sistema. O documento também diz o que a 0.3 precisa deixar pronto (a `FonteDeLinhas` do PR 1 em
+  forma de callback, o gravador do PR 2 pela classe neutra das colunas) para não haver retrabalho.
 
 **Fora da 0.3:** PostgreSQL e outros bancos, DuckDB e Parquet, `.xls`/`.xlsb`, outros idiomas além do inglês (a
 porta fica aberta), macOS, editar texto acima de

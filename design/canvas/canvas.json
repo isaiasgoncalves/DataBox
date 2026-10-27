@@ -94,9 +94,9 @@
     },
     "FuturoGrafico.dc.html": {
       "expand": "fill",
-      "h": 900,
+      "h": 5822,
       "page": "futuro",
-      "title": "Gráfico de uma consulta, com Abrir no Python (roadmap)",
+      "title": "Gráficos: a vista Gráfico nas Propriedades e o gráfico em aba (0.3, PR 7)",
       "w": 1440,
       "x": 1520,
       "y": 0
@@ -271,6 +271,15 @@
       "w": 1440,
       "x": 3040,
       "y": 2040
+    },
+    "FuturoSsh.dc.html": {
+      "expand": "fill",
+      "h": 4656,
+      "page": "futuro",
+      "title": "SSH na 0.3.0: conectar, a chave da máquina e o Explorador remoto (só leitura)",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
     }
   },
   "createdOnFiles": {
@@ -358,7 +367,8 @@
     "Propostas03Consulta.dc.html",
     "Propostas03VaziaCsv.dc.html",
     "Propostas03Visao.dc.html",
-    "Propostas03Preferencias.dc.html"
+    "Propostas03Preferencias.dc.html",
+    "FuturoSsh.dc.html"
   ],
   "pages": [
     {
