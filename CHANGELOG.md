@@ -26,6 +26,15 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   com as casas da coluna e sem perder o zero final; sem milhar em chaves, na "#" e em colunas de id, ano e CEP; REAL
   na forma mais curta, sem notação científica. Seção "Números" do `design/README.md`.
 
+### Corrigido
+
+- **As abas de documento não cortam mais até ninguém saber qual é qual** (D1 da revisão de 26/10/2026): com sete abas
+  a 1280 px elas viravam "en…", "exp…", "app.l…". Agora cada aba fica com umas dez letras do nome, no mínimo; com mais
+  abas do que isso cabe, a faixa rola (a roda do mouse, o Ctrl+Tab e o "Todas as abas"). O nome é cortado no meio, com
+  a extensão inteira ("enderecos…ntes.csv"), como os caminhos. A aba ativa não encolhe antes das outras e fica sempre à
+  vista, também quando uma aba abre ou fecha e quando a janela muda de largura. Dois arquivos abertos com o mesmo nome
+  mostram a pasta-mãe depois do nome ("vendas_2025.csv 2024"), também no "Todas as abas" e no leitor de tela.
+
 ## [0.2.4] - 2026-10-23
 
 Acabamento da interface, da revisão de UI de 22/10/2026 (o debate do designer com o PO, em
