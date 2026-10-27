@@ -17,8 +17,11 @@ fn salvar_ligado(h: &H) -> bool {
     !salvar_da_janela(h).accesskit_node().is_disabled()
 }
 
-/// Escolhe uma opção de um select da janela: abre a lista e clica na opção.
+/// Escolhe uma opção de um select da janela: rola até ele (a Aparência, com o Idioma, passa da altura do corpo e
+/// rola), abre a lista e clica na opção.
 fn escolher_opcao(h: &mut H, select: &str, opcao: &str) {
+    h.get(by().role(Role::ComboBox).label(select)).scroll_to_me();
+    h.run_steps(3);
     clicar(h, Role::ComboBox, select);
     clicar_botao(h, opcao);
 }
@@ -275,10 +278,8 @@ fn idioma_vale_na_hora_cancelar_volta_e_salvar_grava() {
         let mut h = harness(&amb);
         abrir_preferencias(&mut h);
         ir_para_secao(&mut h, "Aparência");
-        // logo depois do Tema, com o idioma que o sistema dá entre parênteses
+        // logo depois do Tema (os rótulos das opções: o teste de unidade rotulos_dos_idiomas)
         assert!(rect_de(&h, Role::ComboBox, "Idioma").top() > rect_de(&h, Role::Button, "Escuro").bottom());
-        let sistema = format!("Seguir o sistema ({})", idioma::do_sistema().nome_curto());
-        assert!(tem_texto(&h, &sistema), "{sistema}");
         assert!(tem_texto(&h, "Menus, janelas e mensagens; os números e as datas seguem o idioma."));
 
         escolher_opcao(&mut h, "Idioma", "English");
