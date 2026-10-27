@@ -27,6 +27,7 @@ use interface::pecas::cartao::Cartao;
 use interface::pecas::navegacao::{Cabecalho, ParteSeletor, Passo, TamanhoTrilho, trilho_com_partes};
 use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::texto::link;
+use interface::pecas::toast::toast_concluido;
 use servico::TabelaCompleta;
 
 use crate::recursos::nome_arquivo;
@@ -568,15 +569,20 @@ impl estado::Documento for TelaTabela {
                 let (caminho, tamanho) =
                     self.arquivo.as_ref().map(|(_, c, t)| (c.as_str(), t.as_str())).unwrap_or_default();
                 let banco = ctx.estado.banco.as_ref();
+                let mut copiar = false;
                 let _ = Secao::new("propriedades::arquivo_curto", "Arquivo").mostrar(ui, |ui| {
                     ficha(ui, |d| {
-                        d.linha_texto("Caminho", Some(caminho), "—");
+                        copiar = d.linha_caminho("Caminho", caminho);
                         if let Some(b) = banco {
                             crate::casca::status::linha_da_gravacao(d, b);
                         }
                         d.linha_texto("Tamanho", Some(tamanho), "—");
                     });
                 });
+                if copiar {
+                    ui.ctx().copy_text(caminho.to_string());
+                    toast_concluido(ui.ctx(), crate::visao_geral::MSG_CAMINHO_COPIADO);
+                }
             }
             _ => {
                 let egui = ui.ctx().clone();

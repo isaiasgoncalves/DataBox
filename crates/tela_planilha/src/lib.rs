@@ -80,11 +80,12 @@ use interface::icones::{self, EstadoIcone, Icone, TipoArquivo};
 use interface::pecas::arranjo::em_linha;
 use interface::pecas::avisos::{TomAviso, aviso_tom, carregando};
 use interface::pecas::botao::Botao;
+use interface::pecas::caminho::caminho_na_faixa;
 use interface::pecas::documento::Documento as DocumentoPeca;
 use interface::pecas::folhas::{ALTURA_FAIXA_FOLHAS, FaixaDeFolhas, Folha};
 use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::progresso::barra_progresso;
-use interface::pecas::texto::{Trecho, galley, galley_caminho, texto, texto_rico};
+use interface::pecas::texto::{Trecho, galley, texto, texto_rico};
 use interface::pecas::toast::{toast_concluido, toast_erro};
 use interface::tema::paleta;
 use planilha::{LINHAS_POR_BLOCO, Pagina, Pasta, Planilha, SistemaDatas, nome_da_coluna, referencia_a1};
@@ -799,10 +800,7 @@ impl TelaPlanilha {
         icones::pintar(ui.painter(), r, self.icone(), e.t2);
         nome_forte(ui, &self.nome, 13.0);
         let caminho = self.caminho.display().to_string();
-        let g = galley_caminho(ui, &caminho, fontes::fonte(12.0, Peso::Leve), e.t3, ui.available_width());
-        let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::hover());
-        ui.painter().galley(rect.min, g, e.t3);
-        resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &caminho));
+        caminho_na_faixa(ui, &caminho, ui.available_width());
     }
 
     /// O rodapé da planilha (0.2.3, item F: o que a faixa mostrava veio para cá). À esquerda, "Vendas › B7" (a planilha

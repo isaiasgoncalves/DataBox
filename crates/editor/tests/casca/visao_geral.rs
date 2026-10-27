@@ -339,3 +339,56 @@ fn atualizar_rele_banco_e_objetos_pela_casca() {
     assert!(existe(&h, Role::Link, "zebra"), "o Explorador recebe a mesma lista");
     assert_eq!(campo_da_busca(&h, "Buscar tabelas").value().as_deref(), Some("a"), "a busca fica");
 }
+
+/// D3 da revisão de 26/10/2026: o Caminho das Propriedades é a mesma peça no banco, na tabela e no arquivo: o rótulo
+/// em cima, o caminho na largura inteira da seção (em até duas linhas, cortado do começo) e o Copiar caminho na
+/// ponta. Antes eram três desenhos (uma linha com o Copiar, o caminho quebrado em três linhas sem ele, o nome
+/// cortado). Capturas `propriedades-caminho-{banco,tabela,arquivo}-{claro,escuro}.png`.
+#[test]
+fn caminho_com_a_mesma_peca_no_banco_na_tabela_e_no_arquivo() {
+    for (tema, sufixo) in [(Tema::Claro, "claro"), (Tema::Escuro, "escuro")] {
+        let amb = Ambiente::exemplo(&format!("caminho_peca_{sufixo}"));
+        let pasta = amb.pasta().join("dados_da_revisao").join("vendas");
+        std::fs::create_dir_all(&pasta).unwrap();
+        let csv = pasta.join("vendas_2025.csv");
+        std::fs::write(&csv, "id;valor\n1;10,5\n").unwrap();
+        let mut h = harness_com(&amb, tema, TAMANHO, Partida::default(), |_| None);
+        let banco = h.state().estado().banco.as_ref().map(|b| b.caminho.display().to_string()).unwrap_or_default();
+        // o nó do caminho nas Propriedades (o rótulo é o caminho inteiro, mesmo cortado) e o Copiar dele
+        let caminho_em = |h: &H, caminho: &str| -> (egui::Rect, egui::Rect) {
+            let doc = documento(h);
+            let r = h.query_all_by_label(caminho).map(|n| n.rect()).find(|r| r.left() > doc.right());
+            let r = r.unwrap_or_else(|| panic!("o caminho {caminho} nas Propriedades"));
+            let copiar = h
+                .query_all(by().role(Role::Button).label("Copiar caminho"))
+                .map(|n| n.rect())
+                .find(|c| c.left() > doc.right())
+                .expect("o Copiar caminho");
+            (r, copiar)
+        };
+        let mut vistos = Vec::new();
+        let (r, copiar) = caminho_em(&h, &banco);
+        vistos.push(("banco", r, copiar));
+        capturar(&mut h, &format!("propriedades-caminho-banco-{sufixo}.png"));
+        clicar_link(&mut h, "clientes");
+        assentar(&mut h);
+        let (r, copiar) = caminho_em(&h, &banco);
+        vistos.push(("tabela", r, copiar));
+        capturar(&mut h, &format!("propriedades-caminho-tabela-{sufixo}.png"));
+        h.state_mut().ir(Rota::arquivo(&csv));
+        assentar(&mut h);
+        let (r, copiar) = caminho_em(&h, &csv.display().to_string());
+        vistos.push(("arquivo", r, copiar));
+        capturar(&mut h, &format!("propriedades-caminho-arquivo-{sufixo}.png"));
+        let x = vistos[0].1.left();
+        for (onde, r, copiar) in &vistos {
+            // o caminho começa na borda da ficha (o rótulo em cima), não na coluna do valor de 112px depois dele
+            assert!((r.left() - x).abs() < 0.5, "{onde}: {r:?}, o banco em {x}");
+            // e usa a largura dela: numa linha larga ou, comprido, em duas
+            assert!(r.width() > 150.0 || r.height() > 17.5, "{onde}: o caminho com a largura da seção ({r:?})");
+            assert!(r.height() <= 2.0 * 17.0 + 0.5, "{onde}: no máximo duas linhas ({r:?})");
+            // o Copiar na ponta da última linha
+            assert!(copiar.left() >= r.left() && (copiar.center().y - (r.bottom() - 8.5)).abs() < 1.0, "{onde}");
+        }
+    }
+}

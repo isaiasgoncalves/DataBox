@@ -415,6 +415,21 @@ pub fn dica_celula(c: &Celula) -> Option<String> {
     }
 }
 
+/// A dica da célula só quando ela diz mais do que a célula mostra (D13 da revisão de 26/10/2026): o [`dica_celula`],
+/// menos o texto e o número que estão inteiros na célula (`cortada` diz se a pintura cortou com "…", o que o
+/// [`pintar_celula`] devolve). O texto com quebras de linha, o vazio, o texto cortado no banco e o BLOB continuam com a
+/// dica, que diz o que a célula não mostra.
+pub fn dica_celula_cortada(c: &Celula, cortada: bool) -> Option<String> {
+    let dica = dica_celula(c)?;
+    let inteira = !cortada
+        && match c {
+            Celula::Texto(s) => !s.is_empty() && uma_linha(s) == s.as_str(),
+            Celula::Inteiro(_) | Celula::Real(_) => texto_exibicao(c) == dica,
+            _ => false,
+        };
+    (!inteira).then_some(dica)
+}
+
 /// Bytes em hexadecimal minúsculo, sem separador.
 pub fn hex(bytes: &[u8]) -> String {
     const D: &[u8; 16] = b"0123456789abcdef";
@@ -465,9 +480,10 @@ pub fn largura_natural(painter: &Painter, p: &Paleta, c: &Celula) -> f32 {
 }
 
 /// Pinta o conteúdo de uma célula no retângulo de conteúdo (já sem o padding), centrado na vertical; numa
-/// coluna numérica, tudo à direita. O `painter` deve vir com o recorte da célula.
-pub fn pintar_celula(painter: &Painter, p: &Paleta, conteudo: Rect, c: &Celula, numerica: bool) {
-    pintar_celula_com(painter, p, conteudo, c, numerica, false);
+/// coluna numérica, tudo à direita. O `painter` deve vir com o recorte da célula. Devolve se o texto foi cortado com
+/// "…" (para o [`dica_celula_cortada`]).
+pub fn pintar_celula(painter: &Painter, p: &Paleta, conteudo: Rect, c: &Celula, numerica: bool) -> bool {
+    pintar_celula_com(painter, p, conteudo, c, numerica, false)
 }
 
 /// O texto de uma célula de arquivo de texto (o CSV, prancheta 7): como o [`pintar_celula`] de um texto (12px em
@@ -553,24 +569,26 @@ pub fn pintar_celula_alterada(painter: &Painter, p: &Paleta, celula: Rect) {
 }
 
 /// [`pintar_celula`] da coluna da chave (`.grade td.chave`: `--acct` 600; o NULL fica no itálico `--t3`).
-pub fn pintar_celula_chave(painter: &Painter, p: &Paleta, conteudo: Rect, c: &Celula, numerica: bool) {
-    pintar_celula_com(painter, p, conteudo, c, numerica, true);
+pub fn pintar_celula_chave(painter: &Painter, p: &Paleta, conteudo: Rect, c: &Celula, numerica: bool) -> bool {
+    pintar_celula_com(painter, p, conteudo, c, numerica, true)
 }
 
-fn pintar_celula_com(painter: &Painter, p: &Paleta, conteudo: Rect, c: &Celula, numerica: bool, chave: bool) {
+fn pintar_celula_com(painter: &Painter, p: &Paleta, conteudo: Rect, c: &Celula, numerica: bool, chave: bool) -> bool {
     if let Celula::Blob { .. } = c {
         let rotulo = texto_exibicao(c);
         let t = tamanho_chip_em(painter, &rotulo);
         let x = if numerica { conteudo.right() - t.x } else { conteudo.left() };
         let r = Rect::from_min_size(pos2(x, conteudo.center().y - t.y / 2.0), t);
         pintar_chip_em(painter, p, r, &rotulo, false);
-        return;
+        return t.x > conteudo.width() + 0.5;
     }
-    let Some(job) = job_celula(c, p, conteudo.width(), chave) else { return };
+    let Some(job) = job_celula(c, p, conteudo.width(), chave) else { return false };
     let g = painter.layout_job(job);
+    let cortada = g.elided;
     // `td.num`: a coluna inteira alinha à direita (o NULL e o "vazio" também)
     let x = if numerica { conteudo.right() - g.size().x } else { conteudo.left() };
     painter.galley(pos2(x, conteudo.center().y - g.size().y / 2.0), g, p.fg);
+    cortada
 }
 
 /// O número da linha (`.grade td.lin`): 12px em `--t3`, à direita do conteúdo e centrado na vertical. O fundo
@@ -2134,6 +2152,8 @@ struct DesenhoSomenteLeitura<'a> {
     colunas: &'a [ColunaGrade],
     linhas: &'a [Vec<Celula>],
     numericas: &'a [bool],
+    /// As células que a pintura cortou com "…" neste quadro (só elas têm a dica do texto inteiro).
+    cortadas: Vec<(usize, usize)>,
 }
 
 impl DesenhoGrade for DesenhoSomenteLeitura<'_> {
@@ -2141,7 +2161,9 @@ impl DesenhoGrade for DesenhoSomenteLeitura<'_> {
         if let Some(v) = self.linhas.get(c.linha).and_then(|l| l.get(c.coluna)) {
             let recorte = ui.painter().with_clip_rect(c.recorte);
             let numerica = self.numericas.get(c.coluna).copied().unwrap_or(false);
-            pintar_celula(&recorte, paleta(ui), c.conteudo, v, numerica);
+            if pintar_celula(&recorte, paleta(ui), c.conteudo, v, numerica) {
+                self.cortadas.push((c.linha, c.coluna));
+            }
         }
     }
 
@@ -2170,7 +2192,8 @@ impl DesenhoGrade for DesenhoSomenteLeitura<'_> {
     }
 
     fn dica(&mut self, linha: usize, coluna: usize) -> Option<String> {
-        self.linhas.get(linha).and_then(|l| l.get(coluna)).and_then(dica_celula)
+        let cortada = self.cortadas.contains(&(linha, coluna));
+        self.linhas.get(linha).and_then(|l| l.get(coluna)).and_then(|c| dica_celula_cortada(c, cortada))
     }
 }
 
@@ -2299,8 +2322,12 @@ impl GradeSomenteLeitura {
             self.nucleo.definir_larguras(iniciais);
             self.larguras_prontas = true;
         }
-        let mut desenho =
-            DesenhoSomenteLeitura { colunas: &self.colunas, linhas: &self.linhas, numericas: &self.numericas };
+        let mut desenho = DesenhoSomenteLeitura {
+            colunas: &self.colunas,
+            linhas: &self.linhas,
+            numericas: &self.numericas,
+            cortadas: Vec::new(),
+        };
         let r = self.nucleo.mostrar(ui, altura_max, &mut desenho);
         let mut resposta = RespostaGrade { copiado: None, selecao_mudou: r.selecao_mudou, menu_celula: r.menu_celula };
         let copiado = if r.copiar {
@@ -2374,6 +2401,23 @@ mod testes {
         );
         assert_eq!(dica_celula(&Celula::Real(2.5)).as_deref(), Some("2.5"));
         assert_eq!(dica_celula(&Celula::Real(1500.0)).as_deref(), Some("1500"));
+    }
+
+    #[test]
+    fn dica_so_quando_a_celula_nao_mostra_tudo() {
+        let texto = Celula::Texto("nuno.10@example.test".into());
+        assert_eq!(dica_celula_cortada(&texto, false), None, "inteiro na célula: sem dica");
+        assert_eq!(dica_celula_cortada(&texto, true).as_deref(), Some("nuno.10@example.test"));
+        assert_eq!(dica_celula_cortada(&Celula::Inteiro(17), false), None);
+        // o que a célula não mostra continua na dica: as quebras, o vazio, o cortado no banco e o BLOB
+        let quebras = Celula::Texto("linha 1\nlinha 2".into());
+        assert_eq!(dica_celula_cortada(&quebras, false).as_deref(), Some("linha 1\nlinha 2"));
+        assert_eq!(dica_celula_cortada(&Celula::Texto(String::new()), false).as_deref(), Some("Texto vazio ('')"));
+        let cortado = Celula::TextoCortado { inicio: "abc".into(), tamanho: 5000 };
+        assert!(dica_celula_cortada(&cortado, false).is_some());
+        let blob = Celula::Blob { tamanho: 3, inicio: vec![0xAB] };
+        assert!(dica_celula_cortada(&blob, false).is_some());
+        assert_eq!(dica_celula_cortada(&Celula::Nulo, true), None);
     }
 
     #[test]

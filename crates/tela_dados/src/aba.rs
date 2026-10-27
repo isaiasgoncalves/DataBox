@@ -1130,6 +1130,7 @@ impl AbaDados {
             edicao_desenhada: false,
             origem: None,
             visivel: None,
+            cortadas: Vec::new(),
         };
         let topo = ui.cursor().top();
         let r = grade.nucleo.mostrar(ui, altura_max, &mut pintor);

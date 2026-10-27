@@ -3,6 +3,7 @@
 //! `--t3` e valor em `--t`, os dois em 12px numa linha de 17px (`line-height:1.4`). O rótulo comprido quebra dentro
 //! da coluna; o valor quebra em qualquer ponto (`overflow-wrap:anywhere`). O valor vazio vai em `--t3`.
 //! [`Detalhes::titulo_grupo`] é o `.sec` que separa dois `.det` (o "Na grade de dados" da janela de atalhos).
+//! [`Detalhes::linha_caminho`] é o Caminho, sempre empilhado (o rótulo em cima), com a peça [`crate::pecas::caminho`].
 
 use egui::{Align, Layout, Rect, Sense, Ui, UiBuilder, pos2, vec2};
 
@@ -60,6 +61,17 @@ pub struct Detalhes<'u> {
 impl Detalhes<'_> {
     /// Uma linha com o valor desenhado por quem chama.
     pub fn linha<R>(&mut self, rotulo: &str, valor: impl FnOnce(&mut Ui) -> R) -> R {
+        self.linha_com(rotulo, false, valor)
+    }
+
+    /// O Caminho de um arquivo ou banco ([`crate::pecas::caminho::caminho`], D3 da revisão de 26/10/2026): o rótulo
+    /// em cima e o caminho na largura inteira da ficha, em até duas linhas, com o Copiar caminho na ponta. Devolve se o
+    /// Copiar foi clicado (quem chama copia e dá o toast).
+    pub fn linha_caminho(&mut self, rotulo: &str, caminho: &str) -> bool {
+        self.linha_com(rotulo, true, |ui| crate::pecas::caminho::caminho(ui, caminho))
+    }
+
+    fn linha_com<R>(&mut self, rotulo: &str, empilhar: bool, valor: impl FnOnce(&mut Ui) -> R) -> R {
         let p = paleta(self.ui);
         let e = &p.estudio;
         let largura = self.ui.available_width();
@@ -72,7 +84,7 @@ impl Detalhes<'_> {
         }
         let topo = self.ui.cursor().min;
         // `dt`: quebra dentro da coluna de 112px (menos, numa ficha estreita; na estreitíssima, a ficha empilha)
-        let colunas = largura_do_rotulo(largura);
+        let colunas = if empilhar { None } else { largura_do_rotulo(largura) };
         let gr =
             galley_quebrado(self.ui, rotulo, fontes::fonte(12.0, Peso::Normal), e.t3, colunas.unwrap_or(largura), 1.4);
         let altura_rotulo = gr.tamanho().y.max(ALTURA_LINHA);

@@ -218,7 +218,10 @@
 //!     [`pecas::filtros::popover_condicao`]`(ctx, id, &mut CondicaoEmEdicao, colunas, operadores, sem_valor) ->
 //!     Option<FimCondicao>` (Coluna, Operador, Valor, Cancelar e Aplicar).
 //!   - [`pecas::divisoria::Divisoria`] (a alça dos painéis laterais da casca; ver "Mudanças de API").
-//!   - [`pecas::detalhes::detalhes`]`(ui, |d| d.linha(…) / d.linha_texto(…) / d.titulo_grupo(…))` (o `.det`:
+//!   - [`pecas::caminho`]: `caminho(ui, caminho) -> bool` (o Caminho de um arquivo ou banco: até duas linhas,
+//!     cortado do começo com o nome inteiro, o Copiar caminho na ponta; devolve o clique), `caminho_na_faixa` (uma
+//!     linha em `--t3`, a faixa do documento) e `linhas_do_caminho` (a regra do corte).
+//!   - [`pecas::detalhes::detalhes`]`(ui, |d| d.linha(…) / d.linha_texto(…) / d.linha_caminho(…) / d.titulo_grupo(…))` (o `.det`:
 //!     rótulo `--t3` em 112px · valor `--t`, `gap:7px 10px`; o texto do `linha_texto` é selecionável;
 //!     `titulo_grupo` é o `.sec` entre dois `.det`, o "Na grade de dados" da janela de atalhos).
 //!   - [`pecas::tabela`]: [`pecas::tabela::Tabela`]`::new(id, &[ColunaTabela], n_linhas).mostrar(ui, |ui, linha,
@@ -344,7 +347,8 @@
 //!   direita em 10px `--t3`, o `.tp`), [`grade::pintar_fundo_cabecalho`]
 //!   (o degradê `Cabecalho` com as riscas e o fio `--btb`; serve também à tabela), [`grade::pintar_celula_ativa`]
 //!   (contorno de 2px `--acc` e o brilho interno `--brilho`), [`grade::texto_exibicao`], [`grade::texto_celula`]
-//!   (o `textoCelula`: o texto da edição no lugar e da cópia), [`grade::dica_celula`], [`grade::coluna_numerica`],
+//!   (o `textoCelula`: o texto da edição no lugar e da cópia), [`grade::dica_celula`] e [`grade::dica_celula_cortada`]
+//!   (a dica só quando a célula não mostra tudo: o [`grade::pintar_celula`] devolve se cortou), [`grade::coluna_numerica`],
 //!   [`grade::pintar_texto_de_celula`] (o texto de uma célula de arquivo de texto, o CSV: sem o "vazio" em itálico,
 //!   o texto vazio não pinta nada), [`grade::pintar_celula_alterada`] (`td.alt`: fundo `--tint` e faixa de
 //!   [`grade::LARGURA_FAIXA_ALTERADA`] 3px `--acct` à esquerda) e [`grade::Th::selecionada`] (`th.selcol`: o nome em

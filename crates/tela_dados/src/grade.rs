@@ -18,8 +18,8 @@ use interface::fontes::{self, Peso};
 use interface::grade::{
     ALTURA_CABECALHO_COM_TIPO_ABRE, ALTURA_LINHA, CabecalhoVisivel, CelulaVisivel, DesenhoGrade, ESPACO_SETA_ORDEM,
     LADO_SETA_ORDEM, LARGURA_COLUNA_MARCAR, LARGURA_MAX_COLUNA, LARGURA_MIN_COLUNA, LARGURA_PASTILHA_TH, Navegacao,
-    NucleoGrade, Ordem, Th, dica_celula, largura_cabecalho, largura_natural, padding_coluna, pintar_cabecalho_coluna,
-    pintar_celula,
+    NucleoGrade, Ordem, Th, dica_celula_cortada, largura_cabecalho, largura_natural, padding_coluna,
+    pintar_cabecalho_coluna, pintar_celula,
 };
 use interface::pecas::campos::{ALTURA_CAMPO_PEQUENO, Check, DURACAO_SALVO, Entrada, pintar_salvo};
 use interface::pecas::texto::nome_abre_tamanho;
@@ -289,6 +289,9 @@ pub(crate) struct Pintor<'a> {
     pub edicao_desenhada: bool,
     pub origem: Option<Pos2>,
     pub visivel: Option<Rect>,
+    /// As células (linha, coluna da grade) que a pintura cortou com "…" neste quadro: só elas têm a dica do texto
+    /// inteiro (D13 da revisão de 26/10/2026).
+    pub cortadas: Vec<(usize, usize)>,
 }
 
 impl Pintor<'_> {
@@ -566,7 +569,9 @@ impl DesenhoGrade for Pintor<'_> {
             // `td.gerada`: o texto em `--k-muted`
             p.fg = p.muted;
         }
-        pintar_celula(&pintor, &p, c.conteudo, valor, col.numerica);
+        if pintar_celula(&pintor, &p, c.conteudo, valor, col.numerica) {
+            self.cortadas.push((l, c.coluna));
+        }
     }
 
     fn cabecalho(&mut self, ui: &mut Ui, h: &CabecalhoVisivel) {
@@ -669,9 +674,9 @@ impl DesenhoGrade for Pintor<'_> {
             return None;
         }
         match self.dados.celula(linha, dc)? {
-            // números não têm `title` na aba Dados (só texto, o "vazio", o "…" e o chip)
+            // números não têm `title` na aba Dados (só texto, o "vazio", o "…" e o chip); o texto, só cortado
             Celula::Inteiro(_) | Celula::Real(_) | Celula::Nulo => None,
-            outra => dica_celula(outra),
+            outra => dica_celula_cortada(outra, self.cortadas.contains(&(linha, coluna))),
         }
     }
 }

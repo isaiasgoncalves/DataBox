@@ -612,7 +612,7 @@ impl Mostruario {
                     let _ = Secao::new("casca::banco", "Banco").primeira(true).mostrar(ui, |ui| {
                         ficha(ui, |d| {
                             d.linha_texto("Nome", Some(BANCO), "—");
-                            d.linha_texto("Caminho", Some(CAMINHO), "—");
+                            let _ = d.linha_caminho("Caminho", CAMINHO);
                         });
                     });
                     let _ = Secao::new("casca::transacao", "Transação").mostrar(ui, |ui| {
@@ -626,7 +626,7 @@ impl Mostruario {
                 (_, Some("Visão geral")) => {
                     let _ = Secao::new("casca::arquivo", "Arquivo").primeira(true).mostrar(ui, |ui| {
                         ficha(ui, |d| {
-                            d.linha_texto("Caminho", Some(CAMINHO), "—");
+                            let _ = d.linha_caminho("Caminho", CAMINHO);
                             d.linha_texto("Tamanho", Some("500 KB"), "—");
                             d.linha_texto("Modificado em", Some("13/10/2026 18:00"), "—");
                             d.linha_texto("Versão do SQLite", Some("3.53.2"), "—");
@@ -654,7 +654,7 @@ impl Mostruario {
                     });
                     let _ = Secao::new("casca::arquivo_curto", "Arquivo").mostrar(ui, |ui| {
                         ficha(ui, |d| {
-                            d.linha_texto("Caminho", Some(CAMINHO), "—");
+                            let _ = d.linha_caminho("Caminho", CAMINHO);
                             d.linha_texto("Tamanho", Some("500 KB"), "—");
                         });
                     });

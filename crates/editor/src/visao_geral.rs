@@ -21,16 +21,14 @@
 //! tela (a busca, o resultado e a manutenção em andamento ficam). O Explorador recebe a mesma lista.
 
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use banco::{AcaoManutencao, BancoInfo, CopiaFeita, ObjetosInfo, ResultadoManutencao, TipoObjeto};
 use comum::Codigo;
-use egui::{Align, Layout, Rect, Sense, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, vec2};
+use egui::{Align, Layout, Rect, Sense, Ui, UiBuilder, pos2, vec2};
 use estado::{
     Aba, Acao, Anatomia, Contexto, Oferta, Ofertas, OrigemJanelaExportar, PedidoJanelaExportar, Promessa, Reacao, Rota,
     Verbo, icone_da_tabela,
 };
-use interface::fontes::{self, Peso};
 use interface::formato::{
     UnidadeBytes, formatar_bytes, formatar_bytes_em, formatar_data_opt, formatar_numero, formatar_numero_opt,
     nome_do_caminho, partes_bytes, sem_acento,
@@ -43,7 +41,7 @@ use interface::pecas::janela::{Confirmacao, confirmar};
 use interface::pecas::painel::{Secao, ficha};
 use interface::pecas::rotulos::{TipoPill, pill};
 use interface::pecas::tabela::{ColunaTabela, Tabela, moldura_lista};
-use interface::pecas::texto::{galley_caminho, nome_abre, texto, titulo_lista, y_na_linha};
+use interface::pecas::texto::{nome_abre, texto, titulo_lista};
 use interface::pecas::toast::{AcaoToast, toast_atencao, toast_concluido, toast_concluido_com_acao, toast_erro};
 use interface::tema::paleta;
 
@@ -96,9 +94,6 @@ const ESPACO_FICHA: f32 = 8.0;
 /// `.det` da Manutenção: `padding:2px 8px 12px; gap:2px`.
 const RECUO_MANUTENCAO: [f32; 3] = [2.0, 8.0, 12.0];
 const ESPACO_MANUTENCAO: f32 = 2.0;
-/// O espaço entre o Caminho e o Copiar caminho, e a linha da ficha (`.det`: 12px × 1,4).
-const ESPACO_COPIAR: f32 = 4.0;
-const ALTURA_LINHA_FICHA: f32 = 17.0;
 
 /// Um botão de manutenção, com a silhueta (D7).
 struct BotaoManutencao {
@@ -574,13 +569,14 @@ impl TelaBanco {
                     }
                     _ => {
                         // o botão de ícone só aparece na linha do ponteiro e no foco do teclado; escondido, ele
-                        // continua no lugar (o Tab chega nele)
+                        // continua no lugar (o Tab chega nele). O ícone é o da vista Colunas das Propriedades, o
+                        // destino dele (D4 da revisão de 26/10/2026: o lápis é renomear ou editar)
                         let visivel = sob == Some(v) || com_foco == Some(v);
                         let dica = format!("Colunas de {}", t.nome);
                         let resp = ui
                             .scope(|ui| {
                                 ui.set_opacity(if visivel { 1.0 } else { 0.0 });
-                                ui.add(Botao::icone(Icone::Editar).pequeno().rotulo(&dica).dica(&dica))
+                                ui.add(Botao::icone(Icone::Estrutura).pequeno().rotulo(&dica).dica(&dica))
                             })
                             .inner;
                         if resp.has_focus() {
@@ -618,7 +614,7 @@ impl TelaBanco {
         let mut copiar_caminho = false;
         let _ = Secao::new("propriedades::arquivo", "Arquivo").primeira(true).mostrar(ui, |ui| {
             ficha(ui, |d| {
-                d.linha("Caminho", |ui| copiar_caminho = linha_do_caminho(ui, &t.caminho));
+                copiar_caminho = d.linha_caminho("Caminho", &t.caminho);
                 crate::casca::status::linha_da_gravacao(d, b);
                 d.linha_texto("Tamanho", Some(&t.tamanho_arquivo), "—");
                 d.linha_texto("Modificado em", Some(&t.modificado), "—");
@@ -697,28 +693,6 @@ fn com_recuo(ui: &mut Ui, [cima, lados, baixo]: [f32; 3], conteudo: impl FnOnce(
     conteudo(&mut dentro);
     let altura = dentro.min_rect().height().max(0.0) + cima + baixo;
     ui.allocate_space(vec2(ui.available_width(), altura));
-}
-
-/// O Caminho das Propriedades numa linha, cortado do começo quando não cabe, com o nome e a pasta-mãe inteiros (o
-/// `galley_caminho`; o caminho inteiro na dica e para o leitor de tela), e o `.ib.pq` Copiar caminho. Devolve se ele
-/// foi clicado. A ficha do arquivo de dados usa a mesma.
-pub(crate) fn linha_do_caminho(ui: &mut Ui, caminho: &str) -> bool {
-    let e = &paleta(ui).estudio;
-    let lado = interface::pecas::botao::LADO_PEQUENO;
-    let largura_valor = ui.available_width();
-    let largura = (largura_valor - lado - ESPACO_COPIAR).max(0.0);
-    let g = galley_caminho(ui, caminho, fontes::fonte(12.0, Peso::Leve), e.t, largura);
-    let encurtado = g.text() != caminho;
-    // a linha de 17pt das outras da ficha; o botão de 26 centrado nela, logo depois do caminho, sem a esticar
-    let (rect, resp) = ui.allocate_exact_size(vec2(g.size().x, ALTURA_LINHA_FICHA), Sense::hover());
-    ui.painter().galley(pos2(rect.left(), y_na_linha(rect.top(), ALTURA_LINHA_FICHA, &g)), Arc::clone(&g), e.t);
-    resp.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, caminho));
-    if encurtado {
-        resp.on_hover_text(caminho);
-    }
-    let centro = pos2(rect.right() + ESPACO_COPIAR + lado / 2.0, rect.center().y);
-    let mut ui_botao = ui.new_child(UiBuilder::new().max_rect(Rect::from_center_size(centro, vec2(lado, lado))));
-    ui_botao.add(Botao::icone(Icone::CopiarCaminho).pequeno().dica("Copiar caminho")).clicked()
 }
 
 /// A Visão geral como documento da casca (veja o topo do módulo).
