@@ -109,6 +109,10 @@ fn alvo_de_pasta_banco_e_dados() {
         (c.escrever("dados.json", b"[]"), Natureza::Dados(TipoDeArquivo::Json)),
         (c.escrever("notas.txt", b"oi"), Natureza::Dados(TipoDeArquivo::Texto)),
         (c.escrever("leia-me.md", b""), Natureza::Dados(TipoDeArquivo::Texto)),
+        // o JSON Lines e o .sql são texto até o PR 10 da 0.3 (PO5)
+        (c.escrever("eventos.jsonl", b"{\"a\":1}\n"), Natureza::Dados(TipoDeArquivo::Texto)),
+        (c.escrever("lote.NDJSON", b"{}\n"), Natureza::Dados(TipoDeArquivo::Texto)),
+        (c.escrever("carga.sql", b"SELECT 1;"), Natureza::Dados(TipoDeArquivo::Texto)),
     ];
     for (caminho, esperado) in alvos {
         assert_eq!(c.servico.alvo_do_caminho(&caminho).unwrap(), esperado, "{}", caminho.display());
@@ -173,7 +177,7 @@ fn alvo_de_tipo_desconhecido_diz_que_nao_abre() {
         ("grande.pdf", lixo(5_000)),
         ("programa.exe", lixo(300)),
         ("antigo.xls", lixo(100)),
-        ("consulta.sql", b"select 1".to_vec()),
+        ("vendas.parquet", b"PAR1".to_vec()),
     ] {
         let alvo = c.escrever(nome, &conteudo);
         let e = erro_com(c.servico.alvo_do_caminho(&alvo), 400);
@@ -267,6 +271,21 @@ fn listar_mostra_pasta_com_ponto() {
     let l = c.listar();
     assert_eq!(nomes(&l), [".coletor_noticias", ".github", ".coletor.db", ".notas.txt"]);
     assert_eq!(l.ocultas, 1, "o .env é de outro tipo, não oculto por causa do ponto");
+}
+
+/// O JSON Lines e o `.sql` aparecem na árvore como texto (PO5 da revisão de 26/10/2026; antes, só entravam na conta
+/// dos arquivos de outros tipos).
+#[test]
+fn listar_mostra_jsonl_ndjson_e_sql_como_texto() {
+    let c = cenario("listar-jsonl-sql");
+    c.escrever("eventos.jsonl", b"{\"a\":1}\n{\"a\":2}\n");
+    c.escrever("lote.ndjson", b"{}\n");
+    c.escrever("carga.sql", b"CREATE TABLE t(a);");
+    c.escrever("relatorio.pdf", &lixo(30));
+    let l = c.listar();
+    assert_eq!(nomes(&l), ["carga.sql", "eventos.jsonl", "lote.ndjson"]);
+    assert!(l.entradas.iter().all(|e| e.natureza == Natureza::Dados(TipoDeArquivo::Texto)));
+    assert_eq!(l.ocultas, 1, "só o PDF fica de fora");
 }
 
 #[test]

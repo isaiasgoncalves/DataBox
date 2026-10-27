@@ -710,7 +710,8 @@ das Propriedades de todos (Caminho com o Copiar caminho, Tamanho, Modificado em,
 `Verbo::TrazerColunas` entrou logo depois da Nova coluna (`Verbo::TODOS` com 14); só o CSV o liga.
 
 A `editor::tela_arquivo::TelaArquivo` escolhe a tela pelo tipo do arquivo (`Rota::Arquivo` não mudou): CSV → `TelaCsv`,
-JSON, TXT, MD e LOG → `TelaTexto`, `.xlsx` e `.xlsm` → `TelaPlanilha`; sem o recurso `telas`, a ficha do arquivo.
+JSON, TXT, MD, LOG, JSON Lines (`.jsonl`, `.ndjson`) e SQL → `TelaTexto` (os dois últimos como texto, até o PR 10 da
+0.3), `.xlsx` e `.xlsm` → `TelaPlanilha`; sem o recurso `telas`, a ficha do arquivo.
 Além do trait, a casca usa de cada uma o `tomar_pedido` (os botões "Abrir no programa padrão" e "Mostrar na pasta" do
 erro; da planilha, também o "Trazer colunas desta planilha"), o `pergunta_aberta` (o "Salvar mesmo assim" do texto) e,
 do CSV, `trazer_colunas_de(rótulo)`.
