@@ -1,0 +1,120 @@
+# O inglês do DataBox. A chave (msgid) é o texto em português do código; o msgstr é a tradução.
+# Os termos seguem o glossário (crates/idioma/glossario.md). O extrator (cargo run -p idioma --bin extrator)
+# lista o que falta; o CI falha se uma chave do código não estiver aqui.
+#
+# Na I1 este arquivo tem os textos de teste e os poucos textos que já passam pelo t!; o en.po completo é a I4.
+msgid ""
+msgstr ""
+"Project-Id-Version: DataBox\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ---- textos de teste (os exemplos do crate idioma)
+
+msgid "Abrir pasta"
+msgstr "Open folder"
+
+msgid "Gravado em {tabela} (linha {linha})"
+msgstr "Saved to {tabela} (row {linha})"
+
+msgid "{n} linha"
+msgid_plural "{n} linhas"
+msgstr[0] "{n} row"
+msgstr[1] "{n} rows"
+
+msgid "Uma linha em {t}"
+msgid_plural "{n} linhas em {t}"
+msgstr[0] "One row in {t}"
+msgstr[1] "{n} rows in {t}"
+
+msgid "Salvar"
+msgstr "Save"
+
+# ---- interface::formato
+
+msgid "Linhas {inicio}–{fim} de {total}"
+msgstr "Rows {inicio}–{fim} of {total}"
+
+msgid "Nenhuma linha"
+msgstr "No rows"
+
+msgid "{linhas} de {n} linha"
+msgid_plural "{linhas} de {n} linhas"
+msgstr[0] "{linhas} of {n} row"
+msgstr[1] "{linhas} of {n} rows"
+
+msgid "filtradas de {total}"
+msgstr "filtered from {total}"
+
+# as palavras do formato::plural (a contagem vem antes, já formatada)
+msgid "linha"
+msgid_plural "linhas"
+msgstr[0] "row"
+msgstr[1] "rows"
+
+# ---- Preferências › Aparência › Idioma
+
+msgid "Idioma"
+msgstr "Language"
+
+msgid "Menus, janelas e mensagens; os números e as datas seguem o idioma."
+msgstr "Menus, windows and messages; numbers and dates follow the language."
+
+msgid "Seguir o sistema ({idioma})"
+msgstr "Follow the system ({idioma})"
+
+# ---- a linha de comando (editor::linha_comando)
+
+msgid "Uso: {executavel} [caminho] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]"
+msgstr "Usage: {executavel} [path] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]"
+
+msgid "Toolkit de dados gratuito e aberto para desenvolvedores, cientistas e engenheiros de dados."
+msgstr "A free and open data toolkit for developers, data scientists and data engineers."
+
+msgid "Argumentos:"
+msgstr "Arguments:"
+
+msgid "caminho"
+msgstr "path"
+
+msgid "pasta, banco SQLite ou arquivo de dados para abrir ao iniciar"
+msgstr "folder, SQLite database or data file to open at startup"
+
+msgid "Opções:"
+msgstr "Options:"
+
+msgid "abre o banco sem permitir gravação"
+msgstr "opens the database read-only"
+
+msgid "usa a barra de título e as bordas do sistema no lugar das do DataBox"
+msgstr "uses the system title bar and borders instead of DataBox's"
+
+msgid "cria o atalho \"DataBox\" na Área de Trabalho e no Menu Iniciar e sai"
+msgstr "creates the \"DataBox\" shortcut on the Desktop and in the Start menu and exits"
+
+msgid "cria o atalho \"DataBox\" no menu de aplicativos e sai"
+msgstr "creates the \"DataBox\" shortcut in the applications menu and exits"
+
+msgid "mostra esta ajuda e sai (também --ajuda)"
+msgstr "shows this help and exits (also --ajuda)"
+
+msgid "mostra a versão e sai (também --versao)"
+msgstr "shows the version and exits (also --versao)"
+
+msgid "só um caminho pode ser aberto ao iniciar (recebi {a} e {b})"
+msgstr "only one path can be opened at startup (got {a} and {b})"
+
+msgid "--renderizador precisa de um valor: glow ou wgpu"
+msgstr "--renderizador needs a value: glow or wgpu"
+
+msgid "renderizador desconhecido: '{valor}' (use glow ou wgpu)"
+msgstr "unknown renderer: '{valor}' (use glow or wgpu)"
+
+msgid "opção desconhecida: {opcao}"
+msgstr "unknown option: {opcao}"
+
+msgid "Argumentos inválidos: {mensagem}."
+msgstr "Invalid arguments: {mensagem}."

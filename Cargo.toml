@@ -20,6 +20,7 @@ expect_used = "deny"
 
 [workspace.dependencies]
 # crates do próprio projeto
+idioma = { path = "crates/idioma" }
 comum = { path = "crates/comum" }
 amostras = { path = "crates/amostras" }
 ddl = { path = "crates/ddl" }
@@ -57,6 +58,8 @@ base64 = "=0.23.1"
 regex = "=1.13.1"
 log = "=0.4.34"
 parking_lot = "=0.12.5"
+# o idioma do sistema (decisão 15 de design/planos-0.3.md); sem dependências no Windows e no Linux
+sys-locale = "=0.3.2"
 
 [profile.dev]
 debug = "line-tables-only"

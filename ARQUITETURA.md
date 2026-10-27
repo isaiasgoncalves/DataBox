@@ -23,6 +23,7 @@ commit. O guia visual (o visual Estúdio) está em [`design/README.md`](design/R
 | Visual **Estúdio** em código (crate `interface`): os tokens claro e escuro das pranchetas, as fontes do Windows lidas em tempo de execução (Segoe UI, Consolas ou Cascadia Mono), o logo próprio, os ícones em PNG rasterizados dos SVG e as peças (botões, campos, cartão, menus, abas, árvore, painéis, janela, toast…) | O egui não usa CSS nem desfoca o que está atrás: o vidro fosco das camadas que se sobrepõem é feito com a foto da própria janela, desfocada embaixo do `--flut` a 78/80% (`interface::fosco`, §4.7), com o liso a 96% de reserva (`design/README.md`). Nenhuma marca de terceiros; das fontes, só as padrão do egui (`epaint_default_fonts`: Ubuntu Light, Noto Emoji, Hack; SIL OFL 1.1 e Ubuntu Font Licence), compiladas como reserva e listadas no `THIRD-PARTY-NOTICES.txt` do pacote da versão. |
 | Cada tela é o **documento de uma aba** e tem endereço (`Rota`); Voltar e Avançar andam num **histórico único** (aba + endereço), com Alt+←/→ e os botões laterais do mouse | As abas deixam várias partes de tabela e várias Consultas abertas juntas, e o Voltar funciona como num navegador. |
 | Janela **sem a decoração do sistema**, com a barra de título própria integrada aos menus (no Windows e, desde a 0.2.2, no Linux; `BARRA_PROPRIA` no main.rs, e o `--moldura-do-sistema` volta à do sistema) | Uma faixa só de 30 px para o logo, os menus, o título e os botões da janela. Fica dentro do eframe e do winit 0.30, sem `unsafe`: sem o `WM_NCHITTEST`, perdem-se o Snap Layouts no Maximizar e o menu do sistema no clique direito do título (§5). O winit como dependência direta e o subclassing da janela ficaram de fora por decisão de 16/10/2026. |
+| **Idiomas no estilo do gettext** (crate `idioma`, desde a 0.3): `t!("texto em português")`, com o próprio texto como chave e um catálogo `.po` por idioma (`crates/idioma/idiomas/`), embutido e lido por um analisador próprio; o inglês é o de reserva; números e datas seguem o idioma da interface | O português continua legível no código e os testes não mudam; o `.po` é o formato que o Poedit, o Weblate e o Crowdin já leem; um idioma novo é um arquivo e uma linha de registro. O Fluent pediria um identificador por frase (as ~1.700 do código reescritas e afastadas dele). O risco (mudar a frase em português muda a chave) fica com o extrator no CI (`ferramentas/idioma.rs`). Decisões 10 a 15 de `design/planos-0.3.md`. |
 | Toolchain **GNU** (MinGW-w64 da WinLibs) e não MSVC | Não exige Visual Studio nem admin. Ver §1. |
 | **Linux** (experimental) com o mesmo código: o que é de cada sistema fica em `cfg(windows)`, sem crate novo | O `rfd` usa o xdg-desktop-portal (sem GTK), as pastas são as do XDG (`comum::app`), as fontes Noto/DejaVu (`interface::fontes`), o "Abrir"/"Mostrar na pasta" o `xdg-open` (`servico::arquivos`; a pasta, sem selecionar o arquivo) e o `--criar-atalho` um `databox.desktop` (`editor::atalho`). A janela usa a moldura do sistema. Textos que citam o sistema saem de `comum::app::{SEGUIR_O_SISTEMA, PROGRAMA_PADRAO}`. O CI roda fmt, clippy e testes no Ubuntu; a versão leva um AppImage (`ferramentas/appimage.sh`: appimagetool e runtime em versões fixas conferidas pelo SHA-256; as bibliotecas gráficas e as fontes vêm da distribuição; compilado no Ubuntu 22.04 pela glibc mínima) e um `.tar.gz`. Dentro do AppImage, o atalho e o relançar com wgpu usam o `$APPIMAGE` (`editor::atalho::executavel_do_pacote`), porque o binário de dentro fica numa montagem temporária. |
 
@@ -75,8 +76,12 @@ databox/
 ├─ README.md · README.pt-BR.md · ARQUITETURA.md (este) · CHANGELOG.md · CONTRIBUTING.md · RELEASE.md
 ├─ .github/workflows/             CI (compila, testa, clippy, fmt) e release (o DataBox.exe na página da versão)
 ├─ ferramentas/vincular.rs        intermediário de link (ver §1)
+├─ ferramentas/idioma.rs          o extrator dos textos: confere as chaves do t! com os .po (§4.0; roda no CI)
 ├─ design/                        guia visual (README.md), canvas, logo, ícones em SVG e geradores em Python
 └─ crates/
+   ├─ idioma/         os idiomas da interface: t!/tn!/t_estatico!, o idioma atual (global, com o do sistema pelo
+   │                  sys-locale), os catálogos .po embutidos (idiomas/en.po) e o analisador deles; sem dependência
+   │                  do projeto, na base do grafo
    ├─ comum/          ErroBanco, Codigo, q(), afinidade(), traduzir_*; Valor, Celula, Chave, Entrada;
    │                  app (o nome DataBox e as pastas por pessoa); arquivos (os tipos de arquivo, o cabeçalho do
    │                  SQLite, os ocultos, a ordem natural e a Listagem de uma pasta, sem disco); texto (sem_acento,
@@ -96,7 +101,7 @@ databox/
    ├─ interface/      visual Estúdio em egui: tema, fontes do Windows, logo, ícones em PNG, realce de SQL
    │                  (codigo), vidro fosco (fosco), peças (também as da casca: abas de documento, documento,
    │                  árvore, painel, divisória, dock, popover, barras de título, de ferramentas e de status),
-   │                  formatação pt-BR
+   │                  formatação de números e datas no idioma da interface
    ├─ estado/         estado do app, Rota, as abas de documento com o histórico único, os verbos da barra de
    │                  ferramentas, Acao, Promessa (tarefa de fundo), diálogos e o contrato das telas com a casca
    │                  (documento: os traits Documento e ParteTabela)
@@ -120,7 +125,9 @@ databox/
                       terceiros e o THIRD-PARTY-NOTICES.txt do pacote da versão), registro (log)
 ```
 
-Dependências (sem ciclos): `comum` ← `ddl` ← `esquema`; `comum` ← `banco`, `exportar`, `prefs`, `planilha`,
+Dependências (sem ciclos): `idioma` (só a biblioteca padrão e o `sys-locale`) na base, aberto a todo crate que
+tenha texto para a pessoa (hoje `prefs`, `interface` e `editor`; a varredura da 0.3, I2 e I3, leva aos outros);
+`comum` ← `ddl` ← `esquema`; `comum` ← `banco`, `exportar`, `prefs`, `planilha`,
 `tabular` ← `texto`; todos ← `servico` ← `estado` ← `tela_*` ← `editor`; `interface` (só `comum`, `tabular` e egui)
 ← `estado`, `tela_*`, `editor`. O `interface` usa do `tabular` só o `colunas` da cópia: a grade copia um intervalo
 de células como o Excel (`escrever_tsv`, desde a 0.2.2), com as mesmas regras de aspas do copiar e colar do CSV, e o
@@ -179,8 +186,35 @@ outras partes precisam saber:
   Excel 16 e no openpyxl). Cancelar = um callback devolver `ErroBanco` 409 `Codigo::Cancelado`, que volta igual.
 - `prefs`: todo getter pode tocar no disco (e `recentes()` abre threads): chame fora da thread da interface e
   guarde em cache. `modificado_em` usa as regras de horário de verão da época (como o Explorer).
+- `idioma`: `definir` antes do primeiro quadro (o `main`, pela escolha das preferências); nos testes, o idioma
+  troca só com `com_idioma`/`isolar` (o global é do processo, e os testes correm em paralelo).
 - `interface`: `tema::aplicar` antes do primeiro quadro; a grade da aba Dados se monta sobre
   `grade::NucleoGrade`; movimento reduzido do Windows vem do editor por `tema::definir_movimento_reduzido`.
+
+### 4.0 `idioma`
+
+A API inteira (com exemplos) está no topo do `idioma/src/lib.rs`. **A chave é o texto em português**:
+`t!("Abrir pasta")` e `t!("Gravado em {tabela}", tabela = nome)` devolvem `Cow<'static, str>` no idioma atual;
+`tn!(n, "{n} linha", "{n} linhas")` escolhe a forma pelo `Plural-Forms` do idioma (o `{n}` já sai com o milhar dele);
+num `const`, `t_estatico!("…")` marca o texto e `idioma::traduzir(CONST)` traduz na hora de mostrar. Sem a chave no
+catálogo, o texto sai no inglês (se o idioma atual não é ele nem o português) e, sem ele, em português. As macros só
+aceitam literais, e o compilador confere os `{nome}` contra os argumentos.
+
+- **O idioma atual** é global (`atual()`, `definir(Idioma)`), trocado pela casca; `com_idioma`/`isolar` trocam só o da
+  thread (os testes). `Escolha::{Sistema, Idioma(i)}` é o que as preferências guardam (`"system"`, `"pt-BR"`, `"en"`);
+  `do_sistema()` lê o `sys-locale`: `pt*` → português, `en*` → inglês, qualquer outro → inglês (decisão 12).
+- **O registro** é a lista `IDIOMAS` (código, nome no próprio idioma, milhar, decimal e o padrão da data:
+  português "1.234,56" e "21/10/2026", inglês "1,234.56" e "2026-10-21"). Um idioma novo é um `.po` em
+  `crates/idioma/idiomas/` e uma linha ali.
+- **O `.po`** é lido por `idioma::po` (msgid, msgstr, msgid_plural, msgstr[n], comentários, `#, fuzzy`, o cabeçalho
+  com `Language` e `Plural-Forms`, com a expressão do gettext inteira); `msgid` repetido e `msgctxt` são erro. Os
+  catálogos embutidos são conferidos pelos testes do crate; em produção, um que não abra só ficaria sem efeito.
+- **O extrator** (`ferramentas/idioma.rs`, o binário `extrator` do crate: `cargo run -p idioma --bin extrator`)
+  lista as chaves das três macros no `src/` dos crates (fora o código de teste), falha com a que falta no `en.po`
+  (ou está vazia, `fuzzy`, com o plural trocado ou com `{nome}` que a chave não tem) e só avisa nos outros idiomas; e
+  lista os literais com espaço e acento fora do `t!` nos crates de tela, com as exceções de
+  `ferramentas/idioma-excecoes.txt`. Até a varredura das telas (I3), o CI roda com `--so-avisar` (os literais só
+  avisam; o `en.po` continua falhando). `--pot` escreve todas as chaves no formato `.po`.
 
 ### 4.1 `ddl`
 
@@ -408,7 +442,10 @@ apaga, vazio → 400 "A pasta aberta precisa ser um caminho."): a chave `"pasta_
 `"larguras_paineis"` e **só existe enquanto há pasta aberta** (apagada no Fechar pasta). `barra_status() → bool` e
 `Mudanca.barra_status: Option<bool>` (`Mudanca::barra_status(b)`): a chave `"barra_status"` vem depois de
 `"pasta_aberta"`, só entra no arquivo na primeira mudança, e sem ela (ou com valor que não é booleano) a barra de
-status fica escondida.
+status fica escondida. `idioma() → idioma::Escolha` e `Mudanca.idioma: Option<idioma::Escolha>`
+(`Mudanca::idioma(e)`): a chave `"idioma"` vem depois de `"barra_status"` (`"system"`, `"pt-BR"`, `"en"`), só entra
+no arquivo depois da escolha; sem ela, ou com um código que esta versão não tem, segue o sistema (o código
+desconhecido fica no arquivo como estava). `PrefsInfo.idioma` leva a escolha à casca.
 
 **Aparência do código:** `aparencia() → Aparencia { cores_codigo: CoresCodigo::{DataBox, AltoContraste,
 SolarizedEscuro, Monokai}, fonte_codigo: Option<String> /* None = Consolas */, tamanho_codigo: f32 }` (padrão
@@ -474,8 +511,9 @@ centrada), `vazio`, `carregando`, `janela` (modal: cabeçalho com ícone, títul
 passam por um "pode fechar?"), `confirmar`, `toast`, `ajuda` (balão), `campo`, `check`, `radio`, `select`, `abas`,
 `trilha`, `cabecalho`, `tiles`, `track` (seletor segmentado), `detalhes` (rótulo · valor), `barra_progresso`,
 `texto_pre`, `zona_risco`, célula da grade (`Celula` → NULL, chip de BLOB, "…", números à direita em fonte tabular)
-e uma grade só leitura com cabeçalho fixo e rolagem virtual (a da Consulta SQL). Formatação pt-BR: `formatar_bytes`,
-`partes_bytes`, `formatar_numero`, `formatar_data`, `formatar_ms`, `plural`, e `sem_acento` (a chave das buscas e
+e uma grade só leitura com cabeçalho fixo e rolagem virtual (a da Consulta SQL). Formatação no idioma da interface (perguntada ao `idioma::atual()`: "1.234,56" e "21/10/2026" no
+português, "1,234.56" e "2026-10-21" no inglês): `formatar_bytes`,
+`partes_bytes`, `formatar_numero`, `formatar_data`, `formatar_ms`, `plural` (a palavra pelo catálogo, como no `tn!`), e `sem_acento` (a chave das buscas e
 dos filtros, a única: mora em `comum::texto`, com a `Agulha` que o `tabular`, o `planilha` e o texto usam na busca da
 barra, e o `interface::formato` a reexporta). Um **mostruário** (exemplo e teste com captura em PNG pelo `egui_kittest`) mostra cada peça
 nos dois temas. As peças da casca: `abas_documento`, `arvore`, `painel`, `barra_status`, `barra_titulo`,

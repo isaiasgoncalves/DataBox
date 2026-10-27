@@ -4,7 +4,9 @@
 //! DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador glow|wgpu] [--criar-atalho]
 //! ```
 //!
-//! Liga o registro (com o gancho de pânico), abre as preferências e o serviço, e abre a janela com o tema das preferências e o movimento reduzido do Windows.
+//! Liga o registro (com o gancho de pânico), abre as preferências e o serviço, define o idioma da interface (o das
+//! preferências ou o do sistema, [`idioma::definir`]) e abre a janela com o tema das preferências e o movimento
+//! reduzido do Windows. A ajuda, a versão e os erros de argumento também saem nesse idioma.
 //! No Windows e no Linux, a janela fica sem a decoração do sistema, com a barra de título própria ([`BARRA_PROPRIA`]);
 //! o `--moldura-do-sistema` volta à do sistema ([`barra_propria`]).
 //! No Linux, a interface cresce pelo tamanho do texto do GNOME ([`escala::fator_do_sistema`], o zoom do egui).
@@ -67,12 +69,27 @@ fn falha_fatal(frase: &str) -> String {
     )
 }
 
+/// Define o idioma da interface pela escolha das preferências (seguir o sistema enquanto a pessoa não escolher).
+fn definir_idioma(prefs: &prefs::Preferencias) {
+    let idioma = prefs.idioma().resolver();
+    idioma::definir(idioma);
+}
+
 fn main() -> ExitCode {
     let argv: Vec<OsString> = std::env::args_os().skip(1).collect();
-    let args = match linha_comando::analisar(&argv) {
+    let comando = linha_comando::analisar(&argv);
+    if !matches!(comando, Ok(Comando::Executar(_))) {
+        // a ajuda, a versão e o erro saem no idioma das preferências (lidas sem o registro ligado: o programa sai já)
+        definir_idioma(&prefs::Preferencias::abrir(None));
+    }
+    let executavel = || {
+        let exe = std::env::current_exe().ok();
+        linha_comando::executavel(std::env::var_os("APPIMAGE").as_deref(), exe.as_deref())
+    };
+    let args = match comando {
         Ok(Comando::Executar(args)) => args,
         Ok(Comando::Ajuda) => {
-            caixa(linha_comando::AJUDA, false);
+            caixa(&linha_comando::ajuda(&executavel()), false);
             return ExitCode::SUCCESS;
         }
         Ok(Comando::Versao) => {
@@ -80,7 +97,7 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         Err(e) => {
-            caixa(&e.texto(), true);
+            caixa(&e.texto(&executavel()), true);
             return ExitCode::from(2);
         }
     };
@@ -149,6 +166,9 @@ fn opcoes_nativas(renderizador: Renderizador, barra_propria: bool, fator: f32) -
 
 fn executar(args: &Argumentos) -> ExitCode {
     let prefs = prefs::Preferencias::abrir(None);
+    // o idioma vale antes do primeiro quadro (e antes das frases que o serviço monta ao subir)
+    definir_idioma(&prefs);
+    log::info!("Idioma da interface: {}.", idioma::atual().codigo());
     let tema = tema_da_interface(prefs.tema());
     let aparencia = prefs.aparencia();
     let paineis = prefs.paineis();

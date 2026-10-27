@@ -145,7 +145,8 @@ fn sem_arquivo_vale_o_padrao_e_nada_e_gravado() {
             tema: Tema::Sistema,
             recentes: vec![],
             exportacao: OpcoesExportacao::default(),
-            aparencia: Aparencia::default()
+            aparencia: Aparencia::default(),
+            idioma: idioma::Escolha::Sistema,
         }
     );
     assert!(!arquivo.exists());
@@ -2316,4 +2317,77 @@ fn barra_status_escondida_por_padrao_grava_e_volta() {
         gravar_texto(&arquivo, &format!(r#"{{"tema": "dark", "barra_status": {valor}}}"#));
         assert!(!abrir(&arquivo).barra_status(), "{valor}");
     }
+}
+
+#[test]
+fn idioma_segue_o_sistema_por_padrao_grava_e_volta() {
+    use idioma::{Escolha, INGLES, PORTUGUES};
+    let tmp = PastaTemp::nova("idioma");
+    let arquivo = tmp.arquivo();
+    let p = abrir(&arquivo);
+    assert_eq!(p.idioma(), Escolha::Sistema, "seguir o sistema por padrão");
+    p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
+    assert!(!fs::read_to_string(&arquivo).unwrap().contains("idioma"), "a chave só entra depois da escolha");
+    p.atualizar(Mudanca::idioma(Escolha::Idioma(INGLES))).unwrap();
+    assert_eq!(p.idioma(), Escolha::Idioma(INGLES));
+    assert_eq!(json_lido(&arquivo).campo("idioma"), Some(&Json::Texto("en".into())));
+    assert_eq!(abrir(&arquivo).idioma(), Escolha::Idioma(INGLES), "outra instância lê o mesmo");
+    assert_eq!(p.resumo().idioma, Escolha::Idioma(INGLES));
+    assert_eq!(p.tema(), Tema::Escuro, "o resto fica como estava");
+    p.atualizar(Mudanca::idioma(Escolha::Idioma(PORTUGUES))).unwrap();
+    assert_eq!(json_lido(&arquivo).campo("idioma"), Some(&Json::Texto("pt-BR".into())));
+    // voltar a seguir o sistema grava "system" (a escolha fica no arquivo)
+    p.atualizar(Mudanca::idioma(Escolha::Sistema)).unwrap();
+    assert_eq!(json_lido(&arquivo).campo("idioma"), Some(&Json::Texto("system".into())));
+    assert_eq!(abrir(&arquivo).idioma(), Escolha::Sistema);
+}
+
+#[test]
+fn idioma_estranho_segue_o_sistema_e_fica_no_arquivo() {
+    use idioma::{Escolha, INGLES};
+    // o texto de um idioma que esta versão não tem (de um DataBox mais novo) segue o sistema e não se perde
+    let tmp = PastaTemp::nova("idioma-estranho");
+    let arquivo = tmp.arquivo();
+    gravar_texto(&arquivo, r#"{"tema": "dark", "idioma": "fr"}"#);
+    let p = abrir(&arquivo);
+    assert_eq!(p.idioma(), Escolha::Sistema);
+    p.atualizar(Mudanca::barra_status(true)).unwrap();
+    assert_eq!(json_lido(&arquivo).campo("idioma"), Some(&Json::Texto("fr".into())), "regravado como estava");
+    p.atualizar(Mudanca::idioma(Escolha::Idioma(INGLES))).unwrap();
+    assert_eq!(json_lido(&arquivo).campo("idioma"), Some(&Json::Texto("en".into())));
+    // um valor que não é texto conta como não escolhido (e some na próxima gravação)
+    for valor in ["1", "true", "null", "{}", "[\"en\"]", "\"\"", "\"English\""] {
+        let tmp = PastaTemp::nova("idioma-nao-texto");
+        let arquivo = tmp.arquivo();
+        gravar_texto(&arquivo, &format!(r#"{{"tema": "dark", "idioma": {valor}}}"#));
+        let p = abrir(&arquivo);
+        assert_eq!(p.idioma(), Escolha::Sistema, "{valor}");
+        assert_eq!(p.tema(), Tema::Escuro, "{valor}: o resto do arquivo vale");
+    }
+}
+
+/// O arquivo de uma 0.2.x (sem a chave `"idioma"`) abre como antes e segue o sistema; regravado, continua sem ela.
+#[test]
+fn arquivo_da_0_2_abre_sem_o_idioma() {
+    let tmp = PastaTemp::nova("idioma-0-2");
+    let arquivo = tmp.arquivo();
+    let antigo = serde_json::json!({
+        "versao": 1,
+        "tema": "light",
+        "exportacao": {"csv_separador": ",", "csv_decimal": ".", "json_indentado": false},
+        "ultimo_diretorio": null,
+        "recentes": [],
+        "historico_sql": {},
+        "aparencia": {"cores_codigo": "monokai", "fonte_codigo": null, "tamanho_codigo": 14.0},
+        "barra_status": true
+    });
+    gravar_texto(&arquivo, &serde_json::to_string_pretty(&antigo).unwrap());
+    let p = abrir(&arquivo);
+    assert_eq!(p.idioma(), idioma::Escolha::Sistema);
+    assert_eq!(p.tema(), Tema::Claro);
+    assert!(p.barra_status());
+    assert_eq!(p.exportacao().csv_separador, ',');
+    p.atualizar(Mudanca::tema(Tema::Escuro)).unwrap();
+    assert_eq!(json_lido(&arquivo).campo("idioma"), None);
+    assert_eq!(abrir(&arquivo).aparencia().cores_codigo, CoresCodigo::Monokai);
 }

@@ -95,7 +95,8 @@
 //!   [`pintura::RAIO_PADRAO`] (o raio único de 10 das superfícies e dos campos),
 //!   [`pintura::pintar_fundo`] (o fundo liso da janela) e as peças de antes com as cores do Estúdio
 //!   ([`pintura::anel_aqua`], [`pintura::anel_rebaixado`], [`pintura::brilho_topo`]).
-//! - [`formato`]: [`formato::formatar_numero`] ("5.000", "1,5"), [`formato::formatar_numero_com_casas`]`(n, min, max)`
+//! - [`formato`] (no idioma da interface, `idioma::atual()`; os exemplos são os do português, e no inglês saem
+//!   "1,234.56" e "2026-10-21"): [`formato::formatar_numero`] ("5.000", "1,5"), [`formato::formatar_numero_com_casas`]`(n, min, max)`
 //!   ("98.231,40"), [`formato::formatar_bytes`]
 //!   / [`formato::partes_bytes`] ("1,2 MB"), [`formato::formatar_bytes_em`], [`formato::formatar_data`]
 //!   ("22/09/2026 10:31"), [`formato::formatar_ms`] ("320 ms", o `tempo()` da Consulta SQL),

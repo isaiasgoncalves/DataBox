@@ -21,6 +21,21 @@ toolchain GNU e o MinGW da WinLibs, e **sempre** `.\cargo.ps1` no lugar de `carg
 ## Convenções
 
 - **Português** nos nomes, comentários, documentação, testes e textos da interface (frases inteiras).
+- **Todo texto para a pessoa passa pelo `t!`** (do crate `idioma`, desde a 0.3): `t!("Abrir pasta")`,
+  `t!("Gravado em {tabela}", tabela = nome)`, `tn!(n, "{n} linha", "{n} linhas")` para o plural e, num `const`,
+  `t_estatico!("…")` com `idioma::traduzir` na hora de mostrar. A chave é o próprio texto em português (o estilo do
+  gettext); a API e os exemplos estão no topo de `crates/idioma/src/lib.rs`. Vale para rótulos, dicas, mensagens,
+  nomes lidos pelo leitor de tela e frases de erro; não vale para o registro (`log::…`) nem para os pânicos.
+- **Texto novo entra também no inglês:** a mesma frase em `crates/idioma/idiomas/en.po` (`msgid` com o português,
+  `msgstr` com a tradução, os termos do [glossário](crates/idioma/glossario.md)). O CI roda o extrator
+  (`cargo run -p idioma --bin extrator`) e falha com a chave que falta no `en.po`; mudar uma frase em português muda
+  a chave, então a linha do `.po` muda junto. Os textos com espaço e acento fora do `t!` nas telas só avisam até a
+  varredura da 0.3 (I3); depois, falham (as exceções ficam em `ferramentas/idioma-excecoes.txt`).
+- **Um idioma novo** é um arquivo `crates/idioma/idiomas/<código>.po` (comece pelo `--pot` do extrator, que lista
+  todas as chaves, e traduza no Poedit ou no Weblate) e uma linha em `idioma::IDIOMAS`, com o nome no próprio
+  idioma e os formatos de número e data. O que faltar traduzir cai no inglês.
+- Nenhuma largura fixa pelo texto em português: botões, etiquetas, campos e colunas medem o texto (o inglês e os
+  outros idiomas são mais longos ou mais curtos).
 - Erros como `comum::ErroBanco`, com frase pronta para a pessoa; nada de `unwrap`/`expect` com dado da pessoa ou do
   arquivo fora dos testes.
 - A thread da interface nunca toca no disco nem no SQLite: use `estado::Promessa` (tarefa de fundo).
@@ -36,6 +51,7 @@ toolchain GNU e o MinGW da WinLibs, e **sempre** `.\cargo.ps1` no lugar de `carg
 ```powershell
 .\cargo.ps1 fmt --all
 .\cargo.ps1 clippy --workspace --all-targets '--' -D warnings
+.\cargo.ps1 run -q -p idioma --bin extrator '--' --so-avisar
 .\cargo.ps1 test --workspace --exclude editor --exclude interface --exclude 'tela_*'
 .\cargo.ps1 test -p editor -p interface -p 'tela_*' '--' --test-threads=1
 .\cargo.ps1 test -p editor --no-default-features '--' --test-threads=1

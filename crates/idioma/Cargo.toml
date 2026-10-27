@@ -1,0 +1,20 @@
+[package]
+name = "idioma"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sys-locale = { workspace = true }
+
+# O extrator dos textos (o CI roda com `cargo run -p idioma --bin extrator`): mora em ferramentas/, como o
+# vincular.rs, e só usa a biblioteca padrão e o analisador do .po deste crate (idioma::po).
+[[bin]]
+name = "extrator"
+path = "../../ferramentas/idioma.rs"
+test = true
+doc = false
+
+[lints]
+workspace = true

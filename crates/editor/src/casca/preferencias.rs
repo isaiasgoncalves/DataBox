@@ -7,8 +7,10 @@
 //! **As seções** (a navegação à esquerda, nós de [`No::lateral`] com o sólido de 20px; o `selected` do AccessKit marca a
 //! que está à vista), só com opções que o app já sabe fazer:
 //! - **Geral**: limpar a lista de "Abertos recentemente".
-//! - **Aparência**: o tema (Seguir o Windows, Claro, Escuro), as quatro "cores do código" (cartas com a amostra de três
-//!   linhas no realce de verdade) e a fonte do código (a família entre as que existem na máquina e o tamanho).
+//! - **Aparência**: o tema (Seguir o Windows, Claro, Escuro), o idioma (Seguir o sistema, com o idioma que ele dá entre
+//!   parênteses, e cada idioma de [`idioma::IDIOMAS`] com o nome no próprio idioma; prancheta "Preferências com o
+//!   idioma"), as quatro "cores do código" (cartas com a amostra de três linhas no realce de verdade) e a fonte do
+//!   código (a família entre as que existem na máquina e o tamanho).
 //! - **Consulta SQL**: limpar o histórico de comandos.
 //! - **Exportação**: as opções que a janela Exportar guarda (separador, decimal, cabeçalho, proteção de fórmulas,
 //!   JSON indentado).
@@ -19,10 +21,11 @@
 //!
 //! **Vale na hora**: ao abrir, a janela guarda o retrato do que valia (o tema, a
 //! aparência do código em vigor e as opções de exportação). Cada mudança aplica na hora, por [`Efeito`]s que o editor
-//! cumpre (o tema por `tema::aplicar` e pelo `SetTheme` do egui, as cores e o tamanho por `codigo::definir`, a fonte
-//! numa `Promessa` que lê o arquivo, seguida de `fontes::trocar_mono`). Nada é gravado até o Salvar. Cancelar, Esc, o ×
+//! cumpre (o tema por `tema::aplicar` e pelo `SetTheme` do egui, o idioma por `idioma::definir`, as cores e o tamanho
+//! por `codigo::definir`, a fonte numa `Promessa` que lê o arquivo, seguida de `fontes::trocar_mono`). Nada é gravado até o Salvar. Cancelar, Esc, o ×
 //! e o clique no fundo reaplicam o retrato e fecham. O Salvar só liga quando algo difere do retrato e grava só o que
-//! mudou (a chave `"aparencia"` só entra no arquivo depois de a pessoa escolher alguma coisa nela). As duas limpezas
+//! mudou (a chave `"aparencia"` só entra no arquivo depois de a pessoa escolher alguma coisa nela, e a `"idioma"` só
+//! depois de escolher o idioma). As duas limpezas
 //! (recentes e histórico) são ações do Salvar: o botão marca a limpeza, que o Cancelar desfaz. "Restaurar o padrão"
 //! mexe só na seção visível.
 
@@ -31,6 +34,7 @@ use egui::{
     WidgetType, pos2, vec2,
 };
 use estado::{Estado, Promessa};
+use idioma::t;
 use interface::codigo::{self, CoresCodigo as CoresDoInterface};
 use interface::fontes::{self, Peso};
 use interface::icones::Icone;
@@ -87,8 +91,8 @@ const DICA_FECHAR: &str = "Fechar sem salvar (Esc): desfaz o que você mudou";
 const DICA_CANCELAR: &str = "Volta ao que estava quando a janela abriu (Esc)";
 const DICA_SALVAR: &str = "As mudanças já valem na hora; Salvar guarda para as próximas aberturas";
 const DICA_SALVAR_DESLIGADO: &str = "Nenhuma mudança para salvar";
-const DICA_RESTAURAR_APARENCIA: &str =
-    "Restaura o padrão só desta seção (Aparência): seguir o Windows, cores DataBox, Consolas 12,5 px";
+const DICA_RESTAURAR_APARENCIA: &str = "Restaura o padrão só desta seção (Aparência): seguir o Windows, o idioma do \
+                                         sistema, cores DataBox, Consolas 12,5 px";
 const DICA_RESTAURAR_EXPORTACAO: &str = "Restaura o padrão só desta seção (Exportação): separador ponto e vírgula, \
                                          decimal vírgula, primeira linha com os nomes, proteção de fórmulas e JSON \
                                          indentado";
@@ -143,6 +147,7 @@ impl Secao {
 #[derive(Debug, Clone, PartialEq)]
 struct Valores {
     tema: prefs::Tema,
+    idioma: idioma::Escolha,
     cores: CoresCodigo,
     /// None = a família padrão (Consolas).
     familia: Option<String>,
@@ -166,6 +171,7 @@ impl Valores {
         let e = &estado.prefs.exportacao;
         Valores {
             tema: crate::app::tema_das_prefs(tema),
+            idioma: estado.prefs.idioma,
             cores: CoresCodigo::de_texto(a.cores.como_str()).unwrap_or_default(),
             familia: normalizar_familia(a.familia),
             tamanho: a.tamanho,
@@ -177,9 +183,10 @@ impl Valores {
         }
     }
 
-    /// O padrão da Aparência: seguir o Windows, cores DataBox, Consolas 12,5 px.
+    /// O padrão da Aparência: seguir o Windows, o idioma do sistema, cores DataBox, Consolas 12,5 px.
     fn restaurar_aparencia(&mut self) {
         self.tema = prefs::Tema::Sistema;
+        self.idioma = idioma::Escolha::Sistema;
         self.cores = CoresCodigo::DataBox;
         self.familia = None;
         self.tamanho = TAMANHO_CODIGO_PADRAO;
@@ -212,6 +219,8 @@ impl Valores {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Efeito {
     Tema(prefs::Tema),
+    /// O idioma da interface (a escolha; o editor resolve "seguir o sistema" e chama o `idioma::definir`).
+    Idioma(idioma::Escolha),
     Cores(CoresCodigo),
     /// None = a família padrão.
     Fonte(Option<String>),
@@ -223,6 +232,9 @@ fn diferencas(de: &Valores, para: &Valores) -> Vec<Efeito> {
     let mut efeitos = Vec::new();
     if de.tema != para.tema {
         efeitos.push(Efeito::Tema(para.tema));
+    }
+    if de.idioma != para.idioma {
+        efeitos.push(Efeito::Idioma(para.idioma));
     }
     if de.cores != para.cores {
         efeitos.push(Efeito::Cores(para.cores));
@@ -352,6 +364,7 @@ impl JanelaPreferencias {
     pub(crate) fn gravacao(&self) -> Gravacao {
         let (r, a) = (&self.retrato, &self.atual);
         let tema = (r.tema != a.tema).then_some(a.tema);
+        let idioma = (r.idioma != a.idioma).then_some(a.idioma);
         let aparencia = (!r.aparencia_igual(a)).then(|| MudancaAparencia {
             cores_codigo: Some(a.cores),
             fonte_codigo: Some(a.familia.clone()),
@@ -365,7 +378,7 @@ impl JanelaPreferencias {
             csv_proteger_formulas: (r.proteger_formulas != a.proteger_formulas).then_some(a.proteger_formulas),
         });
         Gravacao {
-            mudanca: Mudanca { tema, exportacao, aparencia, ..Mudanca::default() },
+            mudanca: Mudanca { tema, exportacao, aparencia, idioma, ..Mudanca::default() },
             limpar_recentes: self.limpar_recentes,
             limpar_historico: self.limpar_historico,
         }
@@ -552,6 +565,27 @@ impl JanelaPreferencias {
             },
         );
 
+        // o idioma: a lista de ponta a ponta da coluna do controle (P7)
+        let escolhas = rotulos_dos_idiomas(idioma::do_sistema());
+        let opcoes_idioma: Vec<(idioma::Escolha, &str)> = escolhas.iter().map(|(e, r)| (*e, r.as_str())).collect();
+        let mut escolha = atual.idioma;
+        let ajuda_idioma = t!("Menus, janelas e mensagens; os números e as datas seguem o idioma.");
+        linha_da_secao(
+            ui,
+            "idioma",
+            &t!("Idioma"),
+            Some(&ajuda_idioma),
+            &Opcoes { altura_controle: 28.0, ..Opcoes::PADRAO },
+            |ui| {
+                let largura = ui.available_width();
+                Select::new(id.with("idioma"), &mut escolha, &opcoes_idioma)
+                    .rotulo(&t!("Idioma"))
+                    .largura(largura)
+                    .mostrar(ui);
+            },
+        );
+        atual.idioma = escolha;
+
         // as quatro cartas das cores do código
         linha_da_secao(
             ui,
@@ -653,6 +687,23 @@ fn contagem_de_recentes(recentes: &[prefs::Recente]) -> String {
             format!("{} itens na lista: {} e {ultima}", formatar_numero(recentes.len()), antes.join(", "))
         }
     }
+}
+
+/// As opções do Idioma: "Seguir o sistema (Português)", com o idioma que o sistema dá agora, e cada idioma pelo nome
+/// no próprio idioma ("Português (Brasil)", "English"), que não se traduz.
+pub(crate) fn rotulos_dos_idiomas(do_sistema: idioma::Idioma) -> Vec<(idioma::Escolha, String)> {
+    idioma::Escolha::todas()
+        .into_iter()
+        .map(|e| {
+            let rotulo = match e {
+                idioma::Escolha::Sistema => {
+                    t!("Seguir o sistema ({idioma})", idioma = do_sistema.nome_curto()).into_owned()
+                }
+                idioma::Escolha::Idioma(i) => i.nome().to_string(),
+            };
+            (e, rotulo)
+        })
+        .collect()
 }
 
 /// Os tamanhos da fonte com o texto de cada um ("12,5 px"); o tamanho de agora entra se não for um deles (um valor
@@ -923,6 +974,7 @@ mod testes {
     fn valores() -> Valores {
         Valores {
             tema: prefs::Tema::Sistema,
+            idioma: idioma::Escolha::Sistema,
             cores: CoresCodigo::DataBox,
             familia: None,
             tamanho: TAMANHO_CODIGO_PADRAO,
@@ -971,9 +1023,16 @@ mod testes {
         assert!(g.mudanca.exportacao.is_none());
 
         let mut j = janela();
+        j.atual.idioma = idioma::Escolha::Idioma(idioma::INGLES);
+        let g = j.gravacao();
+        assert_eq!(g.mudanca.idioma, Some(idioma::Escolha::Idioma(idioma::INGLES)));
+        assert_eq!((g.mudanca.tema, g.mudanca.aparencia), (None, None), "o idioma não leva a aparência");
+
+        let mut j = janela();
         j.atual.tamanho = 14.0;
         let g = j.gravacao();
         assert_eq!(g.mudanca.tema, None);
+        assert_eq!(g.mudanca.idioma, None, "a chave idioma só entra depois da escolha");
         let aparencia = g.mudanca.aparencia.expect("aparência");
         assert_eq!(aparencia.tamanho_codigo, Some(14.0));
         assert_eq!(aparencia.fonte_codigo, Some(None), "a família padrão grava como None");
@@ -1004,6 +1063,7 @@ mod testes {
     fn diferencas_na_ordem_e_cancelar_volta_ao_retrato() {
         let mut j = janela();
         j.atual.tema = prefs::Tema::Claro;
+        j.atual.idioma = idioma::Escolha::Idioma(idioma::PORTUGUES);
         j.atual.cores = CoresCodigo::Monokai;
         j.atual.familia = Some("Courier New".into());
         j.atual.tamanho = 16.0;
@@ -1011,6 +1071,7 @@ mod testes {
             diferencas(&j.retrato, &j.atual),
             [
                 Efeito::Tema(prefs::Tema::Claro),
+                Efeito::Idioma(idioma::Escolha::Idioma(idioma::PORTUGUES)),
                 Efeito::Cores(CoresCodigo::Monokai),
                 Efeito::Fonte(Some("Courier New".into())),
                 Efeito::Tamanho(16.0)
@@ -1020,6 +1081,7 @@ mod testes {
             diferencas(&j.atual, &j.retrato),
             [
                 Efeito::Tema(prefs::Tema::Sistema),
+                Efeito::Idioma(idioma::Escolha::Sistema),
                 Efeito::Cores(CoresCodigo::DataBox),
                 Efeito::Fonte(None),
                 Efeito::Tamanho(12.5)
@@ -1032,14 +1094,30 @@ mod testes {
     fn restaurar_so_mexe_na_secao() {
         let mut v = valores();
         v.tema = prefs::Tema::Escuro;
+        v.idioma = idioma::Escolha::Idioma(idioma::INGLES);
         v.tamanho = 16.0;
         v.separador = '\t';
         v.cabecalho = false;
         v.restaurar_aparencia();
-        assert_eq!((v.tema, v.tamanho), (prefs::Tema::Sistema, 12.5));
+        assert_eq!((v.tema, v.idioma, v.tamanho), (prefs::Tema::Sistema, idioma::Escolha::Sistema, 12.5));
         assert_eq!((v.separador, v.cabecalho), ('\t', false), "a exportação ficou");
         v.restaurar_exportacao();
         assert_eq!(v, valores());
+    }
+
+    #[test]
+    fn idiomas_seguir_o_sistema_e_os_nomes_no_proprio_idioma() {
+        let rotulos = |sistema| -> Vec<String> { rotulos_dos_idiomas(sistema).into_iter().map(|(_, r)| r).collect() };
+        idioma::com_idioma(idioma::PORTUGUES, || {
+            assert_eq!(rotulos(idioma::PORTUGUES), ["Seguir o sistema (Português)", "Português (Brasil)", "English"]);
+            assert_eq!(rotulos(idioma::INGLES)[0], "Seguir o sistema (English)");
+        });
+        idioma::com_idioma(idioma::INGLES, || {
+            assert_eq!(rotulos(idioma::PORTUGUES), ["Follow the system (Português)", "Português (Brasil)", "English"]);
+        });
+        let escolhas: Vec<idioma::Escolha> =
+            rotulos_dos_idiomas(idioma::PORTUGUES).into_iter().map(|(e, _)| e).collect();
+        assert_eq!(escolhas, idioma::Escolha::todas());
     }
 
     #[test]

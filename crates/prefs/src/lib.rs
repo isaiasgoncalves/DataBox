@@ -17,6 +17,7 @@
 //!     pub fn lugares(&self) -> LugaresPaineis   // onde mora cada painel; None = o padrão da casca
 //!     pub fn pasta_aberta(&self) -> Option<String>   // a pasta que estava aberta; None = nenhuma
 //!     pub fn barra_status(&self) -> bool        // a barra de status à vista (Exibir › Barra de status); padrão false
+//!     pub fn idioma(&self) -> idioma::Escolha   // o idioma da interface; padrão (e valor desconhecido) = Sistema
 //!     pub fn ultimo_diretorio(&self) -> Option<String>
 //!     pub fn atualizar(&self, mudanca: Mudanca) -> Resultado<()>   // ErroBanco 400 com a frase
 //!     pub fn recentes(&self) -> Vec<Recente>    // até 15 (bancos, pastas, arquivos), o mais recente primeiro; consulta os arquivos agora
@@ -54,9 +55,9 @@
 //!     ultimo_diretorio: Option<Option<PathBuf>>,    // None = não mexe; Some(None) = apaga
 //!     aparencia: Option<MudancaAparencia>, paineis: Option<MudancaLarguraPaineis>, lugares: Option<LugaresPaineis>,
 //!     pasta_aberta: Option<Option<PathBuf>>,        // None = não mexe; Some(None) = apaga a chave
-//!     barra_status: Option<bool> }
+//!     barra_status: Option<bool>, idioma: Option<idioma::Escolha> }
 //!     Mudanca::tema(t) / ::exportacao(m) / ::ultimo_diretorio(p) / ::aparencia(m) / ::paineis(m) / ::lugares(l)
-//!     / ::pasta_aberta(p) / ::barra_status(b)
+//!     / ::pasta_aberta(p) / ::barra_status(b) / ::idioma(e)
 //!     e Default
 //! pub enum TipoRecente { Banco, Pasta, Arquivo }  // como_str()/Display: "banco" | "pasta" | "arquivo"; Default = Banco
 //!     TipoRecente::TODOS; TipoRecente::de_texto(&str) -> Resultado<TipoRecente> (e FromStr):
@@ -69,7 +70,8 @@
 //! pub enum ResultadoSql { Linhas { quantidade: u64, mais: bool }, Alteradas(u64), Executado,
 //!     Erro { numero: u32, mensagem: String }, Interrompida { numero: u32 } }
 //!     // ResultadoSql::erro(numero, &str) corta a mensagem
-//! pub struct PrefsInfo { tema: Tema, recentes: Vec<Recente>, exportacao: OpcoesExportacao, aparencia: Aparencia }
+//! pub struct PrefsInfo { tema: Tema, recentes: Vec<Recente>, exportacao: OpcoesExportacao, aparencia: Aparencia,
+//!     idioma: idioma::Escolha }
 //! pub fn arquivo_padrao() -> PathBuf            // %APPDATA%\DataBox\preferencias.json (sem APPDATA, a pasta pessoal)
 //! pub fn caminho_exibido(p) -> String           // absoluto e normalizado, com a caixa como veio
 //! pub fn chave_caminho(p) -> String             // a chave de comparação de caminhos (sem caixa nem barra)
@@ -142,6 +144,11 @@
 //! - **A barra de status** (revisão de 20/10/2026: escondida por padrão) fica na chave `"barra_status"`, depois de
 //!   `"pasta_aberta"`: `true` com ela à vista. A chave só é gravada na primeira mudança com `barra_status`; sem ela,
 //!   ou com um valor que não é booleano, a barra fica escondida.
+//! - **O idioma da interface** (P7, 0.3) fica na chave `"idioma"`, depois de `"barra_status"`: `"system"` (seguir o
+//!   sistema) ou o código de um idioma (`"pt-BR"`, `"en"`). A chave só é gravada na primeira mudança com `idioma`;
+//!   sem ela, segue o sistema. Um texto que esta versão não conhece (o `"fr"` de um DataBox mais novo) também segue o
+//!   sistema, mas fica no arquivo como estava até a pessoa escolher de novo; um valor que não é texto conta como não
+//!   escolhido.
 //! - **As larguras dos painéis** (as divisórias do Explorador e das Propriedades) ficam na chave
 //!   `"larguras_paineis"`, depois da `"aparencia"`: `{"explorador": 300, "propriedades": 272}` (pontos inteiros;
 //!   cada uma só existe depois que a pessoa a muda). A chave só é gravada na primeira mudança com `paineis`; sem
@@ -489,9 +496,15 @@ pub struct Mudanca {
     pub pasta_aberta: Option<Option<PathBuf>>,
     /// Some grava a chave `"barra_status"` (a barra de status à vista ou não); None não mexe.
     pub barra_status: Option<bool>,
+    /// Some grava a chave `"idioma"` (seguir o sistema ou um idioma); None não mexe.
+    pub idioma: Option<idioma::Escolha>,
 }
 
 impl Mudanca {
+    pub fn idioma(escolha: idioma::Escolha) -> Mudanca {
+        Mudanca { idioma: Some(escolha), ..Mudanca::default() }
+    }
+
     pub fn barra_status(a_vista: bool) -> Mudanca {
         Mudanca { barra_status: Some(a_vista), ..Mudanca::default() }
     }
@@ -700,6 +713,7 @@ pub struct PrefsInfo {
     pub recentes: Vec<Recente>,
     pub exportacao: OpcoesExportacao,
     pub aparencia: Aparencia,
+    pub idioma: idioma::Escolha,
 }
 
 /// O nome do arquivo, o mesmo nas duas versões.
@@ -816,7 +830,7 @@ impl Exportacao {
 type Extras = Vec<(String, Json)>;
 
 /// As chaves do arquivo que esta versão conhece; as outras ficam em [`Dados::extras`].
-const CHAVES_DO_ARQUIVO: [&str; 11] = [
+const CHAVES_DO_ARQUIVO: [&str; 12] = [
     "versao",
     "tema",
     "exportacao",
@@ -828,6 +842,7 @@ const CHAVES_DO_ARQUIVO: [&str; 11] = [
     "lugares_paineis",
     "pasta_aberta",
     "barra_status",
+    "idioma",
 ];
 /// As chaves de cada recente que esta versão conhece; as outras ficam em [`RecenteGuardado::extras`].
 const CHAVES_DO_RECENTE: [&str; 2] = ["caminho", "aberto_em"];
@@ -1061,6 +1076,9 @@ struct Dados {
     pasta_aberta: Option<String>,
     /// A barra de status à vista; None enquanto a pessoa não mudar (sem a chave no arquivo: escondida).
     barra_status: Option<bool>,
+    /// O idioma como está no arquivo ("system", "pt-BR", "en" ou o código de um idioma que esta versão não tem);
+    /// None enquanto a pessoa não escolher (sem a chave no arquivo).
+    idioma: Option<String>,
     /// As chaves do arquivo que esta versão não conhece (gravadas por uma versão mais nova).
     extras: Extras,
 }
@@ -1083,6 +1101,7 @@ impl Dados {
             lugares: None,
             pasta_aberta: None,
             barra_status: None,
+            idioma: None,
             extras: Extras::new(),
         }
     }
@@ -1146,6 +1165,9 @@ impl Dados {
         }
         if let Some(b) = self.barra_status {
             pares.push(("barra_status".to_string(), Json::Bool(b)));
+        }
+        if let Some(idioma) = &self.idioma {
+            pares.push(("idioma".to_string(), Json::Texto(idioma.clone())));
         }
         pares.extend(self.extras.iter().cloned());
         Json::Objeto(pares)
@@ -1249,6 +1271,10 @@ fn sanear(bruto: &Json, max_bancos: usize) -> Result<Dados, String> {
     // uma "barra_status" que não é booleana conta como não escolhida
     if let Some(Json::Bool(b)) = bruto.campo("barra_status") {
         dados.barra_status = Some(*b);
+    }
+    // um "idioma" que não é texto conta como não escolhido; o texto fica como veio (ver Preferencias::idioma)
+    if let Some(idioma) = bruto.campo("idioma").and_then(Json::como_texto) {
+        dados.idioma = Some(idioma.to_string());
     }
     Ok(dados)
 }
@@ -1702,7 +1728,15 @@ impl Preferencias {
         self.dados_atuais(&mut est).barra_status.unwrap_or(false)
     }
 
-    /// Muda tema, exportação, última pasta, aparência, larguras dos painéis, pasta aberta e/ou a barra de status (None
+    /// O idioma da interface escolhido nas Preferências: seguir o sistema enquanto a pessoa não escolher, e também
+    /// quando o arquivo tem um idioma que esta versão não conhece.
+    pub fn idioma(&self) -> idioma::Escolha {
+        let mut est = self.travar_estado();
+        self.dados_atuais(&mut est).idioma.as_deref().and_then(idioma::Escolha::de_texto).unwrap_or_default()
+    }
+
+    /// Muda tema, exportação, última pasta, aparência, larguras dos painéis, pasta aberta, a barra de status e/ou o
+    /// idioma (None
     /// em cada campo deixa como está).
     ///
     /// `exportacao`, `aparencia` e `paineis` são mescladas às guardadas. Separador fora de [`SEPARADORES_CSV`] /
@@ -1716,8 +1750,17 @@ impl Preferencias {
     /// aberta: `pasta_aberta: Some(Some(p))` a grava (o caminho absoluto, sem conferir o disco) e `Some(None)` a
     /// apaga; caminho vazio → ErroBanco 400 ("A pasta aberta precisa ser um caminho."), sem gravar nada.
     pub fn atualizar(&self, mudanca: Mudanca) -> Resultado<()> {
-        let Mudanca { tema, exportacao, ultimo_diretorio, aparencia, paineis, lugares, pasta_aberta, barra_status } =
-            mudanca;
+        let Mudanca {
+            tema,
+            exportacao,
+            ultimo_diretorio,
+            aparencia,
+            paineis,
+            lugares,
+            pasta_aberta,
+            barra_status,
+            idioma,
+        } = mudanca;
         if let Some(t) = aparencia.as_ref().and_then(|m| m.tamanho_codigo)
             && !tamanho_codigo_valido(f64::from(t))
         {
@@ -1813,6 +1856,9 @@ impl Preferencias {
             }
             if let Some(b) = barra_status {
                 dados.barra_status = Some(b);
+            }
+            if let Some(e) = idioma {
+                dados.idioma = Some(e.como_str().to_string());
             }
             true
         });
@@ -1988,6 +2034,7 @@ impl Preferencias {
             recentes: self.recentes(),
             exportacao: self.exportacao(),
             aparencia: self.aparencia(),
+            idioma: self.idioma(),
         }
     }
 }

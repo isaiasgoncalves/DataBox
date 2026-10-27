@@ -264,6 +264,61 @@ fn salvar_grava_e_fecha() {
     assert!(!salvar_ligado(&h));
 }
 
+/// O Idioma (P7): ao lado do Tema, vale na hora (o rótulo da linha já sai no idioma novo), o Cancelar volta ao
+/// sistema e o Salvar grava a chave `"idioma"`. O idioma desta thread fica isolado do global (`com_idioma`): os
+/// outros testes do binário continuam em português.
+#[test]
+fn idioma_vale_na_hora_cancelar_volta_e_salvar_grava() {
+    use idioma::{Escolha, INGLES, PORTUGUES};
+    idioma::com_idioma(PORTUGUES, || {
+        let amb = Ambiente::exemplo("pref_idioma");
+        let mut h = harness(&amb);
+        abrir_preferencias(&mut h);
+        ir_para_secao(&mut h, "Aparência");
+        // logo depois do Tema, com o idioma que o sistema dá entre parênteses
+        assert!(rect_de(&h, Role::ComboBox, "Idioma").top() > rect_de(&h, Role::Button, "Escuro").bottom());
+        let sistema = format!("Seguir o sistema ({})", idioma::do_sistema().nome_curto());
+        assert!(tem_texto(&h, &sistema), "{sistema}");
+        assert!(tem_texto(&h, "Menus, janelas e mensagens; os números e as datas seguem o idioma."));
+
+        escolher_opcao(&mut h, "Idioma", "English");
+        h.run_steps(2);
+        assert_eq!(idioma::atual(), INGLES, "vale na hora");
+        assert!(existe(&h, Role::ComboBox, "Language"), "o rótulo do t! já em inglês");
+        assert!(salvar_ligado(&h));
+        assert_eq!(amb.servico.prefs().idioma(), Escolha::Sistema, "nada é gravado até o Salvar");
+        clicar_botao(&mut h, "Cancelar");
+        h.run_steps(3);
+        assert!(!preferencias_abertas(&h));
+        assert_eq!(idioma::atual(), idioma::do_sistema(), "o Cancelar volta a seguir o sistema");
+        assentar(&mut h);
+        assert!(!prefs_texto(&amb).contains("\"idioma\""), "sem a chave enquanto a pessoa não salva");
+
+        // de novo, agora com o Português (Brasil) e o Salvar
+        idioma::definir(PORTUGUES);
+        abrir_preferencias(&mut h);
+        ir_para_secao(&mut h, "Aparência");
+        escolher_opcao(&mut h, "Idioma", "Português (Brasil)");
+        assert_eq!(idioma::atual(), PORTUGUES);
+        clicar_ligado(&mut h, "Salvar");
+        assentar(&mut h);
+        assert!(!preferencias_abertas(&h));
+        assert_eq!(prefs_lidas(&amb).idioma(), Escolha::Idioma(PORTUGUES));
+        assert!(prefs_texto(&amb).contains("\"idioma\": \"pt-BR\""), "{}", prefs_texto(&amb));
+        assert_eq!(h.state().estado().prefs.idioma, Escolha::Idioma(PORTUGUES));
+        // reaberta, o retrato é o de agora; o Restaurar o padrão volta a seguir o sistema
+        abrir_preferencias(&mut h);
+        ir_para_secao(&mut h, "Aparência");
+        assert!(!salvar_ligado(&h));
+        clicar_botao(&mut h, "Restaurar o padrão");
+        h.run_steps(2);
+        assert_eq!(idioma::atual(), idioma::do_sistema());
+        h.key_press(Key::Escape);
+        h.run_steps(3);
+        assert_eq!(idioma::atual(), PORTUGUES, "o Esc volta ao que valia na abertura");
+    });
+}
+
 #[test]
 fn salvar_so_o_tema_nao_cria_a_chave_aparencia() {
     let amb = Ambiente::exemplo("pref_so_tema");

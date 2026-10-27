@@ -8,29 +8,73 @@
 //! `Servico::alvo_do_caminho`, como o caminho digitado no Início).
 //!
 //! O executável não tem console (`windows_subsystem = "windows"`): a ajuda, a versão e os erros de argumento
-//! aparecem numa caixa de mensagem (quem mostra é o `main`).
+//! aparecem numa caixa de mensagem (quem mostra é o `main`). Os três saem no idioma da interface (o das preferências
+//! ou o do sistema, que o `main` define antes de mostrar), com o nome do executável que a pessoa chamou
+//! ([`executavel`]).
 
 use std::ffi::{OsStr, OsString};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+use idioma::t;
+
+/// O nome do executável quando o sistema não diz: "DataBox.exe" no Windows, "DataBox" fora.
+pub const EXECUTAVEL_PADRAO: &str = if cfg!(windows) { "DataBox.exe" } else { "DataBox" };
+
+/// O nome que a ajuda mostra: o do AppImage (`APPIMAGE`), senão o do próprio executável, senão
+/// [`EXECUTAVEL_PADRAO`].
+pub fn executavel(appimage: Option<&OsStr>, exe: Option<&Path>) -> String {
+    appimage
+        .map(Path::new)
+        .or(exe)
+        .and_then(Path::file_name)
+        .map(|n| n.to_string_lossy().into_owned())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| EXECUTAVEL_PADRAO.to_string())
+}
 
 /// A linha de uso (a primeira linha da ajuda e de todo erro de argumento). O `--renderizador glow|wgpu` continua
 /// aceito, mas fica fora da ajuda: é a reserva que o próprio executável usa quando o OpenGL não abre.
-pub const USO: &str = "Uso: DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]";
+pub fn uso(executavel: &str) -> String {
+    t!(
+        "Uso: {executavel} [caminho] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]",
+        executavel = executavel
+    )
+    .into_owned()
+}
 
-/// O texto da ajuda (`-h`, `--ajuda`, `--help`); a descrição é a do Sobre.
-pub const AJUDA: &str = "Uso: DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--criar-atalho]
-
-Toolkit de dados gratuito e aberto para desenvolvedores, cientistas e engenheiros de dados.
-
-Argumentos:
-  caminho              pasta, banco SQLite ou arquivo de dados para abrir ao iniciar
-
-Opções:
-  --somente-leitura    abre o banco sem permitir gravação
-  --moldura-do-sistema usa a barra de título e as bordas do sistema no lugar das do DataBox
-  --criar-atalho       cria o atalho \"DataBox\" na Área de Trabalho e no Menu Iniciar e sai
-  -h, --ajuda          mostra esta ajuda e sai
-  --versao             mostra a versão e sai";
+/// O texto da ajuda (`-h`, `--help`, `--ajuda`); a descrição é a do Sobre. Os nomes principais são os que quem lê
+/// inglês espera (`--help`, `--version`, PO9 da revisão de 26/10/2026); `--ajuda` e `--versao` continuam valendo.
+pub fn ajuda(executavel: &str) -> String {
+    let atalho = if cfg!(windows) {
+        t!("cria o atalho \"DataBox\" na Área de Trabalho e no Menu Iniciar e sai")
+    } else {
+        t!("cria o atalho \"DataBox\" no menu de aplicativos e sai")
+    };
+    let opcoes = [
+        ("--somente-leitura", t!("abre o banco sem permitir gravação")),
+        ("--moldura-do-sistema", t!("usa a barra de título e as bordas do sistema no lugar das do DataBox")),
+        ("--criar-atalho", atalho),
+        ("-h, --help", t!("mostra esta ajuda e sai (também --ajuda)")),
+        ("--version", t!("mostra a versão e sai (também --versao)")),
+    ];
+    let argumento = t!("caminho");
+    // a coluna das descrições: a opção mais longa (ou o "caminho" traduzido) e dois espaços
+    let largura =
+        opcoes.iter().map(|(o, _)| o.chars().count()).chain([argumento.chars().count()]).max().unwrap_or(0) + 2;
+    let mut texto = format!(
+        "{}\n\n{}\n\n{}\n  {:<largura$}{}\n\n{}",
+        uso(executavel),
+        t!("Toolkit de dados gratuito e aberto para desenvolvedores, cientistas e engenheiros de dados."),
+        t!("Argumentos:"),
+        argumento,
+        t!("pasta, banco SQLite ou arquivo de dados para abrir ao iniciar"),
+        t!("Opções:"),
+    );
+    for (opcao, descricao) in opcoes {
+        texto.push_str(&format!("\n  {opcao:<largura$}{descricao}"));
+    }
+    texto
+}
 
 /// Como a janela é desenhada.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -79,28 +123,43 @@ pub struct Argumentos {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Comando {
     Executar(Argumentos),
-    /// `-h`, `--ajuda`, `--help`: mostra [`AJUDA`] e sai.
+    /// `-h`, `--help`, `--ajuda`: mostra a [`ajuda`] e sai.
     Ajuda,
     /// `--versao`, `--version`: mostra "DataBox 0.2.4" e sai.
     Versao,
 }
 
-/// Argumento que não foi entendido.
+/// Argumento que não foi entendido. A frase sai no idioma de quando é mostrada: a leitura dos argumentos vem antes de
+/// o `main` saber o idioma das preferências.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ErroArgumentos {
-    /// A frase do problema, sem o uso ("opção desconhecida: --x").
-    pub mensagem: String,
+pub enum ErroArgumentos {
+    /// Dois caminhos (o primeiro e o segundo).
+    DoisCaminhos(String, String),
+    RenderizadorSemValor,
+    RenderizadorDesconhecido(String),
+    OpcaoDesconhecida(String),
 }
 
 impl ErroArgumentos {
-    /// O texto para a pessoa: o uso e a frase.
-    pub fn texto(&self) -> String {
-        format!("{USO}\nArgumentos inválidos: {}.", self.mensagem)
+    /// A frase do problema, sem o uso ("opção desconhecida: --x").
+    pub fn mensagem(&self) -> String {
+        match self {
+            ErroArgumentos::DoisCaminhos(a, b) => {
+                t!("só um caminho pode ser aberto ao iniciar (recebi {a} e {b})", a = a, b = b)
+            }
+            ErroArgumentos::RenderizadorSemValor => t!("--renderizador precisa de um valor: glow ou wgpu"),
+            ErroArgumentos::RenderizadorDesconhecido(v) => {
+                t!("renderizador desconhecido: '{valor}' (use glow ou wgpu)", valor = v)
+            }
+            ErroArgumentos::OpcaoDesconhecida(o) => t!("opção desconhecida: {opcao}", opcao = o),
+        }
+        .into_owned()
     }
-}
 
-fn erro(mensagem: impl Into<String>) -> ErroArgumentos {
-    ErroArgumentos { mensagem: mensagem.into() }
+    /// O texto para a pessoa: o uso e a frase.
+    pub fn texto(&self, executavel: &str) -> String {
+        format!("{}\n{}", uso(executavel), t!("Argumentos inválidos: {mensagem}.", mensagem = self.mensagem()))
+    }
 }
 
 /// Lê os argumentos (sem o nome do programa).
@@ -115,11 +174,7 @@ pub fn analisar(argv: &[OsString]) -> Result<Comando, ErroArgumentos> {
         let texto = bruto.to_string_lossy();
         if so_posicionais || !texto.starts_with('-') || texto == "-" {
             if let Some(primeiro) = &caminho {
-                return Err(erro(format!(
-                    "só um caminho pode ser aberto ao iniciar (recebi {} e {})",
-                    primeiro.to_string_lossy(),
-                    texto
-                )));
+                return Err(ErroArgumentos::DoisCaminhos(primeiro.to_string_lossy().into_owned(), texto.into_owned()));
             }
             caminho = Some(bruto.clone());
             continue;
@@ -141,13 +196,13 @@ pub fn analisar(argv: &[OsString]) -> Result<Comando, ErroArgumentos> {
                     None => {
                         let proximo = argv.get(i).map(|v| v.to_string_lossy().to_string());
                         i += 1;
-                        proximo.ok_or_else(|| erro("--renderizador precisa de um valor: glow ou wgpu"))?
+                        proximo.ok_or(ErroArgumentos::RenderizadorSemValor)?
                     }
                 };
-                args.renderizador = Renderizador::de_texto(&valor)
-                    .ok_or_else(|| erro(format!("renderizador desconhecido: '{valor}' (use glow ou wgpu)")))?;
+                args.renderizador =
+                    Renderizador::de_texto(&valor).ok_or(ErroArgumentos::RenderizadorDesconhecido(valor))?;
             }
-            outra => return Err(erro(format!("opção desconhecida: {outra}"))),
+            outra => return Err(ErroArgumentos::OpcaoDesconhecida(outra.to_string())),
         }
     }
     args.caminho = caminho.map(|b| absoluto(&b));
@@ -231,21 +286,79 @@ mod testes {
             &["--porta", "8765"],
         ] {
             let e = analisar(&a(lista)).expect_err("devia recusar");
-            assert!(e.texto().starts_with("Uso: DataBox.exe"), "{}", e.texto());
-            assert!(e.texto().contains("Argumentos inválidos: "), "{}", e.texto());
+            let texto = idioma::com_idioma(idioma::PORTUGUES, || e.texto("DataBox.exe"));
+            assert!(texto.starts_with("Uso: DataBox.exe"), "{texto}");
+            assert!(texto.contains("Argumentos inválidos: "), "{texto}");
         }
-        assert!(analisar(&a(&["--renderizador", "vulkan"])).expect_err("x").mensagem.contains("vulkan"));
+        idioma::com_idioma(idioma::PORTUGUES, || {
+            assert!(analisar(&a(&["--renderizador", "vulkan"])).expect_err("x").mensagem().contains("vulkan"));
+            assert_eq!(
+                analisar(&a(&["a.db", "b.db"])).expect_err("x").mensagem(),
+                "só um caminho pode ser aberto ao iniciar (recebi a.db e b.db)"
+            );
+        });
     }
 
     #[test]
     fn ajuda_e_versao() {
         assert_eq!(analisar(&a(&["--ajuda"])), Ok(Comando::Ajuda));
-        // o argumento é um caminho qualquer: pasta, banco ou arquivo de dados
-        assert!(USO.contains("[caminho]") && !USO.contains("banco.db"));
-        assert!(AJUDA.contains("pasta, banco SQLite ou arquivo de dados"));
+        assert_eq!(analisar(&a(&["--help"])), Ok(Comando::Ajuda));
         assert_eq!(analisar(&a(&["-h"])), Ok(Comando::Ajuda));
         assert_eq!(analisar(&a(&["--versao"])), Ok(Comando::Versao));
-        assert!(AJUDA.starts_with(USO));
+        assert_eq!(analisar(&a(&["--version"])), Ok(Comando::Versao));
+        idioma::com_idioma(idioma::PORTUGUES, || {
+            // o argumento é um caminho qualquer: pasta, banco ou arquivo de dados
+            let uso = uso("DataBox");
+            assert!(uso.starts_with("Uso: DataBox [caminho]") && !uso.contains("banco.db"), "{uso}");
+            let ajuda = ajuda("DataBox");
+            assert!(ajuda.starts_with(&uso));
+            assert!(ajuda.contains("pasta, banco SQLite ou arquivo de dados"));
+            // os nomes principais, com os sinônimos na descrição
+            assert!(ajuda.contains("\n  -h, --help ") && ajuda.contains("(também --ajuda)"), "{ajuda}");
+            assert!(ajuda.contains("\n  --version ") && ajuda.contains("(também --versao)"), "{ajuda}");
+            // as descrições (e a do caminho) começam todas na mesma coluna
+            let colunas: Vec<Option<usize>> = [
+                "pasta, banco",
+                "abre o banco",
+                "usa a barra",
+                "cria o atalho",
+                "mostra esta ajuda",
+                "mostra a versão",
+            ]
+            .iter()
+            .map(|d| ajuda.lines().find_map(|l| l.find(d).map(|i| l[..i].chars().count())))
+            .collect();
+            assert!(
+                colunas[0].is_some() && colunas.windows(2).all(|w| w[0] == w[1]),
+                "{colunas:?}
+{ajuda}"
+            );
+        });
+    }
+
+    #[test]
+    fn ajuda_e_erros_no_ingles() {
+        idioma::com_idioma(idioma::INGLES, || {
+            let ajuda = ajuda("DataBox");
+            assert!(ajuda.starts_with("Usage: DataBox [path] [--somente-leitura]"), "{ajuda}");
+            assert!(ajuda.contains("Options:") && ajuda.contains("shows this help and exits"), "{ajuda}");
+            assert!(!ajuda.contains("Opções"), "{ajuda}");
+            let e = analisar(&a(&["--desconhecido"])).expect_err("x");
+            assert_eq!(
+                e.texto("DataBox.exe").lines().nth(1),
+                Some("Invalid arguments: unknown option: --desconhecido.")
+            );
+        });
+    }
+
+    #[test]
+    fn nome_do_executavel() {
+        let exe = PathBuf::from("/opt/databox/DataBox");
+        assert_eq!(executavel(None, Some(&exe)), "DataBox");
+        let appimage = OsString::from("/home/ana/Baixados/DataBox-0.3.0-x86_64.AppImage");
+        assert_eq!(executavel(Some(&appimage), Some(&exe)), "DataBox-0.3.0-x86_64.AppImage");
+        assert_eq!(executavel(None, None), EXECUTAVEL_PADRAO);
+        assert_eq!(executavel(Some(OsStr::new("")), None), EXECUTAVEL_PADRAO);
     }
 
     #[test]
