@@ -160,7 +160,9 @@ fn linha_oculta_aparece_esmaecida() {
     let nove = v.iter().find(|x| x.0 == "9").expect("o número 9");
     assert_eq!(nove.4, interface::fontes::fonte(12.0, interface::fontes::Peso::Italico));
     let y = nove.1.y;
-    let da_linha: Vec<_> = v.iter().filter(|x| (x.1.y - y).abs() < 1.0 && x.0 != "9").collect();
+    // só a grade: as fichas das Propriedades, à direita, podem cair na mesma altura
+    let painel = t.query_all_by_label_contains("Seção ").map(|n| n.rect().left()).fold(f32::INFINITY, f32::min);
+    let da_linha: Vec<_> = v.iter().filter(|x| (x.1.y - y).abs() < 1.0 && x.0 != "9" && x.1.x < painel).collect();
     assert!(!da_linha.is_empty() && da_linha.iter().all(|x| x.3 == e.t3), "{da_linha:?}");
 }
 
