@@ -144,7 +144,9 @@ fica aqui pela descrição.)*
     Atalhos do teclado. Os números e as datas seguem o idioma ("1.234,56" e "21/10/2026" no português; "1,234.56" e
     "2026-10-21" no inglês).
   - O que vem do arquivo da pessoa não muda: nomes de tabela, valores, o separador decimal do CSV (que continua
-    detectado pelo arquivo).
+    detectado pelo arquivo). O que o app calcula sobre o CSV e o Excel (soma, média, mínimo, máximo, contagens, a
+    coluna "#") segue o idioma, com as casas da coluna e sem milhar em ids, anos e CEPs: as regras estão em
+    "Números" no guia (`design/README.md`, 26/10/2026).
   - Um idioma novo é um arquivo de catálogo novo, sem mexer no código: uma pessoa de fora traduz para o espanhol com
     uma ferramenta comum de tradução e abre um PR só com o arquivo. O CI diz que textos faltam em cada idioma.
   - O README em inglês ganha capturas da interface em inglês.
