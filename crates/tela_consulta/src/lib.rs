@@ -138,7 +138,6 @@
 //!
 //! # Limites conhecidos
 //!
-//! - O desfazer (Ctrl+Z) não alcança o que as Tabelas das Propriedades inserem (as tabelas e as colunas).
 //! - Os resultados não se empilham em cards: um por vez, pelo seletor. O Histórico mora no painel da
 //!   casca.
 //! - A monoespaçada do editor e dos comandos sai na Consolas quando a Cascadia Mono só existe como fonte
@@ -740,16 +739,18 @@ impl TelaConsulta {
         }
     }
 
-    /// Insere o nome (já citado) ou a sugestão no cursor do editor, com o foco de volta nele.
+    /// Insere o nome (já citado) ou a sugestão no cursor do editor, com o foco de volta nele. A inserção entra no
+    /// desfazer do editor (PO7 da revisão de 26/10/2026): o Ctrl+Z tira o que entrou.
     fn inserir(&mut self, ctx: &egui::Context, nome: &str) {
         let id = self.id_do_editor();
         let (s, e) = selecao(ctx, id, self.sql.chars().count());
         let (novo, cursor) = inserir_no_cursor(&self.sql, s, e, nome);
-        self.sql = novo;
+        let antes = std::mem::replace(&mut self.sql, novo);
         self.edicao += 1;
         self.marcas = None;
         self.achado = None;
         colocar_cursor(ctx, id, cursor);
+        marcar_no_desfazer(ctx, id, (s, e, antes));
         ctx.memory_mut(|m| m.request_focus(id));
         self.editado_em = Some(ctx.input(|i| i.time));
     }
@@ -1116,6 +1117,18 @@ fn selecao(ctx: &egui::Context, id: Id, n: usize) -> (usize, usize) {
 fn colocar_cursor(ctx: &egui::Context, id: Id, pos: usize) {
     let mut estado = TextEditState::load(ctx, id).unwrap_or_default();
     estado.cursor.set_char_range(Some(CCursorRange::one(CCursor::new(pos))));
+    estado.store(ctx, id);
+}
+
+/// Põe no desfazer do editor `id` o texto de antes da inserção, com a seleção de então, como o último ponto: o Ctrl+Z
+/// do `TextEdit` volta a ele (o texto de agora vai para o refazer). Sem isso, o desfazer só via o texto novo quando ele
+/// ficasse um segundo parado, e o Ctrl+Z levava junto o que a pessoa digitou antes do clique.
+fn marcar_no_desfazer(ctx: &egui::Context, id: Id, antes: (usize, usize, String)) {
+    let mut estado = TextEditState::load(ctx, id).unwrap_or_default();
+    let mut desfazer = estado.undoer();
+    let (s, e, texto) = antes;
+    desfazer.add_undo(&(CCursorRange::two(CCursor::new(s), CCursor::new(e)), texto));
+    estado.set_undoer(desfazer);
     estado.store(ctx, id);
 }
 

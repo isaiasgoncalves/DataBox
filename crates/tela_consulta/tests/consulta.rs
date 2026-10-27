@@ -485,6 +485,36 @@ fn coluna_insere_o_nome_no_cursor_e_com_shift_a_tabela_junto() {
     assert_eq!(tela(&h).texto(), format!("SELECT email, clientes.nome FROM \"Tabela com espaço\".{citada}"));
 }
 
+/// O Ctrl+Z tira o que o clique na tabela ou na coluna inseriu (PO7 da revisão de 26/10/2026), sem levar junto o que
+/// foi digitado antes; o Ctrl+Y põe de volta.
+#[test]
+fn ctrl_z_desfaz_o_que_as_tabelas_inserem() {
+    let amb = Ambiente::exemplo("consulta_colunas_desfazer");
+    let mut h = abrir(&amb, None, Tema::Claro);
+    escrever(&mut h, "SELECT * FROM");
+    h.get_by_role_and_label(Role::Link, &no_inserir("clientes")).click();
+    h.run_steps(3);
+    assert_eq!(tela(&h).texto(), "SELECT * FROM clientes");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.run_steps(2);
+    assert_eq!(tela(&h).texto(), "SELECT * FROM", "o Ctrl+Z tira a tabela");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Y);
+    h.run_steps(2);
+    assert_eq!(tela(&h).texto(), "SELECT * FROM clientes", "o Ctrl+Y põe de volta");
+    // a coluna, logo depois de digitar: o Ctrl+Z tira só a coluna
+    escrever(&mut h, "SELECT");
+    h.get_by_label("Comando SQL").type_text(" id, ");
+    h.run_steps(1);
+    abrir_tabela(&mut h, "clientes", "email");
+    h.get_by_role_and_label(Role::Link, &no_inserir("email")).click_modifiers(Modifiers::SHIFT);
+    h.run_steps(3);
+    assert_eq!(tela(&h).texto(), "SELECT id, clientes.email");
+    assert!(h.get_by_label("Comando SQL").is_focused());
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    h.run_steps(2);
+    assert_eq!(tela(&h).texto(), "SELECT id, ", "o que foi digitado fica");
+}
+
 #[test]
 fn filtro_acha_a_coluna_em_todas_as_tabelas_e_abre_so_as_que_casam() {
     let amb = Ambiente::exemplo("consulta_colunas_filtro");
