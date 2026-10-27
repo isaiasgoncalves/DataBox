@@ -34,6 +34,9 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   a extensão inteira ("enderecos…ntes.csv"), como os caminhos. A aba ativa não encolhe antes das outras e fica sempre à
   vista, também quando uma aba abre ou fecha e quando a janela muda de largura. Dois arquivos abertos com o mesmo nome
   mostram a pasta-mãe depois do nome ("vendas_2025.csv 2024"), também no "Todas as abas" e no leitor de tela.
+- **O Ctrl+Z desfaz o que o clique nas Tabelas da Consulta inseriu** (PO7 da revisão de 26/10/2026): o nome da tabela
+  ou da coluna (ou o `tabela.coluna`, com Shift) entrava no SQL e só saía apagando à mão. Agora o Ctrl+Z tira só o que
+  entrou, sem levar o que foi digitado antes, e o Ctrl+Y põe de volta.
 
 ## [0.2.4] - 2026-10-23
 
