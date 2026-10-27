@@ -261,10 +261,9 @@ pub(crate) struct Gravacao {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Fim {
     /// Cancelar, Esc, × ou o clique no fundo: `reverter` leva o que vale agora de volta ao retrato da abertura.
-    Cancelou {
-        reverter: Vec<Efeito>,
-    },
-    Salvou(Gravacao),
+    Cancelou { reverter: Vec<Efeito> },
+    /// Numa caixa: a `Gravacao` (com a `Mudanca` inteira) pesa dez vezes o `Cancelou` (`clippy::large_enum_variant`).
+    Salvou(Box<Gravacao>),
 }
 
 /// O que a janela devolve a cada quadro.
@@ -416,7 +415,7 @@ impl JanelaPreferencias {
         }
         let efeitos = diferencas(&antes, &self.atual);
         let fim = if salvar && self.mudou() {
-            Some(Fim::Salvou(self.gravacao()))
+            Some(Fim::Salvou(Box::new(self.gravacao())))
         } else if cancelar || resposta.pediu_fechar {
             Some(Fim::Cancelou { reverter: diferencas(&self.atual, &self.retrato) })
         } else {

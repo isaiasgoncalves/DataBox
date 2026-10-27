@@ -6,22 +6,22 @@ use super::*;
 #[test]
 fn todos_os_catalogos_embutidos_abrem() {
     for idioma in IDIOMAS {
-        if let Some(texto) = idioma.catalogo {
-            let cat = po::ler(texto).unwrap_or_else(|e| panic!("{}.po: {e}", idioma.codigo));
-            assert_eq!(cat.idioma.as_deref(), Some(idioma.codigo), "o Language do {}.po", idioma.codigo);
+        if let Some(texto) = idioma.0.catalogo {
+            let cat = po::ler(texto).unwrap_or_else(|e| panic!("{}.po: {e}", idioma.0.codigo));
+            assert_eq!(cat.idioma.as_deref(), Some(idioma.0.codigo), "o Language do {}.po", idioma.0.codigo);
             assert!(!cat.traducoes.is_empty());
         }
     }
     // o português não tem catálogo (a chave é o texto)
-    assert!(PORTUGUES.catalogo.is_none());
+    assert!(PORTUGUES.0.catalogo.is_none());
 }
 
 #[test]
 fn registro_sem_codigos_repetidos_e_com_o_portugues_primeiro() {
     assert_eq!(IDIOMAS[0], PORTUGUES, "o índice 0 é o padrão antes de qualquer definir");
     for (i, a) in IDIOMAS.iter().enumerate() {
-        assert!(IDIOMAS[i + 1..].iter().all(|b| !b.codigo.eq_ignore_ascii_case(a.codigo)), "{}", a.codigo);
-        assert_ne!(a.milhar, a.decimal, "{}", a.codigo);
+        assert!(IDIOMAS[i + 1..].iter().all(|b| !b.0.codigo.eq_ignore_ascii_case(a.0.codigo)), "{}", a.0.codigo);
+        assert_ne!(a.0.milhar, a.0.decimal, "{}", a.0.codigo);
     }
 }
 
@@ -146,6 +146,12 @@ fn escolha_de_e_para_texto() {
     assert_eq!(Escolha::default(), Escolha::Sistema);
     assert_eq!(Escolha::Idioma(INGLES).resolver(), INGLES);
     assert!(IDIOMAS.contains(&Escolha::Sistema.resolver()));
+}
+
+#[test]
+fn idioma_e_escolha_pesam_pouco() {
+    assert_eq!(std::mem::size_of::<Idioma>(), std::mem::size_of::<usize>());
+    assert_eq!(std::mem::size_of::<Escolha>(), std::mem::size_of::<usize>(), "o None do ponteiro guarda o Sistema");
 }
 
 #[test]

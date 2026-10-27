@@ -99,9 +99,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 pub use modelo::{Argumento, nomes, preencher};
 pub use sistema::{de_locale, do_sistema};
 
-/// Um idioma da interface: o código, o nome e os formatos. Os que existem estão em [`IDIOMAS`].
+/// Um idioma da interface: o código, o nome e os formatos. Os que existem estão em [`IDIOMAS`]. É um ponteiro para o
+/// registro (8 bytes, `Copy`): cabe em qualquer enum sem pesar.
 #[derive(Debug, Clone, Copy)]
-pub struct Idioma {
+pub struct Idioma(&'static Registro);
+
+/// O que o registro guarda de cada idioma.
+#[derive(Debug)]
+struct Registro {
     codigo: &'static str,
     nome: &'static str,
     nome_curto: &'static str,
@@ -114,50 +119,50 @@ pub struct Idioma {
 impl Idioma {
     /// O código BCP 47 ("pt-BR", "en"): o que as preferências gravam e o nome do `.po`.
     pub fn codigo(&self) -> &'static str {
-        self.codigo
+        self.0.codigo
     }
 
     /// O nome no próprio idioma, como o seletor mostra: "Português (Brasil)", "English".
     pub fn nome(&self) -> &'static str {
-        self.nome
+        self.0.nome
     }
 
     /// O nome curto no próprio idioma: "Português", "English" (o "Seguir o sistema (Português)").
     pub fn nome_curto(&self) -> &'static str {
-        self.nome_curto
+        self.0.nome_curto
     }
 
     /// O separador de milhar: '.' no português, ',' no inglês.
     pub fn milhar(&self) -> char {
-        self.milhar
+        self.0.milhar
     }
 
     /// O separador decimal: ',' no português, '.' no inglês.
     pub fn decimal(&self) -> char {
-        self.decimal
+        self.0.decimal
     }
 
     /// A data no padrão do `strftime` (o do `chrono`): "%d/%m/%Y" no português, "%Y-%m-%d" no inglês. A hora, quando
     /// há, vem depois, com um espaço e "%H:%M" (igual nos dois).
     pub fn padrao_data(&self) -> &'static str {
-        self.data
+        self.0.data
     }
 
     /// O idioma pelo código, sem diferença de caixa e com `_` ou `-` ("pt-BR", "pt_br", "EN"); None se o DataBox não
     /// o tem.
     pub fn de_codigo(codigo: &str) -> Option<Idioma> {
         let alvo = codigo.trim().replace('_', "-");
-        IDIOMAS.iter().copied().find(|i| i.codigo.eq_ignore_ascii_case(&alvo))
+        IDIOMAS.iter().copied().find(|i| i.0.codigo.eq_ignore_ascii_case(&alvo))
     }
 
     fn indice(&self) -> usize {
-        IDIOMAS.iter().position(|i| i.codigo == self.codigo).unwrap_or(0)
+        IDIOMAS.iter().position(|i| i.0.codigo == self.0.codigo).unwrap_or(0)
     }
 }
 
 impl PartialEq for Idioma {
     fn eq(&self, outro: &Idioma) -> bool {
-        self.codigo == outro.codigo
+        self.0.codigo == outro.0.codigo
     }
 }
 
@@ -165,12 +170,12 @@ impl Eq for Idioma {}
 
 impl fmt::Display for Idioma {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.nome)
+        f.write_str(self.0.nome)
     }
 }
 
 /// O português do Brasil: o idioma das chaves, sem catálogo.
-pub const PORTUGUES: Idioma = Idioma {
+pub const PORTUGUES: Idioma = Idioma(&Registro {
     codigo: "pt-BR",
     nome: "Português (Brasil)",
     nome_curto: "Português",
@@ -178,11 +183,11 @@ pub const PORTUGUES: Idioma = Idioma {
     decimal: ',',
     data: "%d/%m/%Y",
     catalogo: None,
-};
+});
 
 /// O inglês: o de reserva quando o DataBox não tem o idioma do sistema. As datas no ISO 8601 (2026-10-21), que
 /// quem lê inglês em qualquer país entende sem ambiguidade.
-pub const INGLES: Idioma = Idioma {
+pub const INGLES: Idioma = Idioma(&Registro {
     codigo: "en",
     nome: "English",
     nome_curto: "English",
@@ -190,7 +195,7 @@ pub const INGLES: Idioma = Idioma {
     decimal: '.',
     data: "%Y-%m-%d",
     catalogo: Some(include_str!("../idiomas/en.po")),
-};
+});
 
 /// O registro dos idiomas, na ordem do seletor das Preferências. **Um idioma novo é uma linha aqui** (e o `.po`).
 pub const IDIOMAS: &[Idioma] = &[PORTUGUES, INGLES];
@@ -263,7 +268,7 @@ impl Escolha {
     pub fn como_str(self) -> &'static str {
         match self {
             Escolha::Sistema => "system",
-            Escolha::Idioma(i) => i.codigo,
+            Escolha::Idioma(i) => i.0.codigo,
         }
     }
 
@@ -289,7 +294,7 @@ impl Escolha {
 // ---------------------------------------------------------------------- a tradução
 
 fn catalogo(i: usize) -> Option<&'static po::Catalogo> {
-    let texto = IDIOMAS.get(i)?.catalogo?;
+    let texto = IDIOMAS.get(i)?.0.catalogo?;
     let celula = CATALOGOS.get(i)?;
     // um .po embutido que não abre fica sem efeito (os testes do crate garantem que todos abrem)
     Some(celula.get_or_init(|| po::ler(texto).unwrap_or_default()))
@@ -322,7 +327,7 @@ pub fn escolher_plural<'a>(n: u64, um: &'a str, varios: &'a str) -> &'a str {
 /// `1234` → "1.234" (o milhar do idioma atual): o `{n}` do `tn!`.
 pub fn contagem(n: u64) -> String {
     let digitos = n.to_string();
-    let milhar = atual().milhar;
+    let milhar = atual().milhar();
     let mut s = String::with_capacity(digitos.len() + digitos.len() / 3);
     for (i, c) in digitos.chars().enumerate() {
         if i > 0 && (digitos.len() - i).is_multiple_of(3) {
