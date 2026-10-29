@@ -86,8 +86,10 @@
 //!     as regiões da barra própria no último quadro (a porta para um WM_NCHITTEST próprio)
 //! linha_comando::{analisar(&[OsString]) -> Result<Comando, ErroArgumentos>, Comando::{Executar(Argumentos),
 //!     Ajuda, Versao}, Argumentos { caminho, somente_leitura, renderizador, criar_atalho, moldura_do_sistema },
-//!     Renderizador::{Glow, Wgpu}, ErroArgumentos { mensagem } · texto(), argumentos_para_relancar(&Argumentos,
-//!     Renderizador), USO, AJUDA}
+//!     Renderizador::{Glow, Wgpu}, ErroArgumentos::{DoisCaminhos, RenderizadorSemValor, RenderizadorDesconhecido,
+//!     OpcaoDesconhecida} · mensagem() · texto(executavel), argumentos_para_relancar(&Argumentos, Renderizador),
+//!     uso(executavel), ajuda(executavel), executavel(APPIMAGE, current_exe) -> String, EXECUTAVEL_PADRAO}
+//!     (a ajuda e as frases no idioma atual: o `main` define o idioma antes de mostrar)
 //! escala::{fator_do_sistema() -> f32 (o `text-scaling-factor` do GNOME no Linux; 1 sem ele), ler_fator(&str) ->
 //!     Option<f32>, tamanho_com_fator([f32; 2], f32) -> [f32; 2]}
 //! registro::{iniciar(PathBuf) -> bool, instalar_gancho_de_panico(), RegistroCompartilhado::novo(arquivo,

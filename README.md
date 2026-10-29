@@ -176,7 +176,9 @@ The labels below are translated; the app shows them in Portuguese (the main ones
   also **Paste**, **Clear**, **Set to NULL** (Data only) and **Delete rows**, undone in one step with Ctrl+Z. The
   footer sums the selection like Excel's status bar (count, sum, average, min and max).
 - Frosted glass on menus, lists and dialogs; Light, Dark or Follow Windows theme.
-- Preferences (Ctrl+,): theme, code colors and font, export options; changes preview live and persist on **Save**.
+- Preferences (Ctrl+,): theme, language (Follow the system, Português (Brasil) or English; numbers and dates follow
+  the language), code colors and font, export options; changes preview live and persist on **Save**. The English
+  interface is being translated during 0.3; until then, most screens are still in Portuguese.
 - **Search** (Ctrl+F) in every document, CSV, Excel and text included: the whole file, ignoring case and accents;
   Enter and Shift+Enter go to the next and previous match, the count shows "3 de 41" ("3 of 41"), Esc goes back.
 - Drag and drop a folder, database or data file onto the window to open it.

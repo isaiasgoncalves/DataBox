@@ -1,0 +1,10 @@
+# As exceções do extrator dos textos (ferramentas/idioma.rs): literais com espaço e acento nos crates de tela que não
+# são texto para a pessoa ler e por isso ficam fora do t!.
+#
+# Uma por linha:
+#   crates/editor/src/x.rs                 o arquivo inteiro
+#   crates/editor/src/x.rs: o texto        só aquele literal (exatamente como no código, com \n para a quebra)
+#   *: o texto                             aquele literal em qualquer arquivo
+#
+# Antes de pôr um texto aqui, confira: se a pessoa pode ler (rótulo, dica, mensagem, nome lido pelo leitor de tela),
+# ele passa pelo t!. Até a varredura das telas (I3), o CI roda o extrator com --so-avisar.

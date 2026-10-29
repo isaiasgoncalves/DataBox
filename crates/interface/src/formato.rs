@@ -1,17 +1,20 @@
-//! Formatação pt-BR, com o mesmo resultado do `Intl.NumberFormat("pt-BR")`: milhar com ponto, decimal com vírgula, arredondamento "metade para longe do
-//! zero" sobre a representação decimal mais curta do número (como o ICU faz).
+//! Formatação de números e datas no idioma da interface ([`idioma::atual`], decisão 13 de `planos-0.3.md`), com o
+//! mesmo resultado do `Intl.NumberFormat`: no português, milhar com ponto e decimal com vírgula ("1.234,56"); no
+//! inglês, o contrário ("1,234.56"); arredondamento "metade para longe do zero" sobre a representação decimal mais
+//! curta do número (como o ICU faz). Os exemplos abaixo são os do português.
 //!
 //! - [`formatar_numero`]: `5000` → `"5.000"`, `1.5` → `"1,5"` (até 6 casas), `None` → `"—"`.
 //! - [`formatar_bytes`] / [`partes_bytes`]: `"1,2 MB"`, `"12 KB"`, `"512 bytes"`, `"1 byte"`.
-//! - [`formatar_data`]: `"2026-09-22T10:31:00"` → `"22/09/2026 10:31"`.
+//! - [`formatar_data`]: `"2026-09-22T10:31:00"` → `"22/09/2026 10:31"` (no inglês, `"2026-09-22 10:31"`).
 //! - [`formatar_ms`]: `"320 ms"` (o `tempo()` da Consulta SQL) e [`formatar_segundos`]: `"4,6 s"` (o
 //!   `segundos()` da aba Dados).
-//! - [`plural`]: `plural(60, "linha", "linhas")` → `"60 linhas"`.
+//! - [`plural`]: `plural(60, "linha", "linhas")` → `"60 linhas"` (a palavra pelo catálogo do idioma, como no `tn!`).
 //! - [`nome_do_caminho`]: `"C:\\dados\\vendas.db"` → `"vendas.db"`.
 //! - [`real_js`]: real como o `String(número)` do JavaScript (`17051.0` → `"17051"`, `1e-7` → `"1e-7"`), o que a
 //!   grade mostra e copia.
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use idioma::{t, tn};
 
 /// Traço usado onde não há valor (o `"—"` do JavaScript).
 pub const TRACO: &str = "—";
@@ -128,8 +131,10 @@ impl Decimal {
         self
     }
 
-    /// Texto pt-BR com milhar em ponto e entre `min_casas` e `max_casas` casas decimais.
+    /// Texto com o milhar e o decimal do idioma atual e entre `min_casas` e `max_casas` casas decimais.
     fn escrever(&self, negativo: bool, min_casas: usize, max_casas: usize) -> String {
+        let idioma = idioma::atual();
+        let (milhar, decimal) = (idioma.milhar(), idioma.decimal());
         let digito = |pos: i64| -> u8 {
             // pos: índice do dígito em `digitos` (pode estar fora: vira zero)
             if pos < 0 { 0 } else { self.digitos.get(pos as usize).copied().unwrap_or(0) }
@@ -140,7 +145,7 @@ impl Decimal {
             // dígito na posição k da parte inteira; com ponto ≤ 0 a parte inteira é "0"
             let pos = self.ponto - n_inteira + k;
             if k > 0 && (n_inteira - k) % 3 == 0 {
-                inteira.push('.');
+                inteira.push(milhar);
             }
             inteira.push(char::from(b'0' + digito(pos)));
         }
@@ -158,14 +163,14 @@ impl Decimal {
         }
         s.push_str(&inteira);
         if !fracao.is_empty() {
-            s.push(',');
+            s.push(decimal);
             s.push_str(&fracao);
         }
         s
     }
 }
 
-/// O `Intl.NumberFormat("pt-BR", {minimumFractionDigits, maximumFractionDigits})` para um número.
+/// O `Intl.NumberFormat(idioma, {minimumFractionDigits, maximumFractionDigits})` para um número.
 fn formatar_com_casas(n: Numero, min_casas: usize, max_casas: usize) -> String {
     match n {
         Numero::Inteiro(i) => Decimal::de_inteiro(i.unsigned_abs()).escrever(i < 0, min_casas, max_casas),
@@ -306,27 +311,31 @@ fn juntar_partes(p: PartesBytes) -> String {
     if p.unidade.is_empty() { p.numero } else { format!("{} {}", p.numero, p.unidade) }
 }
 
-/// `"2026-09-22T10:31:00"` → `"22/09/2026 10:31"`; data sem hora → `"22/09/2026"`; vazio → `"—"`.
+/// `"2026-09-22T10:31:00"` → `"22/09/2026 10:31"` no português e `"2026-09-22 10:31"` no inglês (o padrão de
+/// [`idioma::Idioma::padrao_data`]); data sem hora → `"22/09/2026"`; vazio → `"—"`.
 /// Com fuso (`Z`, `+03:00`), converte para a hora local, como o `new Date()` do JavaScript. Texto que não é
 /// data volta como veio.
 pub fn formatar_data(iso: &str) -> String {
     if iso.is_empty() {
         return TRACO.into();
     }
+    let padrao = idioma::atual().padrao_data();
     let b = iso.as_bytes();
     let tem_fuso = termina_com_fuso(iso);
     if !tem_fuso && let Some((a, m, d, hora)) = data_iso_sem_fuso(b) {
+        let data = padrao.replace("%d", d).replace("%m", m).replace("%Y", a);
         return match hora {
-            Some((hh, mm)) => format!("{d}/{m}/{a} {hh}:{mm}"),
-            None => format!("{d}/{m}/{a}"),
+            Some((hh, mm)) => format!("{data} {hh}:{mm}"),
+            None => data,
         };
     }
+    let com_hora = format!("{padrao} %H:%M");
     if let Some(data) = ler_com_fuso(iso) {
         let local = data.with_timezone(&Local);
-        return local.format("%d/%m/%Y %H:%M").to_string();
+        return local.format(&com_hora).to_string();
     }
     if let Some(data) = ler_sem_fuso(iso) {
-        return data.format("%d/%m/%Y %H:%M").to_string();
+        return data.format(&com_hora).to_string();
     }
     iso.to_string()
 }
@@ -423,19 +432,38 @@ pub fn formatar_segundos(ms: impl Into<Numero>) -> String {
 }
 
 /// Contagem com a palavra no número certo: `plural(60, "linha", "linhas")` → `"60 linhas"`;
-/// `plural(1, …)` → `"1 linha"`.
+/// `plural(1, …)` → `"1 linha"`. A palavra vem do catálogo do idioma (a entrada de plural com `msgid "linha"` e
+/// `msgid_plural "linhas"`; sem ela, o português) e o número, do [`formatar_numero`]. Texto novo usa o `tn!`, que o
+/// extrator confere; este fica para as contagens com número real ("1,5 linha" não existe, mas "2,5 MB" sim).
 pub fn plural(n: impl Into<Numero>, um: &str, varios: &str) -> String {
     let n = n.into();
-    format!("{} {}", formatar_numero(n), if n.e_um() { um } else { varios })
+    let palavra = idioma::escolher_plural(contagem_do_plural(n), um, varios);
+    format!("{} {palavra}", formatar_numero(n))
+}
+
+/// A contagem que escolhe a forma do plural: o inteiro pelo valor absoluto; um real é 1 só quando é 1,0 (o resto conta
+/// como 2, para cair no plural do idioma).
+fn contagem_do_plural(n: Numero) -> u64 {
+    match n {
+        Numero::Inteiro(i) => u64::try_from(i.unsigned_abs()).unwrap_or(u64::MAX),
+        Numero::Real(_) if n.e_um() => 1,
+        Numero::Real(_) => 2,
+    }
 }
 
 /// O rodapé das grades (a aba Dados e o CSV): "Linhas 1–100 de 5.000", com as linhas à vista (ou as da página) de
 /// quantas a grade tem; "Nenhuma linha" sem linhas.
 pub fn contagem_linhas(inicio: u64, fim: u64, total: u64) -> String {
     if total > 0 {
-        format!("Linhas {}–{} de {}", formatar_numero(inicio), formatar_numero(fim), formatar_numero(total))
+        t!(
+            "Linhas {inicio}–{fim} de {total}",
+            inicio = formatar_numero(inicio),
+            fim = formatar_numero(fim),
+            total = formatar_numero(total)
+        )
+        .into_owned()
     } else {
-        "Nenhuma linha".to_string()
+        t!("Nenhuma linha").into_owned()
     }
 }
 
@@ -444,15 +472,17 @@ pub fn contagem_linhas(inicio: u64, fim: u64, total: u64) -> String {
 /// total, só as que passam); sem filtro, as linhas ("60 linhas").
 pub fn contagem_filtrada(linhas: u64, total: Option<u64>, filtrando: bool) -> String {
     match total {
-        Some(t) if filtrando => format!("{} de {}", formatar_numero(linhas), plural(t, "linha", "linhas")),
-        _ => plural(linhas, "linha", "linhas"),
+        Some(t) if filtrando => {
+            tn!(t, "{linhas} de {n} linha", "{linhas} de {n} linhas", linhas = formatar_numero(linhas)).into_owned()
+        }
+        _ => tn!(linhas, "{n} linha", "{n} linhas").into_owned(),
     }
 }
 
 /// O que o rodapé das grades diz depois da contagem quando a busca ou os filtros escondem linhas: de quantas a tabela
 /// tem ("filtradas de 1.180"), U3 da revisão de UI de 22/10/2026.
 pub fn filtradas_de(total: u64) -> String {
-    format!("filtradas de {}", formatar_numero(total))
+    t!("filtradas de {total}", total = formatar_numero(total)).into_owned()
 }
 
 /// Nome do arquivo de um caminho do Windows (`"C:\\dados\\vendas.db"` → `"vendas.db"`).
@@ -639,6 +669,41 @@ mod testes {
         assert_eq!(plural(5000, "linha", "linhas"), "5.000 linhas");
         assert_eq!(plural(1.0, "tabela", "tabelas"), "1 tabela");
         assert_eq!(plural(1.5, "tabela", "tabelas"), "1,5 tabelas");
+    }
+
+    /// Os mesmos formatos no inglês (decisão 13: números e datas seguem o idioma da interface).
+    #[test]
+    fn no_ingles() {
+        idioma::com_idioma(idioma::INGLES, || {
+            assert_eq!(formatar_numero(1234.56), "1,234.56");
+            assert_eq!(formatar_numero(-12_345), "-12,345");
+            assert_eq!(formatar_numero(0.5), "0.5");
+            assert_eq!(formatar_numero_com_casas(98231.4, 2, 2), "98,231.40");
+            assert_eq!(formatar_bytes(1_258_291), "1.2 MB");
+            assert_eq!(formatar_bytes(1023), "1,023 bytes");
+            assert_eq!(formatar_ms(1234.5), "1,234.5 ms");
+            assert_eq!(formatar_segundos(4600.0), "4.6 s");
+            assert_eq!(formatar_data("2026-10-21"), "2026-10-21");
+            assert_eq!(formatar_data("2026-09-22T10:31:00"), "2026-09-22 10:31");
+            assert_eq!(formatar_data("2026-09-22 10:31:45.123"), "2026-09-22 10:31");
+            let esperado = DateTime::parse_from_rfc3339("2026-09-22T10:31:00+03:00")
+                .map(|d| d.with_timezone(&Local).format("%Y-%m-%d %H:%M").to_string())
+                .unwrap_or_default();
+            assert_eq!(formatar_data("2026-09-22T10:31:00+03:00"), esperado);
+            assert_eq!(contagem_linhas(101, 200, 5000), "Rows 101–200 of 5,000");
+            assert_eq!(contagem_linhas(0, 0, 0), "No rows");
+            assert_eq!(contagem_filtrada(41, Some(60), true), "41 of 60 rows");
+            assert_eq!(contagem_filtrada(1, Some(1), true), "1 of 1 row");
+            assert_eq!(contagem_filtrada(2500, None, true), "2,500 rows");
+            assert_eq!(filtradas_de(1180), "filtered from 1,180");
+            // a palavra pelo catálogo; sem a entrada, o português
+            assert_eq!(plural(1, "linha", "linhas"), "1 row");
+            assert_eq!(plural(5000, "linha", "linhas"), "5,000 rows");
+            assert_eq!(plural(2, "palavra sem tradução", "palavras sem tradução"), "2 palavras sem tradução");
+            // o que não muda: o real como o JavaScript escreve e a busca sem acento
+            assert_eq!(real_js(1234.5678), "1234.5678");
+            assert_eq!(sem_acento("Ação"), "acao");
+        });
     }
 
     #[test]

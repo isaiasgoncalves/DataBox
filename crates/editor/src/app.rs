@@ -344,6 +344,7 @@ impl Editor {
                 recentes: Vec::new(),
                 exportacao: prefs::OpcoesExportacao::default(),
                 aparencia: prefs::Aparencia::default(),
+                idioma: idioma::Escolha::Sistema,
             },
             ultimo_diretorio: None,
         };

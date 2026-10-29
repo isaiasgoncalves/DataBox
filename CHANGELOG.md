@@ -7,6 +7,17 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ### Adicionado
 
+- **A base da tradução** (I1 da 0.3): o crate `idioma`, no estilo do gettext, com o texto em português como chave
+  (`t!`, `tn!` para o plural, `t_estatico!` para as constantes) e um catálogo `.po` por idioma, embutido no
+  executável; o `en.po` começa com os textos que já passam pelo `t!` (o inglês completo vem com a varredura).
+  **Preferências › Aparência › Idioma**: "Seguir o sistema", "Português (Brasil)" ou "English", aplicado na hora e
+  gravado no Salvar (a chave `"idioma"` das preferências, só depois da escolha). Na primeira abertura vale o idioma do
+  sistema e, quando o DataBox não o tem, o inglês. Os números e as datas seguem o idioma: "1.234,56" e "21/10/2026"
+  em português, "1,234.56" e "2026-10-21" em inglês. A ajuda da linha de comando sai no idioma, com `-h, --help` e
+  `--version` como nomes principais (`--ajuda` e `--versao` continuam valendo) e o nome do executável de verdade
+  (no Linux, "DataBox", sem o ".exe"). O CI ganha o extrator dos textos (`ferramentas/idioma.rs`), que falha quando um
+  texto do `t!` falta no `en.po`.
+
 - **As colunas à mão ao escrever SQL** (Q1 da 0.3): na Consulta, cada tabela da seção "Tabelas" das Propriedades abre
   as colunas, com a pastilha do tipo dos cabeçalhos dos Dados (a chave primária e a estrangeira com o ícone delas) e,
   à direita, o tipo declarado ou a referência ("→ clientes.id"). O clique na coluna insere o nome dela no cursor do

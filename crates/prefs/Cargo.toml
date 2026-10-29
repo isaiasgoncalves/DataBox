@@ -6,6 +6,7 @@ publish.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+idioma = { workspace = true }
 comum = { workspace = true }
 chrono = { workspace = true }
 log = { workspace = true }

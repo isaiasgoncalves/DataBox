@@ -9,6 +9,7 @@ rust-version.workspace = true
 egui = { workspace = true }
 egui_extras = { workspace = true }
 image = { workspace = true }
+idioma = { workspace = true }
 comum = { workspace = true }
 chrono = { workspace = true }
 tabular = { workspace = true }

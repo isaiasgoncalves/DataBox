@@ -1,4 +1,4 @@
-//! As preferências: o tema e a aparência do código (das preferências para o interface) e a janela
+//! As preferências: o tema, o idioma e a aparência do código (das preferências para o interface) e a janela
 //! Preferências, com o que ela põe em vigor na hora e a leitura da fonte do código numa tarefa.
 
 use comum::ErroBanco;
@@ -80,6 +80,10 @@ impl Editor {
             Efeito::Tema(t) => {
                 self.tema = tema_da_interface(t);
                 tema::aplicar(ctx, self.tema);
+            }
+            Efeito::Idioma(e) => {
+                // os textos do t!, os números e as datas mudam no próximo quadro
+                idioma::definir(e.resolver());
             }
             Efeito::Cores(c) => {
                 let mut a = codigo::atual(ctx);

@@ -61,6 +61,11 @@ jobs:
       - name: Clippy
         run: ./cargo.ps1 clippy --workspace --all-targets '--' -D warnings
 
+      # O extrator dos textos (ferramentas/idioma.rs): falha com a chave do t!/tn! que falta no en.po; os literais com
+      # espaço e acento fora do t! nas telas só avisam até a varredura da I3 (aí sai o --so-avisar).
+      - name: Textos e idiomas
+        run: ./cargo.ps1 run -q -p idioma --bin extrator '--' --so-avisar
+
       # O renderizador de software do Windows (WARP) cai com STATUS_ACCESS_VIOLATION quando vários testes criam o wgpu
       # ao mesmo tempo. Os testes de tela (egui_kittest com wgpu) moram nos crates editor, interface e tela_*, inclusive
       # testes de unidade (editor/src/tabela.rs, tela_esquema/src/testes): o corte é por crate, não por alvo. O resto
@@ -112,6 +117,9 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Textos e idiomas
+        run: cargo run -q -p idioma --bin extrator -- --so-avisar
 
       - name: Testes
         run: cargo test --workspace --no-fail-fast

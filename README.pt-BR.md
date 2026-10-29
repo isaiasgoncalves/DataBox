@@ -190,7 +190,8 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
   A largura fica guardada para a próxima vez.
 - **Vidro fosco** nos menus, nas listas e nas janelas, que ficam por cima do resto.
 - **Tema** Claro, Escuro ou Seguir o Windows (Exibir › Tema).
-- **Preferências** (Arquivo › Preferências, Ctrl+,): tema, cores e fonte do código, opções de exportação, limpar os
+- **Preferências** (Arquivo › Preferências, Ctrl+,): tema, idioma (Seguir o sistema, Português (Brasil) ou English;
+  os números e as datas seguem o idioma), cores e fonte do código, opções de exportação, limpar os
   recentes e o histórico de SQL. As mudanças aparecem na hora; só ficam gravadas no **Salvar**.
 - **Busca da barra** (Ctrl+F) em todo documento: nos Dados, na Visão geral, na Estrutura e na Consulta SQL, e no CSV,
   na planilha do Excel e no texto/JSON, no arquivo inteiro, sem diferenciar maiúsculas nem acentos. Enter e Shift+Enter
@@ -322,7 +323,7 @@ DataBox.exe [caminho] [--somente-leitura] [--moldura-do-sistema] [--renderizador
 
 | O quê | Onde |
 |---|---|
-| Preferências (tema, recentes, histórico de SQL, exportação, lugar e largura dos painéis, barra de status, pasta aberta) | `%APPDATA%\DataBox\preferencias.json` |
+| Preferências (tema, idioma, recentes, histórico de SQL, exportação, lugar e largura dos painéis, barra de status, pasta aberta) | `%APPDATA%\DataBox\preferencias.json` |
 | Registro de problemas (log) | `%LOCALAPPDATA%\DataBox\databox.log` |
 
 Em Ajuda › Sobre o DataBox, os links abrem essas duas pastas. Apagar o `preferencias.json` volta tudo ao padrão.
@@ -435,6 +436,7 @@ O workspace tem um crate por pasta em `crates/`, sem ciclos de dependência:
 
 | Crate | O que faz |
 |---|---|
+| `idioma` | Os idiomas da interface, no estilo do gettext: `t!("texto em português")` com o próprio texto como chave, o plural (`tn!`), o idioma atual e o do sistema, e os catálogos `.po` (`crates/idioma/idiomas/`) com o analisador deles. Na base do grafo, sem dependência do projeto. O extrator `ferramentas/idioma.rs` confere o código com os `.po` no CI. |
 | `comum` | Peças usadas por todos: o erro `ErroBanco`, `q()` para citar nomes SQL, os valores (`Valor`, `Celula`, `Chave`, `Entrada`), o nome e as pastas por pessoa, os tipos de arquivo de uma pasta. |
 | `amostras` | Bancos de exemplo para os testes e para ver o app funcionando (`dados/exemplo.db`). |
 | `ddl` | Tokenizador de SQL e analisador de `CREATE TABLE`, com o caminho de volta (montar o SQL de novo sem perder nada). |
