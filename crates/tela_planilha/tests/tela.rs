@@ -110,6 +110,78 @@ fn largura_do_arquivo_vira_pixel_pela_formula() {
     assert_eq!(g.nucleo.larguras(), [56.0, 131.0, 215.0, 103.0, 131.0, 103.0, 117.0]);
 }
 
+/// O `.xlsx` que o `pandas.to_excel` grava: uma planilha só, sem `<cols>` nem `defaultColWidth`, com a cidade, o mês, o
+/// total e o ticket médio (PO1 da revisão de 26/10/2026). `estreita` declara a coluna C com 3 caracteres.
+fn do_pandas(estreita: bool) -> Vec<u8> {
+    let cidades = ["São Paulo — Zona Sul", "Rio de Janeiro", "Belo Horizonte", "Porto Alegre"];
+    let mut xml = linha_xml(1, &[t("cidade"), t("mes"), t("total"), t("ticket_medio")], false);
+    for n in 2..=40u32 {
+        let k = n as usize;
+        let celulas = [
+            t(cidades[k % 4]),
+            t(&format!("2025-{:02}", 1 + k % 12)),
+            C::Num(4_723_215.37 + (k * 1_013) as f64),
+            C::Num(8_969.42 + k as f64),
+        ];
+        xml.push_str(&linha_xml(n, &celulas, false));
+    }
+    let x = Extras {
+        dimensao: Some("A1:D40".into()),
+        colunas: if estreita { vec![(3, 3, 3.0, false)] } else { Vec::new() },
+        ..Extras::default()
+    };
+    Montador::novo().aba_com("Vendas", &xml, &x).bytes()
+}
+
+#[test]
+fn sem_largura_no_arquivo_mede_pelo_conteudo() {
+    let mut t = abrir("pl_pandas", "vendas_pandas.xlsx", &do_pandas(false));
+    esperar_o_indice(&mut t);
+    t.run_steps(3);
+    let larguras = tela(&t).grade().expect("a grade").nucleo.larguras().to_vec();
+    // as quatro colunas cabem o conteúdo: nenhuma fica nos 64px da padrão, nenhuma passa de 320
+    assert_eq!(larguras.len(), 5);
+    for w in &larguras[1..] {
+        assert!((64.0..=320.0).contains(w), "largura {w}");
+    }
+    assert!(larguras[1] > 100.0, "a cidade mais longa cabe: {larguras:?}");
+    let v = textos(&t);
+    assert!(pintado(&v, "São Paulo — Zona Sul").is_some(), "o texto inteiro");
+    // na grade (as Propriedades, à direita, cortam o caminho com "…")
+    let na_grade = |x: &&(String, Pos2, f32, egui::Color32, egui::FontId)| x.1.x < 1000.0;
+    assert!(!v.iter().filter(na_grade).any(|x| x.0.contains('…') || x.0.contains('#')), "nada cortado: {v:?}");
+    // uma planilha só: sem a faixa das planilhas (D14)
+    assert!(t.query_by_role(Role::Tab).is_none(), "sem a faixa");
+}
+
+#[test]
+fn largura_declarada_fica_e_o_numero_que_nao_cabe_vira_cerquilhas() {
+    let mut t = abrir("pl_pandas_estreita", "vendas_estreita.xlsx", &do_pandas(true));
+    esperar_o_indice(&mut t);
+    t.run_steps(3);
+    let larguras = tela(&t).grade().expect("a grade").nucleo.larguras().to_vec();
+    // a C declarada (3 caracteres → 26px) fica; as outras, pelo conteúdo
+    assert_eq!(larguras[3], 26.0);
+    let v = textos(&t);
+    let cerquilhas: Vec<&String> = v.iter().map(|x| &x.0).filter(|x| x.starts_with('#')).collect();
+    assert!(!cerquilhas.is_empty(), "o número que não cabe vira ####");
+    assert!(cerquilhas.iter().all(|x| x.chars().all(|c| c == '#')));
+    assert!(!v.iter().any(|x| x.1.x < 1000.0 && x.0.contains('…')), "número nunca corta com …");
+    // o valor inteiro vai na dica (a C2: 4.723.215,37 + 2 × 1.013)
+    let alvo = v.iter().find(|x| x.0.starts_with('#')).map(|x| x.1).expect("a cerquilha");
+    t.hover_at(alvo + egui::vec2(4.0, 6.0));
+    let mut achou = false;
+    for _ in 0..80 {
+        t.step();
+        if t.query_by_label_contains("4725241,37").is_some() {
+            achou = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(achou, "a dica com o número inteiro");
+}
+
 #[test]
 fn coluna_oculta_some_e_a_secao_diz() {
     let x = Extras {
@@ -548,6 +620,15 @@ fn capturas_do_fechamento() {
         |t| t,
     );
     capturar(&mut t, "etapa56-planilha-erro-escuro.png");
+}
+
+/// A planilha do `pandas.to_excel` (sem `<cols>`) medida pelo conteúdo e sem a faixa das planilhas (PO1 e D14).
+#[test]
+fn captura_da_planilha_sem_larguras() {
+    let mut t = abrir("pl_cap_pandas", "vendas_pandas.xlsx", &do_pandas(false));
+    esperar_o_indice(&mut t);
+    t.run_steps(4);
+    capturar(&mut t, "planilha-sem-larguras-claro.png");
 }
 
 #[test]

@@ -18,7 +18,6 @@ use apoio::*;
 use comum::{Resultado, Valor};
 use editor::{Editor, Partida};
 use egui::Ui;
-use egui::accesskit::Role;
 use estado::apoio_testes::Ambiente;
 use estado::{Acao, Contexto, Documento, Rota};
 use interface::tema::Tema;
@@ -45,9 +44,10 @@ fn xlsx(amb: &Ambiente, nome: &str, n: i64) -> PathBuf {
     destino
 }
 
-/// Espera a planilha abrir (o chip "Somente leitura" na faixa e a aba da planilha "dados").
+/// Espera a planilha abrir: o chip "Somente leitura" no rodapé da planilha e na barra de status, e a planilha "dados"
+/// na migalha do rodapé (com uma planilha só, não há a faixa das planilhas: D14 da revisão de 26/10/2026).
 fn esperar_planilha(h: &mut H) {
-    esperar(h, "a planilha abrir", |h| existe(h, Role::Tab, "dados, planilha 1 de 1"));
+    esperar(h, "a planilha abrir", |h| quantos(h, "Somente leitura") >= 2 && tem_texto_exato(h, "dados"));
     assentar(h);
 }
 
@@ -207,7 +207,7 @@ fn status_da_planilha_diz_somente_leitura() {
     esperar_planilha(&mut h);
     // a barra de status do arquivo: o nome, "Somente leitura" e, à direita, "XLSX · dados"
     assert!(tem_texto_exato(&h, "XLSX") && tem_texto_exato(&h, "dados"), "{:?}", textos(&h));
-    assert!(quantos(&h, "Somente leitura") >= 2, "o chip da faixa e a barra de status: {:?}", textos(&h));
+    assert!(quantos(&h, "Somente leitura") >= 2, "o chip do rodapé e a barra de status: {:?}", textos(&h));
     // só o Atualizar está ligado na barra
     assert!(botao_ligado(&h, "Atualizar"));
     for verbo in ["Salvar", "Novo", "Excluir", "Desfazer", "Trazer colunas"] {
