@@ -58,7 +58,9 @@ impl TipoDeArquivo {
         [TipoDeArquivo::Csv, TipoDeArquivo::Xlsx, TipoDeArquivo::Json, TipoDeArquivo::Texto];
 
     /// O tipo de uma extensão, sem o ponto e sem diferenciar caixa: `csv` `tsv` | `xlsx` | `json` | `txt` `md`
-    /// `log`; o `.xlsm` (Excel com macros, o mesmo pacote) é Excel também. O `.xls`, o `.xlsb` e o `.sql` ficam de fora.
+    /// `log` `jsonl` `ndjson` `sql`; o `.xlsm` (Excel com macros, o mesmo pacote) é Excel também. O JSON Lines e o
+    /// `.sql` são texto até o PR 10 da 0.3 (que os abre como tabela e na Consulta): antes, sumiam da árvore (PO5 da
+    /// revisão de 26/10/2026). O `.xls` e o `.xlsb` ficam de fora.
     pub fn da_extensao(ext: &str) -> Option<TipoDeArquivo> {
         let ext = ext.to_ascii_lowercase();
         TipoDeArquivo::TODOS.into_iter().find(|t| t.extensoes().contains(&ext.as_str()))
@@ -70,7 +72,7 @@ impl TipoDeArquivo {
             TipoDeArquivo::Csv => &["csv", "tsv"],
             TipoDeArquivo::Xlsx => &["xlsx", "xlsm"],
             TipoDeArquivo::Json => &["json"],
-            TipoDeArquivo::Texto => &["txt", "md", "log"],
+            TipoDeArquivo::Texto => &["txt", "md", "log", "jsonl", "ndjson", "sql"],
         }
     }
 
@@ -350,10 +352,13 @@ mod testes {
             ("txt", TipoDeArquivo::Texto),
             ("md", TipoDeArquivo::Texto),
             ("LOG", TipoDeArquivo::Texto),
+            ("jsonl", TipoDeArquivo::Texto),
+            ("NDJSON", TipoDeArquivo::Texto),
+            ("Sql", TipoDeArquivo::Texto),
         ] {
             assert_eq!(TipoDeArquivo::da_extensao(ext), Some(tipo), "{ext}");
         }
-        for fora in ["xls", "xlsb", "sql", "pdf", "db", "", "csv.bak", ".csv"] {
+        for fora in ["xls", "xlsb", "jsonc", "pdf", "db", "", "csv.bak", ".csv", "sql.gz"] {
             assert_eq!(TipoDeArquivo::da_extensao(fora), None, "{fora}");
         }
     }

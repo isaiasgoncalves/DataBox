@@ -98,7 +98,7 @@ applications menu, pointing at the AppImage. Without FUSE, run it with `--appima
 | SQLite database | `.db`, `.sqlite` (and any file that is SQLite inside) | full editing, or read-only on request |
 | Folder | any folder | the Explorer lists its databases and data files |
 | CSV | `.csv`, `.tsv` | table editor |
-| JSON and text | `.json`, `.txt`, `.md`, `.log` | text editor (read-only above 0.5 MiB) |
+| JSON and text | `.json`, `.txt`, `.md`, `.log`, `.jsonl`, `.ndjson`, `.sql` | text editor (read-only above 0.5 MiB) |
 | Excel workbook | `.xlsx`, `.xlsm` | read-only |
 
 ---

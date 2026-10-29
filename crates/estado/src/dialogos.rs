@@ -215,16 +215,11 @@ mod testes {
                 assert!(que_abre.1.contains(ext), "falta {ext}");
             }
         }
-        for ext in ["csv", "tsv", "xlsx", "xlsm", "json", "txt", "md", "log"] {
+        for ext in ["csv", "tsv", "xlsx", "xlsm", "json", "txt", "md", "log", "jsonl", "ndjson", "sql"] {
             assert!(que_abre.1.contains(&ext), "falta {ext}");
         }
-        assert!(
-            !que_abre.1.contains(&"xls")
-                && !que_abre.1.contains(&"xlsb")
-                && !que_abre.1.contains(&"sql")
-                && !que_abre.1.contains(&"*")
-        );
-        assert_eq!(que_abre.1.len(), EXTENSOES_BANCO.len() + 8, "sem repetição");
+        assert!(!que_abre.1.contains(&"xls") && !que_abre.1.contains(&"xlsb") && !que_abre.1.contains(&"*"));
+        assert_eq!(que_abre.1.len(), EXTENSOES_BANCO.len() + 11, "sem repetição");
         // o rótulo dos bancos diz as mesmas extensões da lista do comum
         for ext in EXTENSOES_BANCO {
             assert!(ROTULO_BANCOS.contains(&format!("*.{ext}")), "o rótulo não diz {ext}");

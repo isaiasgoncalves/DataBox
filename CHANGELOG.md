@@ -25,6 +25,9 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   seta (ou → e ←) abre e fecha. O filtro "Filtrar tabelas e colunas" acha a coluna em todas as tabelas e abre só as que
   casam; ao limpá-lo, volta o que estava aberto. As colunas são lidas numa tarefa de fundo, de uma vez, e relidas
   quando a estrutura do banco muda.
+- **`.jsonl`, `.ndjson` e `.sql` no Explorador** (PO5 da revisão de 26/10/2026): esses arquivos sumiam da árvore da
+  pasta. Agora aparecem com o ícone de texto e abrem no editor de texto (só leitura acima do limite, como os outros),
+  também pelo "Abrir arquivo". Até a 0.3 abrir o JSON Lines numa grade e o `.sql` na Consulta.
 
 ### Alterado
 

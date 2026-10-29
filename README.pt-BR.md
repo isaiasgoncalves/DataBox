@@ -104,7 +104,7 @@ menu de aplicativos apontando para o AppImage. Se a distribuição não tiver FU
 | Banco SQLite | `.db`, `.sqlite` (e qualquer arquivo que seja SQLite por dentro) | edição completa; ou só leitura, se pedir |
 | Pasta | qualquer pasta | o Explorador mostra os bancos e os arquivos de dados dela |
 | CSV | `.csv`, `.tsv` | editor de tabela |
-| JSON e texto | `.json`, `.txt`, `.md`, `.log` | editor de texto (só leitura acima de 0,5 MiB) |
+| JSON e texto | `.json`, `.txt`, `.md`, `.log`, `.jsonl`, `.ndjson`, `.sql` | editor de texto (só leitura acima de 0,5 MiB) |
 | Planilha do Excel | `.xlsx`, `.xlsm` | só leitura |
 
 ---
