@@ -26,11 +26,14 @@
 //!   Verificar integridade · Verificar chaves estrangeiras · Otimizar · Compactar (VACUUM) (com as silhuetas da
 //!   Manutenção das Propriedades; os dois últimos só com o banco gravando) | Fazer cópia de segurança · Exportar o
 //!   banco | Abrir só para leitura (ou "Abrir para gravação",
-//!   no banco só leitura) · Fechar o banco. As manutenções e a cópia põem a Visão geral à vista, que as executa.
+//!   no banco só leitura) · Fechar o banco. As manutenções e a cópia põem a Visão geral à vista, que as executa. A
+//!   silhueta do Nova tabela e a do Exportar o banco só vão com a Visão geral ativa, onde o "+" e o Exportar da barra
+//!   são esses mesmos (D5 da revisão de 26/10/2026: nos Dados, eles são "Nova linha" e "Exportar a tabela").
 //! - **Tabela** (prancheta 2; só com uma tabela ou visão à vista, depois do Banco): as vistas das Propriedades
 //!   Colunas (Alt+2), Índices e gatilhos (Alt+3) e Definição SQL (Alt+4; a visão só tem esta) | Abrir na Consulta
 //!   SQL · Exportar a tabela · Copiar o nome | Propriedades em janela própria | Nova linha · Nova coluna · Novo
-//!   índice | Renomear a tabela · Excluir a tabela (em `--perigo`). O que muda a estrutura fica desligado na visão,
+//!   índice | Renomear a tabela · Excluir a tabela (em `--perigo`, sem a lixeira, que na barra exclui as linhas). O
+//!   que muda a estrutura fica desligado na visão,
 //!   no banco só leitura e na tabela que o SQLite não deixa editar.
 //! - **Ajuda**: Atalhos do teclado (a janela; quando ela fecha, o foco volta ao botão "Ajuda") e Sobre o DataBox.
 //!
@@ -96,6 +99,9 @@ pub(crate) struct Menus<'a> {
     pub barra_status: bool,
     /// O banco aberto (com ele, o menu Banco).
     pub banco: Option<&'a BancoInfo>,
+    /// A aba ativa é a Visão geral do banco: só nela o Novo e o Exportar da barra são "Nova tabela" e "Exportar o
+    /// banco", e só nela os itens do menu Banco levam as silhuetas deles (D5 da revisão de 26/10/2026).
+    pub na_visao_geral: bool,
     /// A tabela ou visão à vista (com ela, o menu Tabela).
     pub tabela: Option<MenuTabela<'a>>,
     /// O arquivo do documento à vista (o CSV, a planilha, o texto, a ficha): liga o "Abrir no programa padrão".
@@ -299,7 +305,11 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
             if p.silhueta(Icone::NovaConsulta).item("Nova consulta SQL", None, false).clicked() {
                 pedido = Some(PedidoMenu::Acao(Acao::NovaConsulta { sql: None }));
             }
-            p.silhueta(Icone::Novo);
+            // a silhueta só quando o "+" da barra é o mesmo verbo sobre o mesmo objeto (U11 com a D5 da revisão de
+            // 26/10/2026): na Visão geral ele é "Nova tabela"; nos Dados, "Nova linha"
+            if m.na_visao_geral {
+                p.silhueta(Icone::Novo);
+            }
             if somente_leitura {
                 p.item_desligado("Nova tabela", None);
             } else if p.item("Nova tabela", None, false).clicked() {
@@ -323,7 +333,11 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
             if p.item("Fazer cópia de segurança", None, false).clicked() {
                 pedido = Some(PedidoMenu::Acao(Acao::CopiaDeSeguranca));
             }
-            if p.silhueta(Icone::Exportar).item("Exportar o banco", None, false).clicked() {
+            // nos Dados, o Exportar da barra exporta a tabela
+            if m.na_visao_geral {
+                p.silhueta(Icone::Exportar);
+            }
+            if p.item("Exportar o banco", None, false).clicked() {
                 pedido = Some(PedidoMenu::Acao(Acao::AbrirExportacao(crate::visao_geral::pedido_exportacao(b))));
             }
             p.separador();
@@ -399,7 +413,8 @@ pub(crate) fn barra(ui: &mut Ui, m: &Menus<'_>, recentes: &[RecenteMenu]) -> Sai
             } else if p.item("Renomear a tabela", None, false).clicked() {
                 pedido = Some(PedidoMenu::Tabela(ItemTabela::Renomear));
             }
-            p.silhueta(Icone::Excluir);
+            // sem a lixeira (D5 da revisão de 26/10/2026): na aba da tabela, a lixeira da barra é "Excluir as linhas";
+            // o vermelho já marca o perigo
             if !t.editavel {
                 p.item_desligado("Excluir a tabela", None);
             } else if p.item_perigo("Excluir a tabela", None, false).clicked() {

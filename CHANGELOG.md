@@ -42,6 +42,10 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ### Corrigido
 
+- **O "Excluir a tabela" do menu Tabela não leva mais a lixeira** (D5 da revisão de 26/10/2026): na aba da tabela, a
+  lixeira da barra exclui as linhas, e o menu ensinava que ela apagava a tabela. O vermelho continua marcando o perigo.
+  Pela mesma regra (o mesmo verbo sobre o mesmo objeto da aba ativa), o "Nova tabela" e o "Exportar o banco" do menu
+  Banco só levam o ícone com a Visão geral ativa, onde o "+" e o Exportar da barra fazem isso mesmo.
 - **As abas de documento não cortam mais até ninguém saber qual é qual** (D1 da revisão de 26/10/2026): com sete abas
   a 1280 px elas viravam "en…", "exp…", "app.l…". Agora cada aba fica com umas dez letras do nome, no mínimo; com mais
   abas do que isso cabe, a faixa rola (a roda do mouse, o Ctrl+Tab e o "Todas as abas"). O nome é cortado no meio, com
