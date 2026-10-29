@@ -248,3 +248,40 @@ fn arquivo_so_com_o_cabecalho_oferece_nova_linha() {
     assert!(h.query_by_label("Nenhuma linha neste arquivo.").is_none(), "a linha nova entrou");
     assert!(doc(&h).alterado());
 }
+
+/// Seis colunas de nome curto e valores largos (números e datas), mais que a janela estreita comporta pelo nome.
+fn largas(linhas: usize) -> String {
+    let mut s = String::from("a;b;c;d;e;f\r\n");
+    for i in 0..linhas {
+        let grupo = if i % 2 == 0 { "par" } else { "impar" };
+        s.push_str(&format!(
+            "{grupo};{}44331,{:02};04/01/2025 10:{:02};{}9876,5;{};x{i}\r\n",
+            100 + i,
+            i % 100,
+            i % 60,
+            i,
+            i * 3
+        ));
+    }
+    s
+}
+
+#[test]
+fn filtrar_mantem_as_colunas_medidas_pelo_conteudo() {
+    // PO2 da revisão de 26/10/2026: a página da vista nova chega depois da medida, e as colunas encolhiam até o nome
+    let amb = Ambiente::vazio("filtro_larguras");
+    let mut h = abrir_com(&amb, arquivo(&amb, "largas.csv", largas(40)), Tema::Escuro, egui::vec2(640.0, 480.0));
+    let antes: Vec<f32> = (0..6).map(|c| doc(&h).largura_coluna(c).unwrap()).collect();
+    assert!(antes[1] > 80.0 && antes[2] > 80.0, "medidas pelo conteúdo ao abrir: {antes:?}");
+    doc_mut(&mut h).filtrar("a", OperadorCsv::Igual, "par");
+    esperar_ociosa(&mut h);
+    assert_eq!(posicoes(&h).len(), 20);
+    let filtradas: Vec<f32> = (0..6).map(|c| doc(&h).largura_coluna(c).unwrap()).collect();
+    assert!(filtradas[1] >= antes[1] - 1.0, "o número não corta depois do filtro: {antes:?} → {filtradas:?}");
+    assert!(filtradas[2] >= antes[2] - 1.0, "nem a data: {antes:?} → {filtradas:?}");
+    capturar(&mut h, "csv-filtrado-larguras-escuro.png");
+    h.get_by_label("Limpar filtros").click();
+    esperar_ociosa(&mut h);
+    let limpas: Vec<f32> = (0..6).map(|c| doc(&h).largura_coluna(c).unwrap()).collect();
+    assert_eq!(limpas, antes, "o Limpar filtros volta às larguras de antes");
+}

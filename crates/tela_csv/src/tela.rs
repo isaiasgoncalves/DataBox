@@ -362,6 +362,12 @@ impl TelaCsv {
         self.grade.as_ref()?.centro_cabecalho(coluna)
     }
 
+    /// A largura de uma coluna de dados no último quadro (os testes).
+    #[doc(hidden)]
+    pub fn largura_coluna(&self, coluna: usize) -> Option<f32> {
+        self.grade.as_ref()?.largura(coluna)
+    }
+
     /// A célula ativa (linha da vista, coluna de dados).
     pub fn celula_ativa(&self) -> Option<(usize, usize)> {
         let g = self.grade.as_ref()?;

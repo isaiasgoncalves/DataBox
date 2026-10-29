@@ -88,7 +88,7 @@ impl GradeCsv {
         c.checked_sub(PRIMEIRA_DE_DADOS).filter(|&d| d < self.n_dados)
     }
 
-    /// Mede as colunas de novo no próximo quadro (a página chegou, as colunas mudaram).
+    /// Mede as colunas de novo no próximo quadro com página (a página chegou, a vista ou as colunas mudaram).
     pub(crate) fn medir_de_novo(&mut self) {
         self.medir = true;
     }
@@ -98,9 +98,13 @@ impl GradeCsv {
     /// larguras ficam como ela deixou.
     pub(crate) fn ajustar_larguras(&mut self, ui: &Ui, p: &Paleta, retrato: &Retrato, pagina: Option<&Pagina>) {
         if self.medir {
-            self.medir = false;
-            self.naturais = medir_colunas(ui.painter(), p, retrato, pagina, self.n_dados);
-            self.manual = false;
+            // sem página (a da vista nova ainda não chegou), a medida fica pendente: medir só pelo cabeçalho encolhia
+            // as colunas até o nome (PO2). Só sem medida nenhuma (a grade nova) o cabeçalho serve enquanto isso.
+            if pagina.is_some() || self.naturais.len() != self.n_dados {
+                self.naturais = medir_colunas(ui.painter(), p, retrato, pagina, self.n_dados);
+                self.manual = false;
+            }
+            self.medir = pagina.is_none();
         }
         if self.naturais.len() != self.n_dados {
             return;
@@ -126,6 +130,11 @@ impl GradeCsv {
     /// O centro de uma célula (linha da vista, coluna de dados) no último quadro, se estiver à vista (os testes).
     pub(crate) fn centro_celula(&self, linha: usize, coluna: usize) -> Option<Pos2> {
         self.centro(linha, PRIMEIRA_DE_DADOS + coluna)
+    }
+
+    /// A largura de uma coluna de dados (os testes).
+    pub(crate) fn largura(&self, coluna: usize) -> Option<f32> {
+        (coluna < self.n_dados).then(|| self.nucleo.larguras().get(PRIMEIRA_DE_DADOS + coluna).copied())?
     }
 
     /// O centro da caixa de marcar de uma linha.

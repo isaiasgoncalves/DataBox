@@ -45,6 +45,9 @@ e as versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/
   a extensão inteira ("enderecos…ntes.csv"), como os caminhos. A aba ativa não encolhe antes das outras e fica sempre à
   vista, também quando uma aba abre ou fecha e quando a janela muda de largura. Dois arquivos abertos com o mesmo nome
   mostram a pasta-mãe depois do nome ("vendas_2025.csv 2024"), também no "Todas as abas" e no leitor de tela.
+- **O CSV filtrado não encolhe mais as colunas** (PO2 da revisão de 26/10/2026): depois de um filtro, de tirá-lo ou de
+  ordenar, as colunas eram medidas antes de as linhas da vista nova chegarem, só pelo nome, e cortavam números e datas
+  ("44331,…", "04/01/…"). Agora a medida espera as linhas.
 
 ### Corrigido
 
